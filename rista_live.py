@@ -90,21 +90,31 @@ last_week = (now - timedelta(days=7)).strftime("%Y-%m-%d")
 # ---------------- FETCH SALES ---------------- #
 
 def fetch_sales(day):
+    print(f"\n📥 Fetching sales for {day}")
     all_data = []
 
     for b in branches:
         last_key = None
 
         while True:
-            params = {"branch": b, "day": day}
+            params = {
+                "branch": b,
+                "day": day
+            }
+
             if last_key:
                 params["lastKey"] = last_key
 
             r = requests.get(
-                "https://api.ristaapps.com/v1/sales/page",
+                "https://api.ristaapps.com/v1/sales/summary",
                 headers=headers(),
-                params=params
+                params=params,
+                timeout=30
             )
+
+            if r.status_code != 200:
+                print(f"⚠️ Error {b}: {r.text}")
+                break
 
             js = r.json()
             data = js.get("data", [])
@@ -119,7 +129,15 @@ def fetch_sales(day):
             if not last_key:
                 break
 
-    return pd.concat(all_data, ignore_index=True) if all_data else pd.DataFrame()
+    if not all_data:
+        print("❌ No data fetched")
+        return pd.DataFrame()
+
+    final_df = pd.concat(all_data, ignore_index=True)
+
+    print("📊 Rows fetched:", final_df.shape)
+
+    return final_df
 
 # ---------------- RUN ---------------- #
 
@@ -176,7 +194,7 @@ client = gspread.authorize(creds)
 
 # 👉 ADD YOUR GOOGLE SHEET LINK HERE
 spreadsheet = client.open_by_url(
-    "https://docs.google.com/spreadsheets/d/XXXXXXXXXXXX/edit"
+    "https://docs.google.com/spreadsheets/d/1CVUS-BSBfDIoQI4Yk2GB4_Zp1CIJRF-9YRfpvCih-FM/edit"
 )
 
 print("✅ Connected to Google Sheet")
