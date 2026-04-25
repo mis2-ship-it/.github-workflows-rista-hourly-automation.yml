@@ -56,9 +56,28 @@ print("✅ Connected to NEW Google Sheet")
 # ---------------- FETCH BRANCH ---------------- #
 
 b_url = "https://api.ristaapps.com/v1/branch/list"
-branches = requests.get(b_url, headers=headers()).json()
+b_resp = requests.get(b_url, headers=headers())
 
-branches = [b["branchCode"] for b in branches if b["status"] == "Active"]
+print("Branch API Response:", b_resp.text[:500])  # debug
+
+if b_resp.status_code != 200:
+    raise Exception(f"Branch API failed: {b_resp.text}")
+
+data = b_resp.json()
+
+# 🔥 Handle multiple formats safely
+if isinstance(data, dict):
+    data = data.get("data", [])
+
+if not isinstance(data, list):
+    raise Exception("❌ Unexpected branch response format")
+
+branches = [
+    b["branchCode"] for b in data
+    if isinstance(b, dict) and b.get("status") == "Active"
+]
+
+print("🏪 Branch count:", len(branches))
 
 print("Branches:", len(branches))
 
