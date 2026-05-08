@@ -96,6 +96,8 @@ def rista_get(endpoint, params=None):
 
     log(f"Calling {url}")
 
+    log(f"Using API KEY: {RISTA_API_KEY[:10]}...")
+
     response = requests.get(
         url,
         headers=RISTA_HEADERS,
