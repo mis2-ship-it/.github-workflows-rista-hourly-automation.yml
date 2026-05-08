@@ -19,7 +19,7 @@ RISTA_BASE_URL = "https://api.ristaapps.com/v1"
 RISTA_API_KEY = os.getenv("API_KEY", "")
 
 RISTA_HEADERS = {
-    "Authorization": f"Bearer {RISTA_API_KEY}",
+    "api-key": RISTA_API_KEY,
     "Content-Type": "application/json",
     "Accept": "application/json"
 }
@@ -243,8 +243,8 @@ def upload_dataframe_to_worksheet(spreadsheet, sheet_name, df):
     worksheet.clear()
 
     worksheet.update(
-        "A1",
-        records,
+        values=records,
+        range_name="A1",
         value_input_option="RAW"
     )
 
