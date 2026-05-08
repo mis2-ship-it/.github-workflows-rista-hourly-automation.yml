@@ -400,22 +400,22 @@ text
 </html>
 """
 return html
-def send_email(subject, html_body):
-msg = MIMEMultipart("alternative")
-msg["Subject"] = subject
-msg["From"] = EMAIL_USER
-msg["To"] = EMAIL_TO
 
-text
+# Send Email
+def send_email(subject, html_body, recipients, smtp_host, smtp_port, smtp_user, smtp_password):
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = smtp_user
+    msg["To"] = ", ".join(recipients)
 
+    part = MIMEText(html_body, "html")
+    msg.attach(part)
 
-msg.attach(MIMEText(html_body, "html"))
-
-smtp_server = smtplib.SMTP(EMAIL_HOST, EMAIL_PORT)
-smtp_server.starttls()
-smtp_server.login(EMAIL_USER, EMAIL_PASSWORD)
-smtp_server.sendmail(EMAIL_USER, [item.strip() for item in EMAIL_TO.split(",")], msg.as_string())
-smtp_server.quit()
+    with smtplib.SMTP(smtp_host, smtp_port) as server:
+        server.starttls()
+        server.login(smtp_user, smtp_password)
+        server.sendmail(smtp_user, recipients, msg.as_string())
+        smtp_server.quit()
 
 log("Email sent successfully")
 =========================
