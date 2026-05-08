@@ -113,41 +113,41 @@ def fetch_all_data():
     endpoint_map = {
         "sales_summary": {
             "endpoint": "/analytics/custom/sales/summary",
-            "params": {
-                "business_id": BUSINESS_ID,
-                "branch_id": BRANCH_ID
+            headers=headers(),
+            params=params,
+            timeout=20
             }
         },
 
         "discount_transactions": {
             "endpoint": "/analytics/discount/transactions",
-            "params": {
-                "business_id": BUSINESS_ID,
-                "branch_id": BRANCH_ID
+            headers=headers(),
+            params=params,
+            timeout=20
             }
         },
 
         "soldout_history": {
             "endpoint": "/items/soldout/history",
-            "params": {
-                "branch_id": BRANCH_ID,
-                "business_day": BUSINESS_DAY
+            headers=headers(),
+            params=params,
+            timeout=20
             }
         },
 
         "inventory_items": {
             "endpoint": "/inventory/items",
-            "params": {
-                "business_id": BUSINESS_ID
+            headers=headers(),
+            params=params,
+            timeout=20
             }
         },
 
         "outofstock": {
             "endpoint": "/sale/item/outofstock",
-            "params": {
-                "business_id": BUSINESS_ID,
-                "branch_id": BRANCH_ID
-            }
+            headers=headers(),
+            params=params,
+            timeout=20
         }
     }
 
