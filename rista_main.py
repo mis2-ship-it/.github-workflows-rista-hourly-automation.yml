@@ -418,9 +418,9 @@ def send_email(subject, html_body, recipients, smtp_host, smtp_port, smtp_user, 
         smtp_server.quit()
 
 log("Email sent successfully")
-=========================
-MAIN
-=========================
+# =========================
+#  MAIN
+#  =========================
 def main():
 log("Starting Rista hourly automation")
 
