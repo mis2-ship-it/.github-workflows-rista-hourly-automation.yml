@@ -15,11 +15,7 @@ from google.oauth2.service_account import Credentials
 # CONFIG
 # =========================
 
-RISTA_BASE_URL = os.getenv(
-    "RISTA_BASE_URL",
-    "https://api.ristaapps.com/v1"
-).rstrip("/")
-
+RISTA_BASE_URL = "https://api.ristaapps.com/v1"
 RISTA_API_KEY = os.getenv("API_KEY", "")
 
 RISTA_HEADERS = {
