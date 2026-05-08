@@ -13,22 +13,50 @@ from google.oauth2.service_account import Credentials
 
 # ---------------- AUTH ---------------- #
 
-API_KEY = os.environ["API_KEY"]
-SECRET_KEY = os.environ["SECRET_KEY"]
+import time
+import jwt
+
+API_KEY = os.getenv("API_KEY", "")
+SECRET_KEY = os.getenv("SECRET_KEY", "")
+
+if not API_KEY:
+    raise Exception("API_KEY missing in GitHub Secrets")
+
+if not SECRET_KEY:
+    raise Exception("SECRET_KEY missing in GitHub Secrets")
+
 
 def get_token():
-    payload = {"iss": API_KEY, "iat": int(time.time())}
-    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+
+    payload = {
+        "iss": API_KEY,
+        "iat": int(time.time())
+    }
+
+    return jwt.encode(
+        payload,
+        SECRET_KEY,
+        algorithm="HS256"
+    )
+
 
 def headers():
+
     return {
         "x-api-key": API_KEY,
         "x-api-token": get_token(),
-        "content-type": "application/json"
+        "Content-Type": "application/json",
+        "Accept": "application/json"
     }
 
 
-print("HEADERS =>", RISTA_HEADERS)
+# DEBUG
+print("API_KEY =>", API_KEY[:6] + "*****")
+print("SECRET_KEY =>", SECRET_KEY[:6] + "*****")
+print("HEADERS =>", headers())
+
+
+# ---------------- CONFIG ---------------- #
 
 GOOGLE_SHEET_ID = "12oI9rtQreA0XI5eTiLZEgc2TVPm9DRgbf2TXTArEpBY"
 
@@ -44,7 +72,6 @@ EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD", "")
 EMAIL_TO = os.getenv("EMAIL_TO", "")
 
 TIMEOUT_SECONDS = 60
-
 
 # =========================================================
 # HELPERS
