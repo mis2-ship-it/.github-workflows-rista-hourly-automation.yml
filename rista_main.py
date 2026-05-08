@@ -19,7 +19,7 @@ RISTA_BASE_URL = "https://api.ristaapps.com/v1"
 RISTA_API_KEY = os.getenv("API_KEY", "")
 
 RISTA_HEADERS = {
-    "api-key": RISTA_API_KEY,
+    "X-API-KEY": RISTA_API_KEY,
     "Content-Type": "application/json",
     "Accept": "application/json"
 }
