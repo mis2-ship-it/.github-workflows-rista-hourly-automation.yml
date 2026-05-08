@@ -11,19 +11,22 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 
-# =========================================================
-# CONFIG
-# =========================================================
+# ---------------- AUTH ---------------- #
 
-RISTA_BASE_URL = "https://api.ristaapps.com/v1"
+API_KEY = os.environ["API_KEY"]
+SECRET_KEY = os.environ["SECRET_KEY"]
 
-RISTA_API_KEY = os.getenv("API_KEY")
+def get_token():
+    payload = {"iss": API_KEY, "iat": int(time.time())}
+    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
-RISTA_HEADERS = {
-    "x-api-key": RISTA_API_KEY,
-    "Content-Type": "application/json",
-    "Accept": "application/json"
-}
+def headers():
+    return {
+        "x-api-key": API_KEY,
+        "x-api-token": get_token(),
+        "content-type": "application/json"
+    }
+
 
 print("HEADERS =>", RISTA_HEADERS)
 
