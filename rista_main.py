@@ -8,13 +8,12 @@ from email.mime.text import MIMEText
 import requests
 import pandas as pd
 import gspread
+import time
+import jwt
 from google.oauth2.service_account import Credentials
 
 
 # ---------------- AUTH ---------------- #
-
-import time
-import jwt
 
 API_KEY = os.getenv("API_KEY", "")
 SECRET_KEY = os.getenv("SECRET_KEY", "")
