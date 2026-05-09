@@ -1,8 +1,8 @@
-# =========================================================
+
 # RISTA LIVE ANALYTICS DASHBOARD
 # Endpoint Used:
 # /sale/resource
-# =========================================================
+
 
 import os
 import json
@@ -12,13 +12,13 @@ import requests
 import pandas as pd
 import numpy as np
 import gspread
-
+from datetime import datetime
 from datetime import datetime, timezone
 from google.oauth2.service_account import Credentials
 
-# =========================================================
+
 # CONFIG
-# =========================================================
+
 
 BASE_URL = "https://api.ristaapps.com/v1"
 
@@ -34,9 +34,9 @@ GOOGLE_SERVICE_ACCOUNT_JSON = os.getenv(
 
 TIMEOUT = 60
 
-# =========================================================
+
 # AUTH
-# =========================================================
+
 
 def get_token():
 
@@ -61,9 +61,9 @@ def headers():
         "Accept": "application/json"
     }
 
-#=========================================================
+
 # LOGGER
-#=========================================================
+
 
 def log(msg):
 
@@ -73,9 +73,9 @@ def log(msg):
 
     print(f"[{ts}] {msg}")
 
-#=========================================================
+# ---------------------------------------------
 # GSHEET
-#=========================================================
+# ---------------------------------------------
 
 def get_gspread_client():
 
@@ -129,23 +129,34 @@ def upload_df(spreadsheet, sheet_name, df):
         range_name="A1"
     )
 
-# =========================================================
+
 # FETCH SALES RESOURCE
-# =========================================================
+
 
 def fetch_sales_resource():
 
     url = BASE_URL + "/sale/resource"
 
+    payload = {
+        "page": 1,
+        "pageSize": 500,
+        "fromDate": datetime.now().strftime("%Y-%m-%d"),
+        "toDate": datetime.now().strftime("%Y-%m-%d")
+    }
+
     log(f"Calling {url}")
 
-    response = requests.get(
+    response = requests.post(
         url,
         headers=headers(),
+        json=payload,
         timeout=TIMEOUT
     )
 
     log(f"Status Code: {response.status_code}")
+
+    # DEBUG RESPONSE
+    print("RESPONSE =>", response.text[:1000])
 
     response.raise_for_status()
 
@@ -162,9 +173,11 @@ def fetch_sales_resource():
 
     return pd.DataFrame()
 
-# =========================================================
+print("RESPONSE =>", response.text[:1000])
+
+
 # ITEM SALES DASHBOARD
-# =========================================================
+
 
 def build_item_sales_dashboard(df):
 
@@ -209,9 +222,9 @@ def build_item_sales_dashboard(df):
 
     return out
 
-# =========================================================
+
 # CANCELLATION DASHBOARD
-# =========================================================
+
 
 def build_cancellation_dashboard(df):
 
@@ -242,9 +255,7 @@ def build_cancellation_dashboard(df):
         ignore_index=True
     )
 
-# =========================================================
 # HOURLY LIVE DASHBOARD
-# =========================================================
 
 def build_hourly_dashboard(df):
 
@@ -294,9 +305,9 @@ def build_hourly_dashboard(df):
 
     return out
 
-# =========================================================
+
 # CHANNEL ANALYTICS
-# =========================================================
+
 
 def build_channel_analytics(df):
 
@@ -328,9 +339,9 @@ def build_channel_analytics(df):
 
     return out
 
-# =========================================================
+
 # INVENTORY / SOLDOUT ANALYSIS
-# =========================================================
+
 
 def build_inventory_analysis(df):
 
@@ -345,9 +356,9 @@ def build_inventory_analysis(df):
 
     return df[soldout_cols].copy()
 
-# =========================================================
+
 # STORE SLA TRACKING
-# =========================================================
+
 
 def build_sla_tracking(df):
 
@@ -363,9 +374,9 @@ def build_sla_tracking(df):
 
     return df[prep_cols].copy()
 
-# =========================================================
+
 # RCA ANALYSIS
-# =========================================================
+
 
 def build_rca_analysis(df):
 
@@ -407,9 +418,9 @@ def build_rca_analysis(df):
 
     return pd.DataFrame(rca)
 
-# =========================================================
+
 # SUMMARY
-# =========================================================
+
 
 def build_summary_dataframe(
     raw_df,
@@ -458,9 +469,9 @@ def build_summary_dataframe(
     return summary
 
 
-# =========================================================
+
 # EMAIL HTML
-# =========================================================
+
 
 def dataframe_to_html_table(df, max_rows=20):
 
@@ -531,9 +542,9 @@ def build_email_html(
     return html
 
 
-# =========================================================
+
 # EMAIL SEND
-# =========================================================
+
 
 def send_email(
     subject,
@@ -584,9 +595,9 @@ def send_email(
     log("Email Sent Successfully")
 
 
-# =========================================================
+
 # MAIN
-# =========================================================
+
 
 def main():
 
@@ -730,9 +741,9 @@ def main():
     log("Automation Completed Successfully")
 
 
-# =========================================================
+
 # START
-# =========================================================
+
 
 if __name__ == "__main__":
     main()
