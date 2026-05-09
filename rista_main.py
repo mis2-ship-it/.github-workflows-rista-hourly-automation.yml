@@ -173,8 +173,6 @@ def fetch_sales_resource():
 
     return pd.DataFrame()
 
-print("RESPONSE =>", response.text[:1000])
-
 
 # ITEM SALES DASHBOARD
 
