@@ -27,13 +27,7 @@ jobs:
           pip install pandas requests gspread google-auth
 
       - name: Install dependencies
-        run: |
-          pip install pandas
-          pip install requests
-          pip install gspread
-          pip install google-auth
-          pip install PyJWT
-          pip install numpy
+        run: pip install -r requirements.txt
 
       - name: Run Script
 
