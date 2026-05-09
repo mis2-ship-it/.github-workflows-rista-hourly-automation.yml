@@ -431,15 +431,9 @@ def send_email(
 
     log("Email Sent Successfully")
 
-# =========================================================
-# MAIN
-# =========================================================
-
 def main():
 
-    log(
-        "Starting Dashboard Automation"
-    )
+    log("Starting Dashboard Automation")
 
     gc = get_gspread_client()
 
@@ -447,124 +441,96 @@ def main():
         GOOGLE_SHEET_ID
     )
 
-   # ==========================================
-# FETCH BRANCHES
-# ==========================================
+    # =====================================
+    # HELP SHEET
+    # =====================================
 
-branch_df = fetch_branch_list()
-
-mapped_branch_df = filter_mapped_branches(
-    branch_df,
-    help_df
-)
-
-# ==========================================
-# LOOP STORES
-# ==========================================
-
-all_item_sales = []
-
-for _, row in mapped_branch_df.iterrows():
-
-    branch_code = row["branchCode"]
-
-    branch_name = row["branchName"]
-
-    log(f"Processing {branch_name}")
-
-    item_sales_df = fetch_item_sales(
-        branch_code
+    help_df = get_help_sheet_mapping(
+        spreadsheet
     )
 
-    item_sales_df["branchName"] = branch_name
+    # =====================================
+    # BRANCH LIST
+    # =====================================
 
-    all_item_sales.append(item_sales_df)
+    branch_df = fetch_branch_list()
 
-# ==========================================
-# FINAL DATAFRAME
-# ==========================================
+    mapped_branch_df = filter_mapped_branches(
+        branch_df,
+        help_df
+    )
 
-final_item_sales_df = pd.concat(
-    all_item_sales,
-    ignore_index=True
-)
+    # =====================================
+    # FETCH SALES DATA
+    # =====================================
+
+    all_item_sales = []
+
+    for _, row in mapped_branch_df.iterrows():
+
+        branch_code = row["branchCode"]
+
+        branch_name = row["branchName"]
+
+        log(f"Processing {branch_name}")
+
+        item_sales_df = fetch_item_sales(
+            branch_code
+        )
+
+        item_sales_df["branchName"] = branch_name
+
+        all_item_sales.append(
+            item_sales_df
+        )
+
+    # =====================================
+    # FINAL ITEM SALES
+    # =====================================
+
+    final_item_sales_df = pd.concat(
+        all_item_sales,
+        ignore_index=True
+    ) if all_item_sales else pd.DataFrame()
+
+    # =====================================
+    # OTHER DASHBOARDS
+    # =====================================
 
     discount_df = fetch_discount_dashboard()
 
-    sales_summary_df = fetch_sales_summary()
-
-    soldout_df = fetch_soldout_dashboard()
-
-    inventory_df = fetch_inventory_dashboard()
-
-    # =====================================================
-    # CANCELLATION DASHBOARD
-    # =====================================================
-
-    cancel_cols = [
-        c for c in sales_summary_df.columns
-        if "cancel" in c.lower()
-    ]
-
-    if cancel_cols:
-
-        cancellation_df = (
-            sales_summary_df[
-                cancel_cols
-            ].copy()
-        )
-
-    else:
-
-        cancellation_df = pd.DataFrame()
-
-    # =====================================================
-    # SUMMARY DASHBOARD
-    # =====================================================
-
-    summary_df = pd.DataFrame([{
-
-        "Run Time UTC":
-            datetime.now(
-                timezone.utc
-            ).strftime(
-                "%Y-%m-%d %H:%M:%S"
-            ),
-
-        "Total Stores":
-            len(branch_df),
-
-        "Item Sales Rows":
-            len(item_sales_df),
-
-        "Discount Rows":
-            len(discount_df),
-
-        "Sales Summary Rows":
-            len(sales_summary_df),
-
-        "Soldout Rows":
-            len(soldout_df),
-
-        "Inventory Rows":
-            len(inventory_df)
-
-    }])
-
-    # =====================================================
-    # UPLOAD TO SHEETS
-    # =====================================================
-
-    upload_df(
-        spreadsheet,
-        "branch_dashboard",
-        branch_df
+    cancellation_df = build_cancellation_dashboard(
+        final_item_sales_df
     )
+
+    hourly_df = build_hourly_dashboard(
+        final_item_sales_df
+    )
+
+    channel_df = build_channel_analytics(
+        final_item_sales_df
+    )
+
+    inventory_df = build_inventory_analysis(
+        final_item_sales_df
+    )
+
+    sla_df = build_sla_tracking(
+        final_item_sales_df
+    )
+
+    rca_df = build_rca_analysis(
+        final_item_sales_df
+    )
+
+    # =====================================
+    # UPLOAD TO GSHEET
+    # =====================================
 
     upload_df(
         spreadsheet,
         "item_sales_dashboard",
-        item_sales_df
+        final_item_sales_df
     )
 
     upload_df(
@@ -575,54 +541,41 @@ final_item_sales_df = pd.concat(
 
     upload_df(
         spreadsheet,
-        "sales_summary_dashboard",
-        sales_summary_df
-    )
-
-    upload_df(
-        spreadsheet,
         "cancellation_dashboard",
         cancellation_df
     )
 
     upload_df(
         spreadsheet,
-        "soldout_dashboard",
-        soldout_df
+        "hourly_live_dashboard",
+        hourly_df
     )
 
     upload_df(
         spreadsheet,
-        "inventory_dashboard",
+        "channel_analytics",
+        channel_df
+    )
+
+    upload_df(
+        spreadsheet,
+        "inventory_soldout_analysis",
         inventory_df
     )
 
     upload_df(
         spreadsheet,
-        "summary_dashboard",
-        summary_df
+        "store_sla_tracking",
+        sla_df
     )
 
-    # =====================================================
-    # EMAIL REPORT
-    # =====================================================
-
-    html_body = build_email_html(
-        summary_df,
-        item_sales_df,
-        discount_df,
-        soldout_df,
-        inventory_df
+    upload_df(
+        spreadsheet,
+        "rca_analysis",
+        rca_df
     )
 
-    send_email(
-        subject="Rista Live Dashboard Report",
-        html_body=html_body
-    )
-
-    log(
-        "Dashboard Automation Completed Successfully"
-    )
+    log("Automation Completed Successfully")
 
 # =========================================================
 
