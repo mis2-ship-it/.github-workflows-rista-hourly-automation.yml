@@ -1,6 +1,6 @@
 pandas
 requests
-PyJWT
 gspread
 google-auth
-python-dateutil
+PyJWT
+numpy
