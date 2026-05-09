@@ -435,6 +435,7 @@ def send_email(
 def main():
 
     print("MAIN STARTED")
+
     log("Starting Dashboard Automation")
 
     gc = get_gspread_client()
@@ -443,10 +444,9 @@ def main():
         GOOGLE_SHEET_ID
     )
 
-
-    # =====================================
-    # BRANCH LIST
-    # =====================================
+    help_df = get_help_sheet_mapping(
+        spreadsheet
+    )
 
     branch_df = fetch_branch_list()
 
@@ -455,6 +455,7 @@ def main():
         help_df
     )
 
+    print("BRANCHES FETCHED")
     # =====================================
     # FETCH SALES DATA
     # =====================================
