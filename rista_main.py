@@ -441,13 +441,6 @@ def main():
         GOOGLE_SHEET_ID
     )
 
-    # =====================================
-    # HELP SHEET
-    # =====================================
-
-    help_df = get_help_sheet_mapping(
-        spreadsheet
-    )
 
     # =====================================
     # BRANCH LIST
@@ -579,6 +572,11 @@ def main():
 
 # =========================================================
 
-if __name__ == "__main__":
+def get_help_sheet_mapping():
+    pass
 
+def main():
+    pass
+
+if __name__ == "__main__":
     main()
