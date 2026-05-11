@@ -294,44 +294,51 @@ def filter_mapped_branches(
 def current_time():
     return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
+
 def rista_get(endpoint, params=None):
 
     url = f"{BASE_URL}{endpoint}"
 
     print(f"[{current_time()} UTC] Calling {url}")
 
-    response = requests.get(
-        url,
-        headers=headers(),
-        params=params,
-        timeout=TIMEOUT
-    )
-
-    print(f"[{current_time()} UTC] Status Code: {response.status_code}")
-
-    print("REQUEST URL:", url)
-
-    if params:
-        print("REQUEST PARAMS:", params)
-
-    print("RESPONSE:", response.text[:1000])
-
     try:
+
+        response = requests.get(
+            url,
+            headers=headers(),
+            params=params,
+            timeout=TIMEOUT
+        )
+
+        print(f"[{current_time()} UTC] Status Code: {response.status_code}")
+
+        print("REQUEST URL:", url)
+
+        if params:
+            print("REQUEST PARAMS:", params)
+
+        print("RESPONSE:", response.text[:1000])
+
         response.raise_for_status()
+
+        return response.json()
 
     except Exception as e:
 
-    print(f"API Failed: {endpoint}")
-    print(f"Error: {e}")
+        print(f"API Failed: {endpoint}")
+        print(f"Error: {e}")
 
-    print("REQUEST PARAMS:", params)
+        if params:
+            print("REQUEST PARAMS:", params)
 
-    print("FULL RESPONSE:")
-    print(response.text)
+        try:
+            print("FULL RESPONSE:")
+            print(response.text)
+        except:
+            pass
 
-    return {}
+        return {}
 
-    return response.json()
 
 # =========================================================
 # NORMALIZE
@@ -361,13 +368,6 @@ def normalize_response(data):
         return pd.json_normalize(data)
 
     return pd.DataFrame()
-
-# =========================================================
-# FETCH DASHBOARDS
-# =========================================================
-
-from datetime import datetime
-import pandas as pd
 
 
 # =========================================================
@@ -419,8 +419,7 @@ def fetch_discount_dashboard():
     today = datetime.now().strftime("%Y-%m-%d")
 
     params = {
-        "from_date": today,
-        "to_date": today
+        "day": today
     }
 
     data = rista_get(
@@ -432,79 +431,204 @@ def fetch_discount_dashboard():
 
 
 # =========================================================
-# SALES SUMMARY DASHBOARD
+# HOURLY DASHBOARD
 # =========================================================
 
-def fetch_sales_summary():
+def build_hourly_dashboard(df):
 
-    today = datetime.now().strftime(
-        "%Y-%m-%d"
-    )
+    if df.empty:
+        return pd.DataFrame()
 
-    params = {
+    if "invoiceDate" not in df.columns:
+        return pd.DataFrame()
 
-        "fromDate": today,
+    df["invoice_hour"] = pd.to_datetime(
+        df["invoiceDate"],
+        errors="coerce"
+    ).dt.hour
 
-        "toDate": today
-    }
+    out = df.groupby(
+        ["branchName", "invoice_hour"],
+        as_index=False
+    ).agg({
 
-    data = rista_get(
-        "/analytics/custom/sales/summary",
-        params=params
-    )
+        "billAmount": "sum",
 
-    return normalize_response(data)
+        "invoiceNumber": "count"
+
+    })
+
+    out.rename(columns={
+
+        "billAmount": "sales",
+
+        "invoiceNumber": "orders"
+
+    }, inplace=True)
+
+    return out
 
 
 # =========================================================
-# SOLDOUT DASHBOARD
+# CHANNEL ANALYTICS
 # =========================================================
 
-def fetch_soldout_dashboard():
+def build_channel_analytics(df):
 
-    today = datetime.now().strftime(
-        "%Y-%m-%d"
+    if df.empty:
+        return pd.DataFrame()
+
+    if "channel" not in df.columns:
+        return pd.DataFrame()
+
+    out = df.groupby(
+        ["branchName", "channel"],
+        as_index=False
+    ).agg({
+
+        "billAmount": "sum",
+
+        "invoiceNumber": "count"
+
+    })
+
+    out.rename(columns={
+
+        "billAmount": "sales",
+
+        "invoiceNumber": "orders"
+
+    }, inplace=True)
+
+    return out
+
+
+# =========================================================
+# INVENTORY ANALYSIS
+# =========================================================
+
+def build_inventory_analysis(df):
+
+    if df.empty:
+        return pd.DataFrame()
+
+    if "itemCount" not in df.columns:
+        return pd.DataFrame()
+
+    out = df.groupby(
+        "branchName",
+        as_index=False
+    ).agg({
+
+        "itemCount": "sum",
+
+        "billAmount": "sum"
+
+    })
+
+    return out
+
+
+# =========================================================
+# SLA TRACKING
+# =========================================================
+
+def build_sla_tracking(df):
+
+    if df.empty:
+        return pd.DataFrame()
+
+    cols_needed = [
+        "branchName",
+        "invoiceDate",
+        "orderReadyTimestamp"
+    ]
+
+    for c in cols_needed:
+        if c not in df.columns:
+            return pd.DataFrame()
+
+    df["invoice_ts"] = pd.to_datetime(
+        df["invoiceDate"],
+        errors="coerce"
     )
 
-    params = {
-
-        "fromDate": today,
-
-        "toDate": today
-    }
-
-    data = rista_get(
-        "/items/soldout/history",
-        params=params
+    df["ready_ts"] = pd.to_datetime(
+        df["orderReadyTimestamp"],
+        errors="coerce"
     )
 
-    if isinstance(data, dict):
+    df["prep_minutes"] = (
+        df["ready_ts"] - df["invoice_ts"]
+    ).dt.total_seconds() / 60
 
-        return pd.json_normalize(
-            data.get("data", [])
+    out = df.groupby(
+        "branchName",
+        as_index=False
+    )["prep_minutes"].mean()
+
+    return out
+
+
+# =========================================================
+# RCA ANALYSIS
+# =========================================================
+
+def build_rca_analysis(df):
+
+    if df.empty:
+        return pd.DataFrame()
+
+    if "fulfillmentStatus" not in df.columns:
+        return pd.DataFrame()
+
+    out = df.groupby(
+        ["branchName", "fulfillmentStatus"],
+        as_index=False
+    ).agg({
+
+        "invoiceNumber": "count"
+
+    })
+
+    out.rename(columns={
+
+        "invoiceNumber": "orders"
+
+    }, inplace=True)
+
+    return out
+
+
+# =========================================================
+# BUILD CANCELLATION DASHBOARD
+# =========================================================
+
+def build_cancellation_dashboard(df):
+
+    if df.empty:
+        return pd.DataFrame()
+
+    if "fulfillmentStatus" not in df.columns:
+        return pd.DataFrame()
+
+    cancellation_keywords = [
+        "Cancelled",
+        "Rejected",
+        "Void"
+    ]
+
+    cancellation_df = df[
+        df["fulfillmentStatus"]
+        .astype(str)
+        .str.contains(
+            "|".join(cancellation_keywords),
+            case=False,
+            na=False
         )
+    ].copy()
 
-    return pd.DataFrame()
-
-
-# =========================================================
-# INVENTORY DASHBOARD
-# =========================================================
-
-def fetch_inventory_dashboard():
-
-    data = rista_get(
-        "/inventory/item/stock"
-    )
-
-    if isinstance(data, dict):
-
-        return pd.json_normalize(
-            data.get("data", [])
-        )
-
-    return pd.DataFrame()
-
+    return cancellation_df
 # =========================================================
 # EMAIL HTML
 # =========================================================
