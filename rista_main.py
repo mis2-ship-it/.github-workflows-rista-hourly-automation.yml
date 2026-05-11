@@ -321,11 +321,15 @@ def rista_get(endpoint, params=None):
 
     except Exception as e:
 
-        print(f"API Failed: {endpoint}")
-        print(f"Error: {e}")
-        print(response.text)
+    print(f"API Failed: {endpoint}")
+    print(f"Error: {e}")
 
-        return {}
+    print("REQUEST PARAMS:", params)
+
+    print("FULL RESPONSE:")
+    print(response.text)
+
+    return {}
 
     return response.json()
 
@@ -407,20 +411,16 @@ def fetch_item_sales(branch_code):
 
 
 # =========================================================
-# DISCOUNT DASHBOARD
+# FETCH DISCOUNT DASHBOARD
 # =========================================================
 
 def fetch_discount_dashboard():
 
-    today = datetime.now().strftime(
-        "%Y-%m-%d"
-    )
+    today = datetime.now().strftime("%Y-%m-%d")
 
     params = {
-
-        "fromDate": today,
-
-        "toDate": today
+        "from_date": today,
+        "to_date": today
     }
 
     data = rista_get(
@@ -624,6 +624,32 @@ def send_email(
 
     log("Email Sent Successfully")
 
+# =========================================================
+# BUILD CANCELLATION DASHBOARD
+# =========================================================
+
+def build_cancellation_dashboard(df):
+
+    if df.empty:
+        return pd.DataFrame()
+
+    cancellation_keywords = [
+        "Cancelled",
+        "Rejected",
+        "Void"
+    ]
+
+    cancellation_df = df[
+        df["fulfillmentStatus"]
+        .astype(str)
+        .str.contains(
+            "|".join(cancellation_keywords),
+            case=False,
+            na=False
+        )
+    ].copy()
+
+    return cancellation_df
 
 # Main   
 
