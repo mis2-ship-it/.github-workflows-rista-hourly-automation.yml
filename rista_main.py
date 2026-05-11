@@ -181,7 +181,8 @@ def fetch_branch_list():
 
     response = requests.get(
         url,
-        headers=headers(),
+        headers=headers(),   # <-- add ()
+        params=params,
         timeout=TIMEOUT
     )
 
@@ -285,20 +286,26 @@ def filter_mapped_branches(
 
     return out    
 
+
+
 # =========================================================
 # API CALL
 # =========================================================
+
+def current_time():
+    return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
 def rista_get(endpoint, params=None):
 
     url = f"{BASE_URL}{endpoint}"
 
-    print(f"[{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC] Calling {url}")
+    print(f"[{current_time()} UTC] Calling {url}")
 
     response = requests.get(
         url,
-        headers=headers,
-        params=params
+        headers=headers(),
+        params=params,
+        timeout=TIMEOUT
     )
 
     print(f"[{current_time()} UTC] Status Code: {response.status_code}")
@@ -308,7 +315,7 @@ def rista_get(endpoint, params=None):
     if params:
         print("REQUEST PARAMS:", params)
 
-    print(response.text[:1000])
+    print("RESPONSE:", response.text[:1000])
 
     try:
         response.raise_for_status()
