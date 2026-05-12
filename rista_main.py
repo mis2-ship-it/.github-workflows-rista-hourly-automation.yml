@@ -95,9 +95,7 @@ def headers():
 
 def log(message):
 
-    ts = datetime.now(
-        timezone.utc
-    ).strftime("%Y-%m-%d %H:%M:%S UTC")
+    ts = (datetime.utcnow() + pd.Timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d")
 
     print(f"[{ts}] {message}")
 
@@ -304,7 +302,7 @@ def filter_mapped_branches(
 # =========================================================
 
 def current_time():
-    return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    return (datetime.utcnow() + pd.Timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d")
 
 
 def rista_get(endpoint, params=None):
@@ -405,8 +403,7 @@ def fetch_item_sales(branch_code):
 
         "branch": branch_code,
 
-        "day": datetime.now().strftime(
-            "%Y-%m-%d"
+        "day": (datetime.utcnow() + pd.Timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d")
         ),
 
         "page": 1,
