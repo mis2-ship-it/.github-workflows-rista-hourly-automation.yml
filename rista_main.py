@@ -158,11 +158,23 @@ def upload_df(
             "message": "No Data"
         }])
 
+    # =====================================
+    # CLEAN INVALID VALUES
+    # =====================================
+
+    df = df.replace(
+        [float("inf"), float("-inf")],
+        ""
+    )
+
     df = df.fillna("")
+
+    # convert everything to string
+    df = df.astype(str)
 
     values = [
         df.columns.tolist()
-    ] + df.astype(str).values.tolist()
+    ] + df.values.tolist()
 
     worksheet.update(
         values=values,
@@ -416,19 +428,20 @@ def fetch_item_sales(branch_code):
 
 def fetch_discount_dashboard():
 
-    today = datetime.now().strftime("%Y-%m-%d")
+    try:
 
-    params = {
-        "day": today
-    }
+        data = rista_get(
+            "/analytics/discount/transactions"
+        )
 
-    data = rista_get(
-        "/analytics/discount/transactions",
-        params=params
-    )
+        return normalize_response(data)
 
-    return normalize_response(data)
+    except Exception as e:
 
+        print("Discount API Failed")
+        print(e)
+
+        return pd.DataFrame()
 
 # =========================================================
 # HOURLY DASHBOARD
@@ -819,6 +832,7 @@ def main():
             branch_code
         )
 
+    if not item_sales_df.empty:
         item_sales_df["branchName"] = branch_name
 
         all_item_sales.append(
