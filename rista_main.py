@@ -852,7 +852,6 @@ def main():
     # OTHER DASHBOARDS
     # =====================================
 
-    discount_df = fetch_discount_dashboard()
 
     cancellation_df = build_cancellation_dashboard(
         final_item_sales_df
@@ -886,12 +885,6 @@ def main():
         spreadsheet,
         "item_sales_dashboard",
         final_item_sales_df
-    )
-
-    upload_df(
-        spreadsheet,
-        "discount_dashboard",
-        discount_df
     )
 
     upload_df(
