@@ -65,7 +65,15 @@ for row in rows:
 print(f"✅ COCO Stores Found: {len(mapping_data)}")
 
 headers = {
-    "User-Agent": "Mozilla/5.0"
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json",
+    "Accept-Language": "en-IN,en;q=0.9",
+    "Referer": "https://www.swiggy.com/",
+    "Origin": "https://www.swiggy.com"
 }
 
 final_rows = []
@@ -131,7 +139,10 @@ for row in mapping_data:
                 print(f"✅ Swiggy Done - {store}")
 
         else:
-            print(f"❌ Swiggy API Failed - {store}")
+        print(
+            f"❌ Swiggy API Failed - "
+            f"{store} - Status: {response.status_code}"
+        )
 
     except Exception as e:
         print(f"❌ Swiggy Error - {store} - {e}")
@@ -145,38 +156,39 @@ for row in mapping_data:
 
     try:
 
-        zomato_url = f"https://www.zomato.com/restaurant/{z_rid}"
+    zomato_url = f"https://www.zomato.com/restaurant/{z_rid}"
 
-        response = requests.get(
-            zomato_url,
-            headers=headers,
-            timeout=20
-        )
+    response = requests.get(
+        zomato_url,
+        headers=headers,
+        timeout=20
+    )
 
-        soup = BeautifulSoup(
-            response.text,
-            "html.parser"
-        )
+    soup = BeautifulSoup(
+        response.text,
+        "html.parser"
+    )
 
-        page_text = soup.get_text(" ", strip=True)
+    page_text = soup.get_text(" ", strip=True)
 
-        rating_match = re.search(r'(\d\.\d)', page_text)
+    rating_match = re.findall(r'\b\d\.\d\b', page_text)
 
-        reviews_match = re.search(
-            r'(\d+[\,]?\d*) Reviews',
-            page_text
-        )
+    review_match = re.findall(
+        r'([\d\,]+)\s*reviews',
+        page_text,
+        re.IGNORECASE
+    )
 
-        if rating_match:
-            z_rating = rating_match.group(1)
+    if rating_match:
+        z_rating = rating_match[0]
 
-        if reviews_match:
-            z_reviews = reviews_match.group(1)
+    if review_match:
+        z_reviews = review_match[0]
 
-        print(f"✅ Zomato Done - {store}")
+    print(f"✅ Zomato Done - {store}")
 
-    except Exception as e:
-        print(f"❌ Zomato Error - {store} - {e}")
+except Exception as e:
+    print(f"❌ Zomato Error - {store} - {e}")
 
     # =====================================
     # FINAL OUTPUT
