@@ -17,17 +17,21 @@ print("🚀 Script Started")
 API_KEY = os.environ["API_KEY"]
 SECRET_KEY = os.environ["SECRET_KEY"]
 
-
 def get_token():
+
     payload = {
         "iss": API_KEY,
         "iat": int(time.time())
     }
 
-    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
-
+    return jwt.encode(
+        payload,
+        SECRET_KEY,
+        algorithm="HS256"
+    )
 
 def headers():
+
     return {
         "x-api-key": API_KEY,
         "x-api-token": get_token(),
@@ -39,7 +43,9 @@ def headers():
 # =========================================
 
 creds = Credentials.from_service_account_info(
+
     json.loads(os.environ["GOOGLE_CREDENTIALS"]),
+
     scopes=[
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
@@ -48,7 +54,9 @@ creds = Credentials.from_service_account_info(
 
 client = gspread.authorize(creds)
 
-# ---------------- GOOGLE SHEET ---------------- #
+# =========================================
+# GOOGLE SHEET
+# =========================================
 
 spreadsheet = client.open_by_key(
     "19z6KkVBFoLC33_wcNqVhDLyQEC2dDQ8YQE0gE38BhVg"
@@ -56,31 +64,37 @@ spreadsheet = client.open_by_key(
 
 print("✅ Connected to Google Sheet")
 
-# ---------------- DATE ---------------- #
-
-from datetime import datetime, timedelta
+# =========================================
+# DATE
+# =========================================
 
 yesterday = (
     datetime.now() - timedelta(days=1)
 ).strftime("%Y-%m-%d")
 
+sheet_name = f"{yesterday}_sample"
+
 print("📅 Fetching Date:", yesterday)
 
-# ---------------- CREATE SHEET ---------------- #
+# =========================================
+# CREATE / OPEN SHEET
+# =========================================
 
 try:
-    ws = spreadsheet.worksheet(yesterday)
+
+    ws = spreadsheet.worksheet(sheet_name)
+
+    ws.clear()
 
 except:
+
     ws = spreadsheet.add_worksheet(
-        title=yesterday,
-        rows="500000",
-        cols="120"
+        title=sheet_name,
+        rows="500",
+        cols="200"
     )
 
-ws.clear()
-    
-print(f"✅ Worksheet Ready: {yesterday}")
+print(f"✅ Worksheet Ready: {sheet_name}")
 
 # =========================================
 # FETCH ACTIVE BRANCHES
@@ -88,99 +102,111 @@ print(f"✅ Worksheet Ready: {yesterday}")
 
 b_url = "https://api.ristaapps.com/v1/branch/list"
 
-b_resp = requests.get(b_url, headers=headers())
+b_resp = requests.get(
+    b_url,
+    headers=headers()
+)
 
 b_json = b_resp.json()
 
 if isinstance(b_json, dict):
+
     b_data = b_json.get("data", [])
+
 else:
+
     b_data = b_json
 
 branch_df = pd.DataFrame(b_data)
 
-branch_df = branch_df[branch_df["status"] == "Active"]
+branch_df = branch_df[
+    branch_df["status"] == "Active"
+]
 
 branches = branch_df["branchCode"].tolist()
 
 print("🏪 Active Branches:", len(branches))
 
 # =========================================
-# DATE
-# =========================================
-
-business_day = datetime.now() - timedelta(days=1)
-
-yesterday = business_day.strftime("%Y-%m-%d")
-
-print("📅 Fetching Date:", yesterday)
-
-# =========================================
-# FETCH SALES DATA
+# FETCH SALES PAGE SAMPLE
 # =========================================
 
 s_url = "https://api.ristaapps.com/v1/sales/page"
 
 sales_data = []
 
+total_rows = 0
+
 for branch in branches:
 
     print(f"Fetching: {branch}")
 
-    last_key = None
+    params = {
+        "branch": branch,
+        "day": yesterday
+    }
 
-    while True:
+    try:
 
-        params = {
-            "branch": branch,
-            "day": yesterday
-        }
+        response = requests.get(
+            s_url,
+            headers=headers(),
+            params=params,
+            timeout=60
+        )
 
-        if last_key:
-            params["lastKey"] = last_key
+        if response.status_code != 200:
 
-        try:
+            print(f"❌ Failed: {branch}")
 
-            response = requests.get(
-                s_url,
-                headers=headers(),
-                params=params,
-                timeout=60
-            )
+            continue
 
-            if response.status_code != 200:
-                print(f"❌ Failed {branch}")
-                break
+        js = response.json()
 
-            js = response.json()
+        data = js.get("data", [])
 
-            data = js.get("data", [])
+        if not data:
+            continue
 
-            if not data:
-                break
+        df = pd.json_normalize(data)
 
-            df = pd.json_normalize(data)
+        sales_data.append(df)
 
-            sales_data.append(df)
+        total_rows += len(df)
 
-            last_key = js.get("lastKey")
+        print(f"✅ Rows: {len(df)}")
 
-            if not last_key:
-                break
+        # =====================================
+        # ONLY 100 SAMPLE ROWS
+        # =====================================
 
-        except Exception as e:
-            print("❌ Error:", str(e))
+        if total_rows >= 100:
             break
 
+    except Exception as e:
+
+        print(f"❌ Error: {str(e)}")
+
 # =========================================
-# CONCAT RAW DATA
+# CONCAT
 # =========================================
 
 if not sales_data:
+
     print("❌ No data fetched")
+
     exit()
 
-sales_df = pd.concat(sales_data, ignore_index=True)
+sales_df = pd.concat(
+    sales_data,
+    ignore_index=True
+)
+
+# =========================================
+# LIMIT 100 ROWS
+# =========================================
+
+sales_df = sales_df.head(100)
 
 print("✅ Raw Rows:", len(sales_df))
 print("✅ Raw Columns:", len(sales_df.columns))
@@ -197,7 +223,9 @@ if "items" in sales_df.columns:
         exploded_df["items"]
     ).add_prefix("item_")
 
-    exploded_df = exploded_df.drop(columns=["items"])
+    exploded_df = exploded_df.drop(
+        columns=["items"]
+    )
 
     final_df = pd.concat(
         [
@@ -223,15 +251,16 @@ final_df = final_df.fillna("")
 final_df = final_df.astype(str)
 
 # =========================================
-# PUSH TO GOOGLE SHEET
+# PUSH TO SHEET
 # =========================================
 
-worksheet.update(
-    [final_df.columns.tolist()] + final_df.values.tolist(),
+ws.update(
+    [final_df.columns.tolist()] +
+    final_df.values.tolist(),
     value_input_option="USER_ENTERED"
 )
 
 print("✅ Data Uploaded Successfully")
-print("📄 Final Sheet URL:")
-print(spreadsheet.url)
 
+print("📄 Sheet URL:")
+print(spreadsheet.url)
