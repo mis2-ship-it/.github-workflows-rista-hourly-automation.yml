@@ -75,8 +75,10 @@ except:
     ws = spreadsheet.add_worksheet(
         title=yesterday,
         rows="500000",
-        cols="200"
+        cols="120"
     )
+
+ws.clear()
     
 print(f"✅ Worksheet Ready: {yesterday}")
 
