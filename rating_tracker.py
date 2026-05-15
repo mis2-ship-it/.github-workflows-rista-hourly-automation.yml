@@ -22,7 +22,7 @@ scope = [
 ]
 
 creds = ServiceAccountCredentials.from_json_keyfile_name(
-    "GOOGLE_SERVICE_ACCOUNT_JSON",
+    "service_account.json",
     scope
 )
 
