@@ -7,12 +7,6 @@ from datetime import datetime
 import re
 
 # =========================================
-# GOOGLE SHEET NAME
-# =========================================
-
-SHEET_NAME = "Live RID List"
-
-# =========================================
 # GOOGLE AUTH
 # =========================================
 
@@ -41,7 +35,7 @@ output_sheet = spreadsheet.worksheet("Rating_Output")
 
 raw_data = mapping_sheet.get("A:F")
 
-headers = raw_data[0]
+headers_row = raw_data[0]
 rows = raw_data[1:]
 
 mapping_data = []
@@ -56,13 +50,17 @@ for row in rows:
     while len(row) < 6:
         row.append("")
 
-    row_dict = dict(zip(headers, row))
+    row_dict = dict(zip(headers_row, row))
 
     # FILTER ONLY COCO
     if str(row_dict.get("Store Type", "")).strip().upper() == "COCO":
         mapping_data.append(row_dict)
 
 print(f"✅ COCO Stores Found: {len(mapping_data)}")
+
+# =========================================
+# HEADERS
+# =========================================
 
 headers = {
     "User-Agent": (
@@ -91,6 +89,7 @@ for row in mapping_data:
 
     brand = row.get("Brand Name", "")
     store = row.get("Store Name", "")
+    region = row.get("Region", "")
 
     # =====================================
     # SWIGGY FETCH
@@ -105,8 +104,8 @@ for row in mapping_data:
             f"https://www.swiggy.com/dapi/menu/pl?"
             f"page-type=REGULAR_MENU"
             f"&complete-menu=true"
-            f"&lat=15.3647"
-            f"&lng=75.1240"
+            f"&lat=12.9716"
+            f"&lng=77.5946"
             f"&restaurantId={s_rid}"
         )
 
@@ -119,24 +118,27 @@ for row in mapping_data:
         if response.status_code == 200:
 
             json_data = response.json()
-        
+
             cards = json_data.get("data", {}).get("cards", [])
-        
+
             info = None
-    
+
             for card in cards:
-            try:
-                info = card["card"]["card"]["info"]
-                break
-            except:
-                continue
+                try:
+                    info = card["card"]["card"]["info"]
+                    break
+                except:
+                    continue
 
             if info:
-    
+
                 s_rating = info.get("avgRating", "")
                 s_reviews = info.get("totalRatingsString", "")
-        
+
                 print(f"✅ Swiggy Done - {store}")
+
+            else:
+                print(f"❌ Swiggy Info Missing - {store}")
 
         else:
             print(
@@ -144,8 +146,8 @@ for row in mapping_data:
                 f"{store} - Status: {response.status_code}"
             )
 
-        except Exception as e:
-            print(f"❌ Swiggy Error - {store} - {e}")
+    except Exception as e:
+        print(f"❌ Swiggy Error - {store} - {e}")
 
     # =====================================
     # ZOMATO FETCH
@@ -156,39 +158,42 @@ for row in mapping_data:
 
     try:
 
-    zomato_url = f"https://www.zomato.com/restaurant/{z_rid}"
+        zomato_url = f"https://www.zomato.com/restaurant/{z_rid}"
 
-    response = requests.get(
-        zomato_url,
-        headers=headers,
-        timeout=20
-    )
+        response = requests.get(
+            zomato_url,
+            headers=headers,
+            timeout=20
+        )
 
-    soup = BeautifulSoup(
-        response.text,
-        "html.parser"
-    )
+        soup = BeautifulSoup(
+            response.text,
+            "html.parser"
+        )
 
-    page_text = soup.get_text(" ", strip=True)
+        page_text = soup.get_text(" ", strip=True)
 
-    rating_match = re.findall(r'\b\d\.\d\b', page_text)
+        rating_match = re.findall(
+            r'\b\d\.\d\b',
+            page_text
+        )
 
-    review_match = re.findall(
-        r'([\d\,]+)\s*reviews',
-        page_text,
-        re.IGNORECASE
-    )
+        review_match = re.findall(
+            r'([\d\,]+)\s*reviews',
+            page_text,
+            re.IGNORECASE
+        )
 
-    if rating_match:
-        z_rating = rating_match[0]
+        if rating_match:
+            z_rating = rating_match[0]
 
-    if review_match:
-        z_reviews = review_match[0]
+        if review_match:
+            z_reviews = review_match[0]
 
-    print(f"✅ Zomato Done - {store}")
+        print(f"✅ Zomato Done - {store}")
 
-except Exception as e:
-    print(f"❌ Zomato Error - {store} - {e}")
+    except Exception as e:
+        print(f"❌ Zomato Error - {store} - {e}")
 
     # =====================================
     # FINAL OUTPUT
@@ -198,6 +203,7 @@ except Exception as e:
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         brand,
         store,
+        region,
         s_rating,
         z_rating,
         s_reviews,
@@ -210,9 +216,13 @@ except Exception as e:
 
 if final_rows:
 
-    output_sheet.append_rows(
-        final_rows,
-        value_input_option="USER_ENTERED"
+    existing_data = output_sheet.get_all_values()
+
+    next_row = len(existing_data) + 1
+
+    output_sheet.update(
+        f"A{next_row}:H{next_row + len(final_rows) - 1}",
+        final_rows
     )
 
     print("✅ Google Sheet Updated")
