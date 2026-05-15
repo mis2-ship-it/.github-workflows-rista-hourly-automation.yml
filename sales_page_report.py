@@ -56,19 +56,28 @@ spreadsheet = client.open_by_key(
 
 print("✅ Connected to Google Sheet")
 
-# ---------------- WORKSHEET ---------------- #
+# ---------------- DATE ---------------- #
+
+from datetime import datetime, timedelta
+
+yesterday = (
+    datetime.now() - timedelta(days=1)
+).strftime("%Y-%m-%d")
+
+print("📅 Fetching Date:", yesterday)
+
+# ---------------- CREATE SHEET ---------------- #
 
 try:
     ws = spreadsheet.worksheet(yesterday)
-    ws.clear()
 
 except:
     ws = spreadsheet.add_worksheet(
         title=yesterday,
-        rows="50000",
+        rows="500000",
         cols="200"
     )
-
+    
 print(f"✅ Worksheet Ready: {yesterday}")
 
 # =========================================
