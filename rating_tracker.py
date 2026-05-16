@@ -118,34 +118,26 @@ for row in mapping_data:
         if response.status_code == 200:
 
             json_data = response.json()
-
-            cards = json_data.get("data", {}).get("cards", [])
-
-            info = None
-
-            for card in cards:
-                try:
-                    info = card["card"]["card"]["info"]
-                    break
-                except:
-                    continue
-
-            if info:
-
-                s_rating = info.get("avgRating", "")
-                s_reviews = info.get("totalRatingsString", "")
-
-                print(f"✅ Swiggy Done - {store}")
-
-            else:
-                print(f"❌ Swiggy Info Missing - {store}")
-
+        
+            info = (
+                json_data
+                .get("data", {})
+                .get("cards", [{}])[0]
+                .get("card", {})
+                .get("card", {})
+                .get("info", {})
+            )
+        
+            s_rating = info.get("avgRating", "")
+            s_reviews = info.get("totalRatingsString", "")
+        
+            print(f"✅ Swiggy Done - {store}")
+        
         else:
             print(
                 f"❌ Swiggy API Failed - "
                 f"{store} - Status: {response.status_code}"
             )
-
     except Exception as e:
         print(f"❌ Swiggy Error - {store} - {e}")
 
@@ -220,6 +212,15 @@ if final_rows:
 
     next_row = len(existing_data) + 1
 
+
+    required_rows = next_row + len(final_rows)
+
+    current_rows = output_sheet.row_count
+
+    if required_rows > current_rows:
+        output_sheet.add_rows(
+        required_rows - current_rows + 500
+    )
     output_sheet.update(
         f"A{next_row}:H{next_row + len(final_rows) - 1}",
         final_rows
