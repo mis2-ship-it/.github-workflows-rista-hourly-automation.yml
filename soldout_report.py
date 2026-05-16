@@ -432,7 +432,7 @@ def to_html(df):
 # =========================================================
 
 EMAIL_USER = os.environ["EMAIL_USER"]
-EMAIL_PASS = os.environ["EMAIL_PASS"]
+EMAIL_PASSWORD = os.environ["EMAIL_PASSWORD"]
 
 cc_mails = (
     help_df["CC Mail"]
@@ -483,7 +483,7 @@ server.starttls()
 
 server.login(
     EMAIL_USER,
-    EMAIL_PASS
+    EMAIL_PASSWORD
 )
 
 server.sendmail(
@@ -569,7 +569,7 @@ for store, sdf in grouped:
 
         server.login(
             EMAIL_USER,
-            EMAIL_PASS
+            EMAIL_PASSWORD
         )
 
         server.sendmail(
