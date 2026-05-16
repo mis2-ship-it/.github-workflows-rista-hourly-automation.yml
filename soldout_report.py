@@ -630,44 +630,17 @@ for sheet_name, df_sheet in summary_dict.items():
 # REFRESH ALL SHEETS
 # =========================================================
 
-        refresh_sheet("Raw_Data", final_df)
-        
-        refresh_sheet(
-            "Material_Summary",
-            material_summary
-        )
-        
-        refresh_sheet(
-            "Product_Summary",
-            product_summary
-        )
-        
-        refresh_sheet(
-            "Store_Summary",
-            store_summary
-        )
-        
-        refresh_sheet(
-            "Soldout_Report",
-            soldout_report
-        )
-        
-        refresh_sheet(
-            "Material_Report",
-            material_report
-        )
-        
-        refresh_sheet(
-            "Product_Report",
-            product_report
-        )
-        
-        refresh_sheet(
-            "Store_Report",
-            store_report
-        )
-        
-        print("✅ All Sheets Refreshed")
+refresh_sheet("Raw_Data", final_df)
+refresh_sheet("Material_Summary", material_summary)
+refresh_sheet("Product_Summary", product_summary)
+refresh_sheet("Store_Summary", store_summary)
+
+refresh_sheet("Soldout_Report", final_df)
+refresh_sheet("Material_Report", material_report)
+refresh_sheet("Product_Report", product_report)
+refresh_sheet("Store_Report", store_report)
+
+print("✅ Summary Sheets Pushed")
 
 # =========================================================
 # HTML FORMAT
