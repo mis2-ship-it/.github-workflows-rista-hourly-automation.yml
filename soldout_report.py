@@ -163,6 +163,9 @@ for branch in branches:
 
         df = pd.json_normalize(data)
 
+        # FORCE branchCode
+        df["branchCode"] = branch
+        
         all_data.append(df)
 
     except Exception as e:
