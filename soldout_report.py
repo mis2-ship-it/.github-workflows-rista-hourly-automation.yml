@@ -434,68 +434,81 @@ def to_html(df):
 EMAIL_USER = os.environ["EMAIL_USER"]
 EMAIL_PASSWORD = os.environ["EMAIL_PASSWORD"]
 
-cc_mails = (
-    help_df["CC Mail"]
-    .dropna()
-    .unique()
-    .tolist()
-)
+# -----------------------------------------
+# MULTIPLE CC MAIL SUPPORT
+# -----------------------------------------
 
-summary_html = f"""
+cc_mails = []
 
-<h2>📦 Material Soldout</h2>
+for emails in help_df["CC Mail"].dropna():
 
-{to_html(material_summary)}
+    split_mails = str(emails).split(",")
 
-<br><br>
+    cc_mails.extend(
+        [
+            x.strip()
+            for x in split_mails
+            if x.strip()
+        ]
+    )
 
-<h2>🍔 Product Soldout</h2>
-
-{to_html(product_summary)}
-
-<br><br>
-
-<h2>🏪 Store Wise Soldout</h2>
-
-{to_html(store_summary)}
-
-"""
-
-msg = MIMEMultipart()
-
-msg["From"] = EMAIL_USER
-msg["To"] = ", ".join(CC Mail)
-
-msg["Subject"] = (
-    f"📦 Soldout Summary - {business_day}"
-)
-
-msg.attach(
-    MIMEText(summary_html, "html")
-)
-
-server = smtplib.SMTP(
-    "smtp.gmail.com",
-    587
-)
-
-server.starttls()
-
-server.login(
-    EMAIL_USER,
-    EMAIL_PASSWORD
-)
-
-server.sendmail(
-    EMAIL_USER,
-    cc_mails,
-    msg.as_string()
-)
-
-server.quit()
-
-print("✅ Summary Mail Sent")
-
+    # remove duplicates
+    cc_mails = list(set(cc_mails))
+    
+    summary_html = f"""
+    
+    <h2>📦 Material Soldout</h2>
+    
+    {to_html(material_summary)}
+    
+    <br><br>
+    
+    <h2>🍔 Product Soldout</h2>
+    
+    {to_html(product_summary)}
+    
+    <br><br>
+    
+    <h2>🏪 Store Wise Soldout</h2>
+    
+    {to_html(store_summary)}
+    
+    """
+    
+    msg = MIMEMultipart()
+    
+    msg["From"] = EMAIL_USER
+    msg["To"] = ", ".join(cc_mails)
+    
+    msg["Subject"] = (
+        f"📦 Soldout Summary - {business_day}"
+    )
+    
+    msg.attach(
+        MIMEText(summary_html, "html")
+    )
+    
+    server = smtplib.SMTP(
+        "smtp.gmail.com",
+        587
+    )
+    
+    server.starttls()
+    
+    server.login(
+        EMAIL_USER,
+        EMAIL_PASSWORD
+    )
+    
+    server.sendmail(
+        EMAIL_USER,
+        cc_mails,
+        msg.as_string()
+    )
+    
+    server.quit()
+    
+    print("✅ Summary Mail Sent")
 # =========================================================
 # ALERT MAILS
 # =========================================================
