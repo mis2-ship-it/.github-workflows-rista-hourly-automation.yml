@@ -96,175 +96,168 @@ for row in mapping_data:
 
     z_rating = ""
     z_reviews = ""
+    z_status = ""
 
     # =====================================
-# SWIGGY FETCH
-# =====================================
+    # SWIGGY FETCH
+    # =====================================
 
-s_rating = ""
-s_reviews = ""
-s_status = ""
+    try:
 
-try:
-
-    swiggy_url = (
-        f"https://www.swiggy.com/dapi/menu/pl?"
-        f"page-type=REGULAR_MENU"
-        f"&complete-menu=true"
-        f"&lat=12.9716"
-        f"&lng=77.5946"
-        f"&restaurantId={s_rid}"
-        f"&submitAction=ENTER"
-    )
-
-    response = requests.get(
-        swiggy_url,
-        headers=headers_req,
-        timeout=30
-    )
-
-    if response.status_code == 200:
-
-        data = response.json()
-
-        cards = (
-            data.get("data", {})
-            .get("cards", [])
+        swiggy_url = (
+            f"https://www.swiggy.com/dapi/menu/pl?"
+            f"page-type=REGULAR_MENU"
+            f"&complete-menu=true"
+            f"&lat=12.9716"
+            f"&lng=77.5946"
+            f"&restaurantId={s_rid}"
+            f"&submitAction=ENTER"
         )
 
-        info = None
+        response = requests.get(
+            swiggy_url,
+            headers=headers_req,
+            timeout=30
+        )
 
-        for card in cards:
-            try:
-                info = (
-                    card["card"]
-                    ["card"]
-                    ["info"]
+        if response.status_code == 200:
+
+            data = response.json()
+
+            cards = (
+                data.get("data", {})
+                .get("cards", [])
+            )
+
+            info = None
+
+            for card in cards:
+                try:
+                    info = (
+                        card["card"]
+                        ["card"]
+                        ["info"]
+                    )
+                    break
+                except:
+                    continue
+
+            if info:
+
+                s_rating = info.get(
+                    "avgRating", ""
                 )
-                break
-            except:
-                continue
 
-        if info:
+                s_reviews = info.get(
+                    "totalRatingsString", ""
+                )
 
-            s_rating = info.get(
-                "avgRating", ""
+                availability = info.get(
+                    "availability", {}
+                )
+
+                opened = availability.get(
+                    "opened",
+                    False
+                )
+
+                s_status = (
+                    "Online"
+                    if opened
+                    else "Offline"
+                )
+
+                print(
+                    f"✅ Swiggy Done - "
+                    f"{store}"
+                )
+
+            else:
+                print(
+                    f"❌ Swiggy Info Missing - "
+                    f"{store}"
+                )
+
+        else:
+            print(
+                f"❌ Swiggy Failed - "
+                f"{store} - "
+                f"{response.status_code}"
             )
 
-            s_reviews = info.get(
-                "totalRatingsString", ""
+    except Exception as e:
+        print(
+            f"❌ Swiggy Error - "
+            f"{store} - {e}"
+        )
+
+    # =====================================
+    # ZOMATO FETCH
+    # =====================================
+
+    try:
+
+        zomato_url = (
+            f"https://www.zomato.com/"
+            f"webroutes/getPage?page_url="
+            f"/r/{z_rid}"
+        )
+
+        response = requests.get(
+            zomato_url,
+            headers=headers_req,
+            timeout=30
+        )
+
+        if response.status_code == 200:
+
+            html = response.text
+
+            rating_match = re.search(
+                r'"ratingV2":"([\d.]+)"',
+                html
             )
 
-            availability = info.get(
-                "availability", {}
+            if rating_match:
+                z_rating = rating_match.group(1)
+
+            review_match = re.search(
+                r'"reviewCount":"(\d+)"',
+                html
             )
 
-            opened = availability.get(
-                "opened",
-                False
-            )
+            if review_match:
+                z_reviews = review_match.group(1)
 
-            s_status = (
-                "Online"
-                if opened
-                else "Offline"
-            )
+            lower_html = html.lower()
+
+            if (
+                "currently not accepting orders"
+                in lower_html
+                or "temporarily closed"
+                in lower_html
+            ):
+                z_status = "Offline"
+            else:
+                z_status = "Online"
 
             print(
-                f"✅ Swiggy Done - "
+                f"✅ Zomato Done - "
                 f"{store}"
             )
 
         else:
             print(
-                f"❌ Swiggy Info Missing - "
-                f"{store}"
+                f"❌ Zomato Failed - "
+                f"{store} - "
+                f"{response.status_code}"
             )
 
-    else:
+    except Exception as e:
         print(
-            f"❌ Swiggy Failed - "
-            f"{store} - "
-            f"{response.status_code}"
+            f"❌ Zomato Error - "
+            f"{store} - {e}"
         )
-
-except Exception as e:
-    print(
-        f"❌ Swiggy Error - "
-        f"{store} - {e}"
-    )
-
-# =====================================
-# ZOMATO FETCH
-# =====================================
-
-z_rating = ""
-z_reviews = ""
-z_status = ""
-
-try:
-
-    zomato_url = (
-        f"https://www.zomato.com/"
-        f"webroutes/getPage?page_url="
-        f"/r/{z_rid}"
-    )
-
-    response = requests.get(
-        zomato_url,
-        headers=headers_req,
-        timeout=30
-    )
-
-    if response.status_code == 200:
-
-        html = response.text
-
-        rating_match = re.search(
-            r'"ratingV2":"([\d.]+)"',
-            html
-        )
-
-        if rating_match:
-            z_rating = rating_match.group(1)
-
-        review_match = re.search(
-            r'"reviewCount":"(\d+)"',
-            html
-        )
-
-        if review_match:
-            z_reviews = review_match.group(1)
-
-        lower_html = html.lower()
-
-        if (
-            "currently not accepting orders"
-            in lower_html
-            or "temporarily closed"
-            in lower_html
-        ):
-            z_status = "Offline"
-        else:
-            z_status = "Online"
-
-        print(
-            f"✅ Zomato Done - "
-            f"{store}"
-        )
-
-    else:
-        print(
-            f"❌ Zomato Failed - "
-            f"{store} - "
-            f"{response.status_code}"
-        )
-
-except Exception as e:
-    print(
-        f"❌ Zomato Error - "
-        f"{store} - {e}"
-    )
 
     # =====================================
     # FINAL OUTPUT
@@ -279,11 +272,10 @@ except Exception as e:
         s_reviews,
         z_reviews,
         s_status,
-        Z_status
+        z_status
     ])
-
 # =========================================
-# OUTPUT TO GSHEET
+# UPDATE GSHEET
 # =========================================
 
 headers_output = [[
@@ -294,17 +286,21 @@ headers_output = [[
     "Z_Rating",
     "S_Reviews",
     "Z_Reviews",
-    "Swiggy_Status"
+    "Swiggy_Status",
     "Zomato_Status"
 ]]
+
+print(f"Rows Prepared: {len(final_rows)}")
 
 # Clear old data
 output_sheet.clear()
 
-# Write fresh output
+# Write headers + data
+all_data = headers_output + final_rows
+
 output_sheet.update(
-    values=headers_output + final_rows,
-    range_name="A1:I"
+    range_name="A1:I",
+    values=all_data
 )
 
 print("✅ Google Sheet Updated")
