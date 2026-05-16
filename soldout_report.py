@@ -256,9 +256,9 @@ for branch in branches:
         )
 
 
-# =========================================================
+#=========================================================
 # CONCAT
-# =========================================================
+#=========================================================
 
 if len(all_data) == 0:
 
@@ -415,6 +415,37 @@ def get_or_create_sheet(sheet_name):
     ws.clear()
 
     return ws
+
+# =========================================================
+# REFRESH SHEET FUNCTION
+# =========================================================
+
+def refresh_sheet(sheet_name, df):
+
+    try:
+        ws = spreadsheet.worksheet(sheet_name)
+
+    except:
+        ws = spreadsheet.add_worksheet(
+            title=sheet_name,
+            rows="5000",
+            cols="200"
+        )
+
+    ws.clear()
+
+    if len(df) == 0:
+        ws.update([["No Data"]])
+        return
+
+    df = df.fillna("")
+
+    ws.update(
+        [df.columns.tolist()] + df.values.tolist(),
+        value_input_option="USER_ENTERED"
+    )
+
+    print(f"✅ Refreshed: {sheet_name}")
 
 
 # =========================================================
@@ -594,37 +625,6 @@ for sheet_name, df_sheet in summary_dict.items():
 
     print(f"✅ {sheet_name} Updated")
 
-# =========================================================
-# REFRESH SHEET FUNCTION
-# =========================================================
-
-def refresh_sheet(sheet_name, df):
-
-    try:
-        ws = spreadsheet.worksheet(sheet_name)
-
-    except:
-        ws = spreadsheet.add_worksheet(
-            title=sheet_name,
-            rows="5000",
-            cols="200"
-        )
-
-    ws.clear()
-
-    if len(df) == 0:
-        ws.update([["No Data"]])
-        return
-
-    df = df.fillna("")
-
-    ws.update(
-        [df.columns.tolist()] + df.values.tolist(),
-        value_input_option="USER_ENTERED"
-    )
-
-    print(f"✅ Refreshed: {sheet_name}")
-
 
 # =========================================================
 # REFRESH ALL SHEETS
@@ -782,144 +782,6 @@ def send_mail(to_list, subject, html_body):
         print(f"❌ Mail Failed: {str(e)}")
 
 
-# =========================================================
-# SUMMARY MAIL (ONLY ONCE)
-# =========================================================
-
-cc_mails = []
-
-for x in help_df["CC Mail"].dropna():
-
-    mails = str(x).split(",")
-
-    for m in mails:
-
-        m = m.strip()
-
-        if m:
-            cc_mails.append(m)
-
-cc_mails = list(set(cc_mails))
-
-
-summary_html = f"""
-
-<h2>Material Soldout - Region Wise</h2>
-
-{format_html_table(material_summary)}
-
-<br>
-
-<h2>Product Soldout - Region Wise</h2>
-
-{format_html_table(product_summary)}
-
-<br>
-
-<h2>Store Wise Soldout - Category Wise</h2>
-
-{format_html_table(store_summary)}
-
-"""
-
-send_mail(
-    cc_mails,
-    f"Soldout Summary - {business_day}",
-    summary_html
-)
-
-print("✅ Summary Mail Sent Once")
-
-
-# =========================================================
-# STORE ALERT MAIL
-# =========================================================
-
-for store in store_report["Store Name"].unique():
-
-    try:
-
-        temp = store_report[
-            store_report["Store Name"] == store
-        ]
-
-        if len(temp) == 0:
-            continue
-
-        am_mail = temp[
-            "AM Email"
-        ].iloc[0]
-
-        rm_mail = temp[
-            "RM Email"
-        ].iloc[0]
-
-        am_name = temp[
-            "AM Name"
-        ].iloc[0]
-
-        to_mails = []
-
-        for x in [am_mail, rm_mail]:
-
-            if str(x).strip():
-                to_mails.append(
-                    str(x).strip()
-                )
-
-        if len(to_mails) == 0:
-            continue
-
-        alert_df = temp[
-            [
-                "Store Name",
-                "itemType",
-                "categoryName",
-                "itemName",
-                "eventDate",
-                "userName"
-            ]
-        ].copy()
-
-        alert_df.columns = [
-            "Store Name",
-            "Item Type",
-            "Category",
-            "Item Name",
-            "Event Time",
-            "User Name"
-        ]
-
-        html_body = f"""
-
-        <p>
-        Hi {am_name},
-        </p>
-
-        <p>
-        Please check and reply what was
-        the reason for soldout immediately.
-        </p>
-
-        {format_html_table(alert_df)}
-
-        """
-
-        send_mail(
-            to_mails,
-            f"Soldout Alert - {store}",
-            html_body
-        )
-
-        print(f"✅ Alert Sent: {store}")
-
-    except Exception as e:
-
-        print(
-            f"❌ Alert Failed {store}: {str(e)}"
-        )
-
-print("🎉 SOLDOUT SCRIPT COMPLETED")
 
 # =========================================================
 # STEP 9 : SUMMARY MAIL
@@ -977,7 +839,7 @@ def style_html_table(df):
     )
 
 
-            summary_html = f"""
+summary_html = f"""
             <html>
             <body style="font-family:Arial;">
             
@@ -1122,7 +984,7 @@ for store in final_df["Store Name"].dropna().unique():
 
         # ---------------- DETAIL TABLE ---------------- #
 
-                store_html = store_df[
+        store_html = store_df[
             [
                 "Store Name",
                 "itemType",
@@ -1147,7 +1009,7 @@ for store in final_df["Store Name"].dropna().unique():
             .replace(0, "-")
         )
         
-        html_table = to_html(store_html)
+        html_table = style_html_table(store_html)
         
         body = f"""
         <html>
@@ -1186,7 +1048,7 @@ for store in final_df["Store Name"].dropna().unique():
         )
 
         msg.attach(
-            MIMEText(html, "html")
+            MIMEText(body, "html")
         )
 
         server = smtplib.SMTP(
