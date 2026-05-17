@@ -1202,6 +1202,12 @@ for store in (
                 str(e)
             )
 
+        except Exception as e:
+        
+            print(
+                f"❌ Alert Failed {store}: {str(e)}"
+            )
+
 
 
 print("🎉 SOLDOUT SCRIPT COMPLETED")
