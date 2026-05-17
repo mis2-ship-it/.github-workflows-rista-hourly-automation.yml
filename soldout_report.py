@@ -1170,6 +1170,10 @@ for store in (
 
         print(f"✅ Alert Sent: {store}")
 
+# =========================================================
+# SAVE SENT ALERTS
+# =========================================================
+
         try:
 
             ws = spreadsheet.worksheet(
