@@ -447,6 +447,46 @@ def refresh_sheet(sheet_name, df):
 
     print(f"✅ Refreshed: {sheet_name}")
 
+# =========================================================
+# ALERT TRACKING SHEET
+# =========================================================
+
+def get_sent_alerts():
+
+    try:
+
+        ws = spreadsheet.worksheet(
+            "Sent_Alerts"
+        )
+
+        df = pd.DataFrame(
+            ws.get_all_records()
+        )
+
+        return df
+
+    except:
+
+        ws = spreadsheet.add_worksheet(
+            title="Sent_Alerts",
+            rows=10000,
+            cols=20
+        )
+
+        ws.update(
+            "A1",
+            [[
+                "alert_key",
+                "sent_time"
+            ]]
+        )
+
+        return pd.DataFrame(
+            columns=[
+                "alert_key",
+                "sent_time"
+            ]
+        )
 
 # =========================================================
 # RAW DATA SHEET
@@ -950,12 +990,49 @@ except Exception as e:
 # STEP 10 : ALERT MAIL
 # =========================================================
 
-for store in final_df["Store Name"].dropna().unique():
+sent_df = get_sent_alerts()
+
+if sent_df.empty:
+
+    sent_keys = set()
+
+else:
+
+    sent_keys = set(
+        sent_df["alert_key"]
+        .astype(str)
+    )
+
+# unique soldout key
+final_df["alert_key"] = (
+    final_df["Store Name"].astype(str)
+    + "|"
+    + final_df["itemName"].astype(str)
+    + "|"
+    + final_df["eventBusinessDay"].astype(str)
+)
+
+# only new soldouts
+new_alert_df = final_df[
+    ~final_df["alert_key"]
+    .isin(sent_keys)
+].copy()
+
+print(
+    "🆕 New Soldout Count:",
+    len(new_alert_df)
+)
+
+for store in (
+    new_alert_df["Store Name"]
+    .dropna()
+    .unique()
+):
 
     try:
 
-        store_df = final_df[
-            final_df["Store Name"] == store
+        store_df = new_alert_df[
+            new_alert_df["Store Name"] == store
         ].copy()
 
         if store_df.empty:
@@ -982,9 +1059,6 @@ for store in final_df["Store Name"].dropna().unique():
             .iloc[0]
         )
 
-        if not am_email:
-            continue
-
         recipients = []
 
         for mail in [am_email, rm_email]:
@@ -998,7 +1072,12 @@ for store in final_df["Store Name"].dropna().unique():
                 if clean_mail:
                     recipients.append(clean_mail)
 
-        recipients = list(set(recipients))
+        recipients = list(
+            set(recipients)
+        )
+
+        if len(recipients) == 0:
+            continue
 
         # ---------------- DETAIL TABLE ---------------- #
 
@@ -1091,11 +1170,34 @@ for store in final_df["Store Name"].dropna().unique():
 
         print(f"✅ Alert Sent: {store}")
 
-    except Exception as e:
+        try:
 
-        print(
-            f"❌ Alert Failed {store}: {str(e)}"
-        )
+            ws = spreadsheet.worksheet(
+                "Sent_Alerts"
+            )
+        
+            alert_log = store_df[
+                ["alert_key"]
+            ].copy()
+        
+            alert_log["sent_time"] = (
+                datetime.now()
+                .strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
+            )
+        
+            ws.append_rows(
+                alert_log.values.tolist()
+            )
+        
+        except Exception as e:
+        
+            print(
+                "Tracking Save Failed:",
+                str(e)
+            )
+
 
 
 print("🎉 SOLDOUT SCRIPT COMPLETED")
