@@ -98,127 +98,110 @@ for row in mapping_data:
     z_reviews = ""
     z_status = ""
 
-    # =====================================
-    # SWIGGY FETCH
-    # =====================================
-    
-    try:
-    
-        swiggy_url = (
-            f"https://www.swiggy.com/restaurants/-{s_rid}"
-        )
-    
-        response = requests.get(
-            swiggy_url,
-            headers=headers_req,
-            timeout=30
-        )
-    
-        html = response.text
+# =====================================
+# SWIGGY FETCH
+# =====================================
 
-        if store == "Koramangala":
-            print("========== SWIGGY HTML ==========")
-            print(html[:5000])
-    
-        # Rating
-        rating_match = re.search(
-            r'"avgRating":"?([\d.]+)"?',
-            html
-        )
-    
-        if rating_match:
-            s_rating = rating_match.group(1)
-    
-        # Reviews
-        review_match = re.search(
-            r'"totalRatingsString":"([^"]+)"',
-            html
-        )
-    
-        if review_match:
-            s_reviews = review_match.group(1)
-    
-        # Status
-        lower_html = html.lower()
-    
-        if (
-            "not accepting orders"
-            in lower_html
-            or "temporarily closed"
-            in lower_html
-        ):
-            s_status = "Offline"
-        else:
-            s_status = "Online"
-    
-        print(f"✅ Swiggy Done - {store}")
-    
-    except Exception as e:
-        print(
-            f"❌ Swiggy Error - "
-            f"{store} - {e}"
-        )
+s_rating = ""
+s_reviews = ""
+s_status = ""
 
-    # =====================================
-    # ZOMATO FETCH
-    # =====================================
-    
-    try:
-    
-        zomato_url = (
-            f"https://www.zomato.com/r/{z_rid}"
-        )
-    
-        response = requests.get(
-            zomato_url,
-            headers=headers_req,
-            timeout=30
-        )
-    
-        html = response.text
+try:
 
-        if store == "Koramangala":
-            print("========== ZOMATO HTML ==========")
-            print(html[:5000])
-    
-        # Rating
-        rating_match = re.search(
-            r'"ratingValue":"([\d.]+)"',
-            html
-        )
-    
-        if rating_match:
-            z_rating = rating_match.group(1)
-    
-        # Reviews
-        review_match = re.search(
-            r'"reviewCount":"([\d,]+)"',
-            html
-        )
-    
-        if review_match:
-            z_reviews = review_match.group(1)
-    
-        # Status
-        lower_html = html.lower()
-    
-        if (
-            "temporarily closed"
-            in lower_html
-            or "currently not accepting orders"
-            in lower_html
-        ):
-            z_status = "Offline"
-        else:
-            z_status = "Online"
-    
-        print(f"✅ Zomato Done - {store}")
-    
-    except Exception as e:
-        print(
-            f"❌ Zomato Error - "
-            f"{store} - {e}"
-        )
+    swiggy_url = f"https://www.swiggy.com/restaurants/{s_rid}"
+
+    response = requests.get(
+        swiggy_url,
+        headers=headers_req,
+        timeout=30
+    )
+
+    html = response.text
+
+    # STATUS
+    if "restaurant unavailable" in html.lower():
+        s_status = "Offline"
+    else:
+        s_status = "Online"
+
+    # RATING
+    rating_match = re.search(
+        r'"avgRating":"?([\d.]+)"?',
+        html
+    )
+
+    if rating_match:
+        s_rating = rating_match.group(1)
+
+    # REVIEWS
+    review_match = re.search(
+        r'"totalRatingsString":"([^"]+)"',
+        html
+    )
+
+    if review_match:
+        s_reviews = review_match.group(1)
+
+    print(f"✅ Swiggy Done - {store}")
+
+except Exception as e:
+    print(f"❌ Swiggy Error - {store} - {e}")
+
+
+# =====================================
+# ZOMATO FETCH
+# =====================================
+
+z_rating = ""
+z_reviews = ""
+z_status = ""
+
+try:
+
+    zomato_url = f"https://www.zomato.com/r/{z_rid}"
+
+    response = requests.get(
+        zomato_url,
+        headers=headers_req,
+        timeout=30
+    )
+
+    html = response.text
+
+    # STATUS
+    lower_html = html.lower()
+
+    if (
+        "currently not accepting orders" in lower_html
+        or "temporarily closed" in lower_html
+        or "online ordering not available" in lower_html
+    ):
+        z_status = "Offline"
+    else:
+        z_status = "Online"
+
+    # RATING
+    rating_match = re.search(
+        r'"ratingV2":"([\d.]+)"',
+        html
+    )
+
+    if rating_match:
+        z_rating = rating_match.group(1)
+
+    # REVIEWS
+    review_match = re.search(
+        r'"reviewCount":"(\d+)"',
+        html
+    )
+
+    if review_match:
+        z_reviews = review_match.group(1)
+
+    print(f"✅ Zomato Done - {store}")
+
+except Exception as e:
+    print(f"❌ Zomato Error - {store} - {e}")
 
     # =====================================
     # FINAL OUTPUT
