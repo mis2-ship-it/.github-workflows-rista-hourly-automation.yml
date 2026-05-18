@@ -541,7 +541,8 @@ final_df["Region"] = (
 
 
 # =========================================================
-# MATERIAL SUMMARY
+# 📦 MATERIAL SOLDOUT - REGION WISE
+# Material Row | Region Column
 # =========================================================
 
 material_df = final_df[
@@ -550,60 +551,61 @@ material_df = final_df[
     == "MATERIAL"
 ].copy()
 
-material_summary = pd.pivot_table(
+material_region_summary = pd.pivot_table(
     material_df,
-    index="categoryName",
-    columns="Region",
-    values="itemName",
+    index="itemName",      # Material row
+    columns="Region",      # Region column
+    values="branchCode",
     aggfunc="count",
     fill_value=0
 ).reset_index()
 
+# Ensure all regions exist
 for col in ["KA", "MH", "TN", "KL"]:
 
-    if col not in material_summary.columns:
-        material_summary[col] = 0
+    if col not in material_region_summary.columns:
+        material_region_summary[col] = 0
 
-material_summary = material_summary[
-    ["categoryName", "KA", "MH", "TN", "KL"]
+material_region_summary = material_region_summary[
+    ["itemName", "KA", "MH", "TN", "KL"]
 ]
 
-material_summary = material_summary.replace(
-    0,
-    "-"
-)
-
-# =========================================================
-# 📦 STORE WISE SOLDOUT - MATERIAL WISE
-# =========================================================
-
-material_summary = final_df[
-    final_df["itemType"] == "Material"
-].copy()
-
-material_summary = (
-    material_summary.groupby(
-        ["Store Name", "itemName"],
-        as_index=False
-    )
-    .size()
-)
-
-material_summary.rename(
-    columns={
-        "itemName": "Material Name",
-        "size": "Soldout Count"
-    },
+material_region_summary.rename(
+    columns={"itemName": "Material"},
     inplace=True
 )
 
-material_summary = material_summary.sort_values(
-    ["Store Name", "Soldout Count"],
-    ascending=[True, False]
+material_region_summary = (
+    material_region_summary.replace(0, "-")
 )
 
+print("✅ Material Region Summary Created")
+
+
 # =========================================================
-# PRODUCT SUMMARY
+# 🏪 STORE WISE SOLDOUT - MATERIAL WISE
+# Store Row | Material Column
+# =========================================================
+
+store_material_summary = pd.pivot_table(
+    material_df,
+    index="Store Name",     # Store row
+    columns="itemName",     # Material column
+    values="branchCode",
+    aggfunc="count",
+    fill_value=0
+).reset_index()
+
+store_material_summary = (
+    store_material_summary.replace(0, "-")
+)
+
+print("✅ Store Material Summary Created")
+
+
+# =========================================================
+# 🍨 PRODUCT SOLDOUT - REGION WISE
+# Category Row | Region Column
 # =========================================================
 
 product_df = final_df[
@@ -630,14 +632,16 @@ product_summary = product_summary[
     ["categoryName", "KA", "MH", "TN", "KL"]
 ]
 
-product_summary = product_summary.replace(
-    0,
-    "-"
+product_summary = (
+    product_summary.replace(0, "-")
 )
+
+print("✅ Product Summary Created")
 
 
 # =========================================================
-# STORE SUMMARY
+# 🏪 STORE SUMMARY
+# Store Row | Category Column
 # =========================================================
 
 store_summary = pd.pivot_table(
@@ -649,37 +653,33 @@ store_summary = pd.pivot_table(
     fill_value=0
 ).reset_index()
 
-store_summary = store_summary.replace(
-    0,
-    "-"
+store_summary = (
+    store_summary.replace(0, "-")
 )
+
+print("✅ Store Summary Created")
+
 
 # =========================================================
 # REPORT TABLES
 # =========================================================
 
-material_report = final_df[
-    final_df["itemType"] == "Material"
-].copy()
+material_report = material_df.fillna("-")
+product_report = product_df.fillna("-")
+store_report = final_df.fillna("-")
 
-product_report = final_df[
-    final_df["itemType"] == "Product"
-].copy()
-
-store_report = final_df.copy()
-
-# Replace blanks
-material_report = material_report.fillna("-")
-product_report = product_report.fillna("-")
-store_report = store_report.fillna("-")
 
 # =========================================================
 # PUSH SUMMARY SHEETS
 # =========================================================
 
 summary_dict = {
-    "Material_Summary":
-        material_summary,
+
+    "Material_Region_Summary":
+        material_region_summary,
+
+    "Store_Material_Summary":
+        store_material_summary,
 
     "Product_Summary":
         product_summary,
@@ -688,39 +688,43 @@ summary_dict = {
         store_summary,
 
     "Material_Report":
-        material_df,
+        material_report,
 
     "Product_Report":
-        product_df,
+        product_report,
 
     "Store_Report":
-        final_df
+        store_report
 }
 
 for sheet_name, df_sheet in summary_dict.items():
 
-    ws = get_or_create_sheet(
-        sheet_name
-    )
+    ws = get_or_create_sheet(sheet_name)
+
+    ws.clear()
 
     ws.update(
         [df_sheet.columns.tolist()]
-        + df_sheet.astype(str)
-        .values.tolist()
+        + df_sheet.astype(str).values.tolist()
     )
 
     print(f"✅ {sheet_name} Updated")
 
 
 # =========================================================
-# REFRESH ALL SHEETS
+# REFRESH SHEETS
 # =========================================================
 
 refresh_sheet("Raw_Data", final_df)
 
 refresh_sheet(
-    "Material_Summary",
-    material_summary
+    "Material_Region_Summary",
+    material_region_summary
+)
+
+refresh_sheet(
+    "Store_Material_Summary",
+    store_material_summary
 )
 
 refresh_sheet(
@@ -930,7 +934,7 @@ summary_html = f"""
             <body style="font-family:Arial;">
             
             <h2>📦 Material Soldout _ Region Wise</h2>
-            {style_html_table(material_summary)}
+            {style_html_table(material_region_summary)}
             
             <br>
             
@@ -945,7 +949,7 @@ summary_html = f"""
             <br>
             
             <h2>🏪 Store Wise Soldout _ Material Wise</h2>
-            {style_html_table(material_summary)}
+            {style_html_table(store_material_summary)}
             
             <br>
             
