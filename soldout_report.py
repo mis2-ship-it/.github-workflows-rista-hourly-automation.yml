@@ -473,12 +473,9 @@ def get_sent_alerts():
             cols=20
         )
 
-        ws.update(
-            "A1",
-            [[
-                "alert_key",
-                "sent_time"
-            ]]
+         ws.update(
+            values=values,
+            range_name="A1"
         )
 
         return pd.DataFrame(
@@ -1002,6 +999,27 @@ else:
         sent_df["alert_key"]
         .astype(str)
     )
+
+# =====================================================
+# SAFE COLUMN FIX
+# =====================================================
+
+if "eventBusinessDay" not in final_df.columns:
+
+    if "invoiceDate" in final_df.columns:
+
+        final_df["invoiceDate"] = pd.to_datetime(
+            final_df["invoiceDate"],
+            errors="coerce"
+        )
+
+        final_df["eventBusinessDay"] = (
+            final_df["invoiceDate"].dt.date
+        )
+
+    else:
+
+        final_df["eventBusinessDay"] = business_day
 
 # unique soldout key
 final_df["alert_key"] = (
