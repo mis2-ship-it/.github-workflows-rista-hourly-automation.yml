@@ -473,9 +473,13 @@ def get_sent_alerts():
             cols=20
         )
 
-         ws.update(
-            values=values,
-            range_name="A1"
+        # Create Header Row
+        ws.update(
+            range_name="A1:B1",
+            values=[[
+                "alert_key",
+                "sent_time"
+            ]]
         )
 
         return pd.DataFrame(
@@ -484,7 +488,6 @@ def get_sent_alerts():
                 "sent_time"
             ]
         )
-
 # =========================================================
 # RAW DATA SHEET
 # =========================================================
