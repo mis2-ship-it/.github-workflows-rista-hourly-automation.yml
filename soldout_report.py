@@ -573,6 +573,34 @@ material_summary = material_summary.replace(
     "-"
 )
 
+# =========================================================
+# 📦 STORE WISE SOLDOUT - MATERIAL WISE
+# =========================================================
+
+material_summary = soldout_df[
+    soldout_df["Item Type"] == "Material"
+].copy()
+
+material_summary = (
+    material_summary.groupby(
+        ["Store Name", "itemName"],
+        as_index=False
+    )
+    .size()
+)
+
+material_summary.rename(
+    columns={
+        "itemName": "Material Name",
+        "size": "Soldout Count"
+    },
+    inplace=True
+)
+
+material_summary = material_summary.sort_values(
+    ["Store Name", "Soldout Count"],
+    ascending=[True, False]
+)
 
 # =========================================================
 # PRODUCT SUMMARY
@@ -913,6 +941,11 @@ summary_html = f"""
             
             <h2>🏪 Store Wise Soldout _ Category Wise</h2>
             {style_html_table(store_summary)}
+
+            <br>
+            
+            <h2>🏪 Store Wise Soldout _ Material Wise</h2>
+            {style_html_table(material_summary)}
             
             <br>
             
