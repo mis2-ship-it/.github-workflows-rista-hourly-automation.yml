@@ -1070,7 +1070,9 @@ for store in (
                 clean_mail = m.strip()
 
                 if clean_mail:
-                    recipients.append(clean_mail)
+                    recipients.append(
+                        clean_mail
+                    )
 
         recipients = list(
             set(recipients)
@@ -1091,7 +1093,7 @@ for store in (
                 "userName"
             ]
         ].copy()
-        
+
         store_html.columns = [
             "Store Name",
             "Item Type",
@@ -1100,36 +1102,38 @@ for store in (
             "Event Time",
             "User Name"
         ]
-        
+
         store_html = (
             store_html.fillna("-")
             .replace(0, "-")
         )
-        
-        html_table = style_html_table(store_html)
-        
+
+        html_table = style_html_table(
+            store_html
+        )
+
         body = f"""
         <html>
         <body>
-        
+
         <p>
         Hi {am_name},
         </p>
-        
+
         <p>
         Please check below soldout items and
         reply immediately with reason for soldout.
         </p>
-        
+
         {html_table}
-        
+
         <br>
-        
+
         <p>
         Regards,<br>
         MIS Team
         </p>
-        
+
         </body>
         </html>
         """
@@ -1138,7 +1142,9 @@ for store in (
 
         msg["From"] = EMAIL_USER
 
-        msg["To"] = ", ".join(recipients)
+        msg["To"] = ", ".join(
+            recipients
+        )
 
         msg["Subject"] = (
             f"🚨 Soldout Alert - {store}"
@@ -1168,48 +1174,52 @@ for store in (
 
         server.quit()
 
-        print(f"✅ Alert Sent: {store}")
+        print(
+            f"✅ Alert Sent: {store}"
+        )
 
-# =========================================================
-# SAVE SENT ALERTS
-# =========================================================
+        # =================================================
+        # SAVE SENT ALERTS
+        # =================================================
 
         try:
 
             ws = spreadsheet.worksheet(
                 "Sent_Alerts"
             )
-        
+
             alert_log = store_df[
                 ["alert_key"]
             ].copy()
-        
+
             alert_log["sent_time"] = (
                 datetime.now()
                 .strftime(
                     "%Y-%m-%d %H:%M:%S"
                 )
             )
-        
+
             ws.append_rows(
                 alert_log.values.tolist()
             )
-        
-        except Exception as e:
-        
+
             print(
-                "Tracking Save Failed:",
+                f"📝 Alert Saved: {store}"
+            )
+
+        except Exception as e:
+
+            print(
+                "❌ Tracking Save Failed:",
                 str(e)
             )
 
-        except Exception as e:
-        
-            print(
-                f"❌ Alert Failed {store}: {str(e)}"
-            )
+    except Exception as e:
 
+        print(
+            f"❌ Alert Failed {store}: {str(e)}"
+        )
 
 
 print("🎉 SOLDOUT SCRIPT COMPLETED")
-
 
