@@ -115,6 +115,10 @@ for row in mapping_data:
         )
     
         html = response.text
+
+        if store == "Koramangala":
+            print("========== SWIGGY HTML ==========")
+            print(html[:5000])
     
         # Rating
         rating_match = re.search(
@@ -172,6 +176,10 @@ for row in mapping_data:
         )
     
         html = response.text
+
+        if store == "Koramangala":
+            print("========== ZOMATO HTML ==========")
+            print(html[:5000])
     
         # Rating
         rating_match = re.search(
