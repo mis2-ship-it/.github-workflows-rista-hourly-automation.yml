@@ -578,7 +578,7 @@ material_summary = material_summary.replace(
 # =========================================================
 
 material_summary = final_df[
-    final_df["Item Type"] == "Material"
+    final_df["itemType"] == "Material"
 ].copy()
 
 material_summary = (
@@ -1150,7 +1150,7 @@ for store in (
 
         store_html.columns = [
             "Store Name",
-            "Item Type",
+            "itemType",
             "Category",
             "Item Name",
             "Event Time",
