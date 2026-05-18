@@ -577,8 +577,8 @@ material_summary = material_summary.replace(
 # 📦 STORE WISE SOLDOUT - MATERIAL WISE
 # =========================================================
 
-material_summary = soldout_df[
-    soldout_df["Item Type"] == "Material"
+material_summary = final_df[
+    final_df["Item Type"] == "Material"
 ].copy()
 
 material_summary = (
