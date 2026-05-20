@@ -547,7 +547,7 @@ return final_df
     # REQUIRED OUTPUT COLUMNS
     # =====================================================
 
-    required_columns = {
+required_columns = {
 
         "branchName": "Store Name",
         "branchCode": "Store Code",
@@ -576,7 +576,7 @@ return final_df
         "item_quantity": "Qty",
         "item_unitPrice": "Unit Price",
         "item_discounts": "Swiggy Discount Code"
-    }
+}
 
     # add missing columns
     for col in required_columns.keys():
