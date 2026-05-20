@@ -162,7 +162,7 @@ else:
 
 clean_headers = []
 
-for i, h in enumerate(raw_headers):
+for i, h in enumerate(clean_headers):
     h = str(h).strip()
 
     if h == "" or h.lower() == "nan":
