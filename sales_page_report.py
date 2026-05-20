@@ -147,36 +147,32 @@ help_ws = spreadsheet.worksheet("Help Sheet")
 
 help_data = help_ws.get("A:H")
 
-# Remove fully empty rows
-help_data = [row for row in help_data if any(row)]
-
-if len(help_data) < 2:
+if not help_data:
     help_df = pd.DataFrame()
+
 else:
 
-    clean_headers = help_data[0]
+    # find first NON-empty row as header
+    clean_headers = None
 
-    # FIX: ensure headers are not empty
-    if not any(clean_headers):
-        print("❌ Help Sheet headers are empty")
-        print("Check Row 1 in Help Sheet")
+    for row in help_data:
+        if any(str(x).strip() for x in row):
+            clean_headers = row
+            break
+
+    if not clean_headers:
         help_df = pd.DataFrame()
     else:
 
+        # normalize header length vs row length
+        max_len = max(len(r) for r in help_data)
+
+        clean_headers = clean_headers + [""] * (max_len - len(clean_headers))
+
         rows = help_data[1:]
 
-        # FIX: normalize row length
-        max_len = len(clean_headers)
-
-        fixed_rows = [
-            r[:max_len] + [""] * (max_len - len(r))
-            for r in rows
-        ]
-
-        help_df = pd.DataFrame(
-            fixed_rows,
-            columns=clean_headers
-        )
+        help_df = pd.DataFrame(rows, columns=clean_headers)
+        
 # =========================================================
 # STEP 2: CLEAN HEADERS (ADD HERE)
 # =========================================================
