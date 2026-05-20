@@ -388,99 +388,107 @@ def process_sales_data(df):
         len(final_df)
     )
 
-    # =====================================================
-    # TIME FORMAT
-    # =====================================================
+# =====================================================
+# TIME FORMAT
+# =====================================================
 
-    def get_time(x):
+def get_time(x):
 
-        try:
+    try:
 
-            if pd.isna(x) or x == "":
-                return ""
-
-            return pd.to_datetime(
-                x
-            ).strftime("%H:%M:%S")
-
-        except:
-
+        if pd.isna(x) or x == "":
             return ""
 
-    # =====================================================
-    # CREATE TIME COLUMNS
-    # =====================================================
+        return pd.to_datetime(
+            x
+        ).strftime("%H:%M:%S")
 
-    final_df["Order Time"] = (
-        final_df["invoiceDate"]
-        .apply(get_time)
-    )
+    except:
 
-    final_df["Order Ready Time"] = (
-        final_df["orderReadyTimestamp"]
-        .apply(get_time)
-    )
+        return ""
 
-    final_df["Delivery Time"] = (
-        final_df[
-            "delivery.deliveryDate"
-        ].apply(get_time)
-    )
+# =====================================================
+# CREATE TIME COLUMNS
+# =====================================================
 
-    # =====================================================
-    # KPT & O2D
-    # =====================================================
+# Order Time = invoiceDate
+final_df["Order Time"] = (
+    final_df["invoiceDate"]
+    .apply(get_time)
+)
 
-    def calculate_minutes(start, end):
+# Delivery Time = orderReadyTimestamp
+final_df["Delivery Time"] = (
+    final_df["orderReadyTimestamp"]
+    .apply(get_time)
+)
 
-        try:
+# Order Ready Time = delivery.deliveryDate
+final_df["Order Ready Time"] = (
+    final_df[
+        "delivery.deliveryDate"
+    ].apply(get_time)
+)
 
-            if (
-                start == ""
-                or end == ""
-            ):
-                return ""
+# =====================================================
+# KPT & O2D
+# =====================================================
 
-            start_dt = pd.to_datetime(
-                start
-            )
+def calculate_minutes(start, end):
 
-            end_dt = pd.to_datetime(
-                end
-            )
+    try:
 
-            return round(
+        if (
+            pd.isna(start)
+            or pd.isna(end)
+            or start == ""
+            or end == ""
+        ):
+            return ""
+
+        start_dt = pd.to_datetime(
+            start
+        )
+
+        end_dt = pd.to_datetime(
+            end
+        )
+
+        return int(
+            round(
                 (
                     end_dt - start_dt
-                ).total_seconds() / 60,
-                0
+                ).total_seconds() / 60
             )
+        )
 
-        except:
+    except:
 
-            return ""
+        return ""
 
-    final_df["KPT (Mins)"] = final_df.apply(
+# KPT = Order → Delivery
+final_df["KPT (Mins)"] = final_df.apply(
 
-        lambda x: calculate_minutes(
-            x["invoiceDate"],
-            x["orderReadyTimestamp"]
-        ),
+    lambda x: calculate_minutes(
+        x["invoiceDate"],
+        x["orderReadyTimestamp"]
+    ),
 
-        axis=1
-    )
+    axis=1
+)
 
-    final_df["O2D (Mins)"] = final_df.apply(
+# O2D = Order → Ready
+final_df["O2D (Mins)"] = final_df.apply(
 
-        lambda x: calculate_minutes(
-            x["invoiceDate"],
-            x[
-                "delivery.deliveryDate"
-            ]
-        ),
+    lambda x: calculate_minutes(
+        x["invoiceDate"],
+        x[
+            "delivery.deliveryDate"
+        ]
+    ),
 
-        axis=1
-    )
+    axis=1
+)
 
     # =====================================================
     # REQUIRED COLUMNS
