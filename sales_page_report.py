@@ -459,7 +459,7 @@ def process_sales_data(df):
                 end
             )
 
-            return int(
+            mins int(
                 round(
                     (
                         end_dt - start_dt
@@ -471,7 +471,7 @@ def process_sales_data(df):
 
             return ""
 
-    # KPT = Order → Delivery
+    # KPT = Order → Ready
     final_df["KPT (Mins)"] = (
         final_df.apply(
 
@@ -485,7 +485,7 @@ def process_sales_data(df):
         )
     )
 
-    # O2D = Order → Ready
+    # O2D = Order → Delivery
     final_df["O2D (Mins)"] = (
         final_df.apply(
 
