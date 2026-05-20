@@ -417,16 +417,16 @@ def process_sales_data(df):
         .apply(get_time)
     )
 
-    # Delivery Time = orderReadyTimestamp
+    # Delivery Time = delivery.deliveryDate
     final_df["Delivery Time"] = (
-        final_df["orderReadyTimestamp"]
+        final_df["delivery.deliveryDate"]
         .apply(get_time)
     )
 
-    # Order Ready Time = delivery.deliveryDate
+    # Order Ready Time = orderReadyTimestamp
     final_df["Order Ready Time"] = (
         final_df[
-            "delivery.deliveryDate"
+            "orderReadyTimestamp"
         ].apply(get_time)
     )
 
