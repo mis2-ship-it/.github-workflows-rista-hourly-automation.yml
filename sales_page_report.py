@@ -139,55 +139,55 @@ def refresh_sheet(sheet_name, df):
         f"{sheet_name}"
     )
 
-# =========================================================
-# HELP SHEET
-# =========================================================
-
 help_ws = spreadsheet.worksheet("Help Sheet")
 
 help_data = help_ws.get("A:H")
 
-if not help_data:
+if not help_data or len(help_data) == 0:
     help_df = pd.DataFrame()
 
 else:
 
-    # find first NON-empty row as header
-    clean_headers = None
+    # remove fully empty rows
+    help_data = [
+        row for row in help_data
+        if any(str(x).strip() for x in row)
+    ]
 
-    for row in help_data:
-        if any(str(x).strip() for x in row):
-            clean_headers = row
-            break
-
-    if not clean_headers:
+    if len(help_data) == 0:
         help_df = pd.DataFrame()
+
     else:
 
-        # normalize header length vs row length
-        max_len = max(len(r) for r in help_data)
+        # FIRST ROW = HEADERS
+        raw_headers = help_data[0]
 
-        clean_headers = clean_headers + [""] * (max_len - len(clean_headers))
-
+        # remaining rows
         rows = help_data[1:]
 
-        help_df = pd.DataFrame(rows, columns=clean_headers)
-        
-# =========================================================
-# STEP 2: CLEAN HEADERS (ADD HERE)
-# =========================================================
+        # normalize header length
+        max_len = max(len(r) for r in help_data)
 
-clean_headers = []
+        raw_headers = list(raw_headers) + [""] * (max_len - len(raw_headers))
 
-for i, h in enumerate(clean_headers):
-    h = str(h).strip()
+        # clean headers safely
+        clean_headers = []
 
-    if h == "" or h.lower() == "nan":
-        h = f"col_{i}"
+        for i, h in enumerate(raw_headers):
+            h = str(h).strip()
 
-    clean_headers.append(h)
+            if h == "" or h.lower() == "nan":
+                h = f"col_{i}"
 
-help_df = pd.DataFrame(rows, columns=clean_headers)
+            clean_headers.append(h)
+
+        # normalize row length
+        fixed_rows = [
+            r + [""] * (len(clean_headers) - len(r))
+            for r in rows
+        ]
+
+        help_df = pd.DataFrame(fixed_rows, columns=clean_headers)
 
 
 help_df.columns = (
