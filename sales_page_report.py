@@ -546,28 +546,28 @@ for col in required_columns.keys():
 
         final_df[col] = ""
 
-# keep only required columns
-output_df = final_df[
-    list(required_columns.keys())
-].copy()
+    # keep only required columns
+    output_df = final_df[
+        list(required_columns.keys())
+    ].copy()
+    
+    # rename columns
+    output_df.rename(
+        columns=required_columns,
+        inplace=True
+    )
+    
+    output_df = (
+        output_df.fillna("")
+        .astype(str)
+    )
+    
+    print(
+        "✅ Final Output Rows:",
+        len(output_df)
+    )
 
-# rename columns
-output_df.rename(
-    columns=required_columns,
-    inplace=True
-)
-
-output_df = (
-    output_df.fillna("")
-    .astype(str)
-)
-
-print(
-    "✅ Final Output Rows:",
-    len(output_df)
-)
-
-    return output_df
+        return output_df
 
 # =========================================================
 # PROCESS TODAY
