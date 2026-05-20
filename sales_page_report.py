@@ -427,7 +427,7 @@ def process_sales_data(df):
     # Delivery Time = delivery.deliveryDate
     final_df["Delivery Time"] = (
         final_df[
-            "delivery.deliveryDate"
+            "modifiedDate"
         ].apply(get_time)
     )
 
@@ -494,7 +494,7 @@ def process_sales_data(df):
             calculate_minutes(
                 x["invoiceDate"],
                 x[
-                    "delivery.deliveryDate"
+                    "modifiedDate"
                 ]
             ),
 
