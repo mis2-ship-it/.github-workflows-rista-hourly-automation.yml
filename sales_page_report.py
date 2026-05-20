@@ -417,18 +417,20 @@ def process_sales_data(df):
         .apply(get_time)
     )
 
-    # Delivery Time = delivery.deliveryDate
-    final_df["Delivery Time"] = (
-        final_df["delivery.deliveryDate"]
-        .apply(get_time)
-    )
-
     # Order Ready Time = orderReadyTimestamp
     final_df["Order Ready Time"] = (
         final_df[
             "orderReadyTimestamp"
         ].apply(get_time)
     )
+
+    # Delivery Time = delivery.deliveryDate
+    final_df["Delivery Time"] = (
+        final_df["delivery.deliveryDate"]
+        .apply(get_time)
+    )
+
+
 
     # =====================================================
     # KPT & O2D
