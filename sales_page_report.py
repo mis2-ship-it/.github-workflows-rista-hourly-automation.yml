@@ -155,23 +155,45 @@ else:
     headers = help_data[0]
     rows = help_data[1:]
     help_df = pd.DataFrame(rows, columns=headers)
-    
+
 # =========================================================
-# REQUIRED COLUMNS
+# STEP 2: CLEAN HEADERS (ADD HERE)
 # =========================================================
 
+clean_headers = []
+
+for i, h in enumerate(raw_headers):
+    h = str(h).strip()
+
+    if h == "" or h.lower() == "nan":
+        h = f"col_{i}"
+
+    clean_headers.append(h)
+
+help_df = pd.DataFrame(rows, columns=clean_headers)
+
+
+help_df.columns = (
+    help_df.columns
+    .str.strip()
+    .str.replace(" ", "")
+    .str.lower()
+)
+    
 required_cols = [
-    "branchCode",
-    "Ownership"
+    "branchcode",
+    "ownership",
+    "storename",
+    "amemail",
+    "rmemail",
+    "ccmail",
+    "region"
 ]
 
 for c in required_cols:
-
     if c not in help_df.columns:
-
         help_df[c] = ""
-
-
+        
 # =========================================================
 # FILTER COCO ONLY
 # =========================================================
@@ -182,6 +204,15 @@ help_df = help_df[
     .str.upper()
     == "COCO"
 ]
+
+help_df.rename(columns={
+    "branchcode": "branchCode",
+    "storename": "Store Name",
+    "amemail": "AM Email",
+    "rmemail": "RM Email",
+    "ccmail": "CC Mail",
+    "region": "Region"
+}, inplace=True)
 
 # =========================================================
 # BRANCH LIST FROM HELP SHEET
@@ -620,21 +651,23 @@ help_merge["branchCode"] = (
 )
 
 # =========================================================
-# MERGE TODAY DATA
+# MERGE TODAY DATA (FIXED)
 # =========================================================
 
-today_df["Store Code"] = (
-    today_df["Store Code"]
+# standardize Rista column → branchCode
+today_df.rename(columns={
+    "Store Code": "branchCode"
+}, inplace=True)
+
+today_df["branchCode"] = (
+    today_df["branchCode"]
     .astype(str)
     .str.strip()
 )
 
 today_df = today_df.merge(
-
     help_merge,
-
-    left_on="Store Code",
-    right_on="branchCode",
+    on="branchCode",
     how="left"
 )
 
@@ -1370,9 +1403,7 @@ MIS Team
 
 cc_mails = []
 
-for x in help_df[
-    "CC Mail"
-].dropna():
+for x in help_df["CC Mail"].dropna():
 
     mails = str(x).split(",")
 
@@ -1384,35 +1415,42 @@ for x in help_df[
 
             cc_mails.append(m)
 
-cc_mails = list(
-    set(cc_mails)
-)
+cc_mails = list(set(cc_mails))
 
-print(
-    "📧 CC Mail Count:",
-    len(cc_mails)
-)
+print("📧 CC Mail Count:", len(cc_mails))
+
+
+# =========================================================
+# TO MAILS (FIXED - MUST BE OUTSIDE msg block)
+# =========================================================
+
+to_mails = list(set(
+    help_df["AM Email"]
+    .dropna()
+    .astype(str)
+    .str.strip()
+    .tolist()
+))
+
+print("📧 TO Mail Count:", len(to_mails))
+
+
+# =========================================================
+# EMAIL SEND
+# =========================================================
 
 try:
 
     msg = MIMEMultipart()
 
     msg["From"] = EMAIL_USER
+    msg["To"] = ", ".join(to_mails)
+    msg["Cc"] = ", ".join(cc_mails)
 
-    msg["To"] = ", ".join(
-        cc_mails
-    )
-
-    msg["Subject"] = (
-        f"KPT Dashboard - "
-        f"{today_date}"
-    )
+    msg["Subject"] = f"KPT Dashboard - {today_date}"
 
     msg.attach(
-        MIMEText(
-            summary_html,
-            "html"
-        )
+        MIMEText(summary_html, "html")
     )
 
     server = smtplib.SMTP(
@@ -1427,51 +1465,19 @@ try:
         EMAIL_PASSWORD
     )
 
+    # IMPORTANT: send TO + CC together
+    all_recipients = to_mails + cc_mails
+
     server.sendmail(
-
         EMAIL_USER,
-
-        cc_mails,
-
+        all_recipients,
         msg.as_string()
     )
 
     server.quit()
 
-    print(
-        "✅ Summary Mail Sent"
-    )
+    print("✅ Summary Mail Sent")
 
 except Exception as e:
 
-    print(
-        "❌ Summary Mail Failed:",
-        str(e)
-    )
-# =========================================================
-# PUSH TO GOOGLE SHEETS
-# =========================================================
-
-refresh_sheet(
-    "Today_Data",
-    today_df
-)
-
-refresh_sheet(
-    "LW_Data",
-    lw_df
-)
-
-# =========================================================
-# COMPLETED
-# =========================================================
-
-print("🎉 SALES SCRIPT COMPLETED")
-
-print(
-    "✅ Today_Data Refreshed"
-)
-
-print(
-    "✅ LW_Data Refreshed"
-)
+    print("❌ Summary Mail Failed:", str(e))
