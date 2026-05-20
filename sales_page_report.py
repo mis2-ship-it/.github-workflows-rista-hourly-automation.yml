@@ -490,9 +490,6 @@ final_df["O2D (Mins)"] = final_df.apply(
     axis=1
 )
 
-    # =====================================================
-    # REQUIRED COLUMNS
-    # =====================================================
 
 # =====================================================
 # REQUIRED OUTPUT COLUMNS
@@ -539,20 +536,12 @@ final_df = final_df[
     required_columns
 ].copy()
 
-    final_df = final_df[
-        list(
-            available_cols.keys()
-        )
-    ].rename(
-        columns=available_cols
-    )
+print(
+    "✅ Final Columns:",
+    len(final_df.columns)
+)
 
-    final_df = (
-        final_df.fillna("")
-        .astype(str)
-    )
-
-    return final_df
+return final_df
 
     # =====================================================
     # SELECT REQUIRED COLUMNS
