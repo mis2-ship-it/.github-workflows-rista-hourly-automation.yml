@@ -319,7 +319,6 @@ lw_raw = fetch_sales_data(
 def process_sales_data(df):
 
     if df.empty:
-
         return pd.DataFrame()
 
     # =====================================================
@@ -361,33 +360,34 @@ def process_sales_data(df):
         len(final_df)
     )
 
-# =====================================================
-# CHANNEL FILTER
-# =====================================================
+    # =====================================================
+    # CHANNEL FILTER
+    # =====================================================
 
-allowed_channels = [
+    allowed_channels = [
 
-    "Zomato Boba Bar",
-    "Zomato Frozen Bottle",
-    "Zomato Madno",
-    "Zomato Lubov",
+        "Zomato Boba Bar",
+        "Zomato Frozen Bottle",
+        "Zomato Madno",
+        "Zomato Lubov",
 
-    "Swiggy Frozen Bottle",
-    "Swiggy Boba Bar",
-    "Swiggy Madno",
-    "Swiggy Lubov"
-]
+        "Swiggy Frozen Bottle",
+        "Swiggy Boba Bar",
+        "Swiggy Madno",
+        "Swiggy Lubov"
+    ]
 
-final_df = final_df[
-    final_df["channel"]
-    .astype(str)
-    .isin(allowed_channels)
-].copy()
+    final_df = final_df[
+        final_df["channel"]
+        .astype(str)
+        .isin(allowed_channels)
+    ].copy()
 
-print(
-    "✅ Filtered Channels Rows:",
-    len(final_df)
-)
+    print(
+        "✅ Channel Filter Rows:",
+        len(final_df)
+    )
+
     # =====================================================
     # TIME FORMAT
     # =====================================================
@@ -408,61 +408,6 @@ print(
             return ""
 
     # =====================================================
-    # KPT (ORDER READY - ORDER TIME)
-    # =====================================================
-
-    def calculate_kpt(row):
-
-        try:
-
-            order_time = pd.to_datetime(
-                row["invoiceDate"]
-            )
-
-            ready_time = pd.to_datetime(
-                row["orderReadyTimestamp"]
-            )
-
-            mins = (
-                ready_time
-                - order_time
-            ).total_seconds() / 60
-
-            return round(mins, 0)
-
-        except:
-
-            return ""
-
-    # =====================================================
-    # O2D
-    # DELIVERY TIME - ORDER TIME
-    # =====================================================
-
-    def calculate_o2d(row):
-
-        try:
-
-            order_time = pd.to_datetime(
-                row["invoiceDate"]
-            )
-
-            delivery_time = pd.to_datetime(
-                row["delivery.deliveryDate"]
-            )
-
-            mins = (
-                delivery_time
-                - order_time
-            ).total_seconds() / 60
-
-            return round(mins, 0)
-
-        except:
-
-            return ""
-
-    # =====================================================
     # CREATE TIME COLUMNS
     # =====================================================
 
@@ -472,9 +417,8 @@ print(
     )
 
     final_df["Order Ready Time"] = (
-        final_df[
-            "orderReadyTimestamp"
-        ].apply(get_time)
+        final_df["orderReadyTimestamp"]
+        .apply(get_time)
     )
 
     final_df["Delivery Time"] = (
@@ -483,18 +427,59 @@ print(
         ].apply(get_time)
     )
 
-    final_df["KPT (Mins)"] = (
-        final_df.apply(
-            calculate_kpt,
-            axis=1
-        )
+    # =====================================================
+    # KPT & O2D
+    # =====================================================
+
+    def calculate_minutes(start, end):
+
+        try:
+
+            if (
+                start == ""
+                or end == ""
+            ):
+                return ""
+
+            start_dt = pd.to_datetime(
+                start
+            )
+
+            end_dt = pd.to_datetime(
+                end
+            )
+
+            return round(
+                (
+                    end_dt - start_dt
+                ).total_seconds() / 60,
+                0
+            )
+
+        except:
+
+            return ""
+
+    final_df["KPT (Mins)"] = final_df.apply(
+
+        lambda x: calculate_minutes(
+            x["invoiceDate"],
+            x["orderReadyTimestamp"]
+        ),
+
+        axis=1
     )
 
-    final_df["O2D (Mins)"] = (
-        final_df.apply(
-            calculate_o2d,
-            axis=1
-        )
+    final_df["O2D (Mins)"] = final_df.apply(
+
+        lambda x: calculate_minutes(
+            x["invoiceDate"],
+            x[
+                "delivery.deliveryDate"
+            ]
+        ),
+
+        axis=1
     )
 
     # =====================================================
@@ -585,15 +570,30 @@ print(
         "Swiggy Discount Code"
     }
 
-    # =====================================================
-    # CREATE MISSING COLUMNS
-    # =====================================================
+    available_cols = {
 
-    for col in required_columns:
+        k: v
 
-        if col not in final_df.columns:
+        for k, v in
+        required_columns.items()
 
-            final_df[col] = ""
+        if k in final_df.columns
+    }
+
+    final_df = final_df[
+        list(
+            available_cols.keys()
+        )
+    ].rename(
+        columns=available_cols
+    )
+
+    final_df = (
+        final_df.fillna("")
+        .astype(str)
+    )
+
+    return final_df
 
     # =====================================================
     # SELECT REQUIRED COLUMNS
