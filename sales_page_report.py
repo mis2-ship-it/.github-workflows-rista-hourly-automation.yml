@@ -582,6 +582,7 @@ required_columns = {
     for col in required_columns.keys():
 
         if col not in final_df.columns:
+
             final_df[col] = ""
 
     # keep only required columns
@@ -616,7 +617,6 @@ today_df = process_sales_data(
     today_raw
 )
 
-
 # =========================================================
 # PROCESS LW
 # =========================================================
@@ -639,15 +639,16 @@ refresh_sheet(
     lw_df
 )
 
-
 # =========================================================
 # COMPLETED
 # =========================================================
 
 print("🎉 SALES SCRIPT COMPLETED")
+
 print(
     "✅ Today_Data Refreshed"
 )
+
 print(
     "✅ LW_Data Refreshed"
 )
