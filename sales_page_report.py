@@ -1,21 +1,35 @@
+# =========================================================
+# IMPORT
+# =========================================================
+
 import os
 import json
 import time
 import jwt
 import requests
 import pandas as pd
-from datetime import datetime, timedelta
+
+from datetime import (
+    datetime,
+    timedelta
+)
+
 import gspread
-from google.oauth2.service_account import Credentials
 
-print("🚀 Script Started")
+from google.oauth2.service_account import (
+    Credentials
+)
 
-# =========================================
+print("🚀 Sales Script Started")
+
+
+# =========================================================
 # AUTH
-# =========================================
+# =========================================================
 
 API_KEY = os.environ["API_KEY"]
 SECRET_KEY = os.environ["SECRET_KEY"]
+
 
 def get_token():
 
@@ -30,6 +44,7 @@ def get_token():
         algorithm="HS256"
     )
 
+
 def headers():
 
     return {
@@ -38,13 +53,16 @@ def headers():
         "content-type": "application/json"
     }
 
-# =========================================
+
+# =========================================================
 # GOOGLE AUTH
-# =========================================
+# =========================================================
 
 creds = Credentials.from_service_account_info(
 
-    json.loads(os.environ["GOOGLE_CREDENTIALS"]),
+    json.loads(
+        os.environ["GOOGLE_CREDENTIALS"]
+    ),
 
     scopes=[
         "https://www.googleapis.com/auth/spreadsheets",
@@ -54,213 +72,567 @@ creds = Credentials.from_service_account_info(
 
 client = gspread.authorize(creds)
 
-# =========================================
+
+# =========================================================
 # GOOGLE SHEET
-# =========================================
+# =========================================================
 
 spreadsheet = client.open_by_key(
     "19z6KkVBFoLC33_wcNqVhDLyQEC2dDQ8YQE0gE38BhVg"
 )
 
-print("✅ Connected to Google Sheet")
+print("✅ Connected Google Sheet")
 
-# =========================================
+
+# =========================================================
 # DATE
-# =========================================
+# =========================================================
 
-yesterday = (
+today_date = (
     datetime.now() - timedelta(days=1)
 ).strftime("%Y-%m-%d")
 
-sheet_name = f"{yesterday}_sample"
+lw_date = (
+    datetime.now() - timedelta(days=8)
+).strftime("%Y-%m-%d")
 
-print("📅 Fetching Date:", yesterday)
+print("📅 Today Data:", today_date)
+print("📅 LW Data:", lw_date)
 
-# =========================================
-# CREATE / OPEN SHEET
-# =========================================
 
-try:
+# =========================================================
+# REFRESH SHEET FUNCTION
+# =========================================================
 
-    ws = spreadsheet.worksheet(sheet_name)
+def refresh_sheet(
+    sheet_name,
+    df
+):
 
-    ws.clear()
+    try:
 
-except:
+        ws = spreadsheet.worksheet(
+            sheet_name
+        )
 
-    ws = spreadsheet.add_worksheet(
-        title=sheet_name,
-        rows="500",
-        cols="200"
+        ws.clear()
+
+    except:
+
+        ws = spreadsheet.add_worksheet(
+            title=sheet_name,
+            rows=50000,
+            cols=100
+        )
+
+    if df.empty:
+
+        ws.update([["No Data"]])
+
+        print(
+            f"⚠️ Empty Sheet: {sheet_name}"
+        )
+
+        return
+
+    ws.update(
+        [df.columns.tolist()]
+        + df.values.tolist(),
+        value_input_option=
+        "USER_ENTERED"
     )
 
-print(f"✅ Worksheet Ready: {sheet_name}")
+    print(
+        f"✅ Refreshed: {sheet_name}"
+    )
 
-# =========================================
+# =========================================================
 # FETCH ACTIVE BRANCHES
-# =========================================
+# =========================================================
 
-b_url = "https://api.ristaapps.com/v1/branch/list"
+branch_url = (
+    "https://api.ristaapps.com/v1/branch/list"
+)
 
-b_resp = requests.get(
-    b_url,
+branch_response = requests.get(
+    branch_url,
     headers=headers()
 )
 
-b_json = b_resp.json()
+branch_json = branch_response.json()
 
-if isinstance(b_json, dict):
+if isinstance(branch_json, dict):
 
-    b_data = b_json.get("data", [])
+    branch_data = branch_json.get(
+        "data",
+        []
+    )
 
 else:
 
-    b_data = b_json
+    branch_data = branch_json
 
-branch_df = pd.DataFrame(b_data)
+
+branch_df = pd.DataFrame(
+    branch_data
+)
 
 branch_df = branch_df[
     branch_df["status"] == "Active"
 ]
 
-branches = branch_df["branchCode"].tolist()
+branches = (
+    branch_df["branchCode"]
+    .dropna()
+    .astype(str)
+    .tolist()
+)
 
-print("🏪 Active Branches:", len(branches))
+print(
+    "🏪 Active Branches:",
+    len(branches)
+)
 
-# =========================================
-# FETCH SALES PAGE SAMPLE
-# =========================================
 
-s_url = "https://api.ristaapps.com/v1/sales/page"
+# =========================================================
+# SALES API
+# =========================================================
 
-sales_data = []
+sales_url = (
+    "https://api.ristaapps.com/v1/sales/page"
+)
 
-total_rows = 0
 
-for branch in branches:
+# =========================================================
+# FETCH FUNCTION
+# =========================================================
 
-    print(f"Fetching: {branch}")
+def fetch_sales_data(fetch_date):
 
-    params = {
-        "branch": branch,
-        "day": yesterday
-    }
+    all_sales = []
 
-    try:
+    print(
+        f"\n📦 Fetching Data: {fetch_date}"
+    )
 
-        response = requests.get(
-            s_url,
-            headers=headers(),
-            params=params,
-            timeout=60
+    for branch in branches:
+
+        print(
+            f"Fetching: {branch}"
         )
 
-        if response.status_code != 200:
+        params = {
+            "branch": branch,
+            "day": fetch_date
+        }
 
-            print(f"❌ Failed: {branch}")
+        try:
 
-            continue
+            response = requests.get(
+                sales_url,
+                headers=headers(),
+                params=params,
+                timeout=120
+            )
 
-        js = response.json()
+            if response.status_code != 200:
 
-        data = js.get("data", [])
+                print(
+                    f"❌ Failed: {branch}"
+                )
 
-        if not data:
-            continue
+                continue
 
-        df = pd.json_normalize(data)
+            js = response.json()
 
-        sales_data.append(df)
+            data = js.get(
+                "data",
+                []
+            )
 
-        total_rows += len(df)
+            if not data:
+                continue
 
-        print(f"✅ Rows: {len(df)}")
+            df = pd.json_normalize(
+                data
+            )
 
-        # =====================================
-        # ONLY 100 SAMPLE ROWS
-        # =====================================
+            all_sales.append(df)
 
-        if total_rows >= 100:
-            break
+            print(
+                f"✅ Rows: {len(df)}"
+            )
 
-    except Exception as e:
+        except Exception as e:
 
-        print(f"❌ Error: {str(e)}")
+            print(
+                f"❌ Error {branch}: "
+                f"{str(e)}"
+            )
 
-# =========================================
-# CONCAT
-# =========================================
+    if len(all_sales) == 0:
 
-if not sales_data:
+        return pd.DataFrame()
 
-    print("❌ No data fetched")
-
-    exit()
-
-sales_df = pd.concat(
-    sales_data,
-    ignore_index=True
-)
-
-# =========================================
-# LIMIT 100 ROWS
-# =========================================
-
-sales_df = sales_df.head(100)
-
-print("✅ Raw Rows:", len(sales_df))
-print("✅ Raw Columns:", len(sales_df.columns))
-
-# =========================================
-# EXPLODE ITEMS
-# =========================================
-
-if "items" in sales_df.columns:
-
-    exploded_df = sales_df.explode("items")
-
-    item_df = pd.json_normalize(
-        exploded_df["items"]
-    ).add_prefix("item_")
-
-    exploded_df = exploded_df.drop(
-        columns=["items"]
+    final_sales = pd.concat(
+        all_sales,
+        ignore_index=True
     )
 
-    final_df = pd.concat(
-        [
-            exploded_df.reset_index(drop=True),
-            item_df.reset_index(drop=True)
-        ],
-        axis=1
+    print(
+        f"✅ Total Rows "
+        f"({fetch_date}):",
+        len(final_sales)
     )
 
-else:
+    return final_sales
 
-    final_df = sales_df.copy()
 
-print("✅ Final Rows:", len(final_df))
-print("✅ Final Columns:", len(final_df.columns))
+# =========================================================
+# FETCH TODAY DATA
+# =========================================================
 
-# =========================================
-# CLEAN
-# =========================================
-
-final_df = final_df.fillna("")
-
-final_df = final_df.astype(str)
-
-# =========================================
-# PUSH TO SHEET
-# =========================================
-
-ws.update(
-    [final_df.columns.tolist()] +
-    final_df.values.tolist(),
-    value_input_option="USER_ENTERED"
+today_raw = fetch_sales_data(
+    today_date
 )
 
-print("✅ Data Uploaded Successfully")
 
-print("📄 Sheet URL:")
-print(spreadsheet.url)
+# =========================================================
+# FETCH LW DATA
+# =========================================================
+
+lw_raw = fetch_sales_data(
+    lw_date
+)
+
+# =========================================================
+# PROCESS SALES DATA
+# =========================================================
+
+def process_sales_data(df):
+
+    if df.empty:
+
+        return pd.DataFrame()
+
+    # =====================================================
+    # EXPLODE ITEMS
+    # =====================================================
+
+    if "items" in df.columns:
+
+        exploded_df = df.explode(
+            "items"
+        )
+
+        item_df = pd.json_normalize(
+            exploded_df["items"]
+        ).add_prefix("item_")
+
+        exploded_df = exploded_df.drop(
+            columns=["items"]
+        )
+
+        final_df = pd.concat(
+            [
+                exploded_df.reset_index(
+                    drop=True
+                ),
+                item_df.reset_index(
+                    drop=True
+                )
+            ],
+            axis=1
+        )
+
+    else:
+
+        final_df = df.copy()
+
+    print(
+        "✅ Exploded Rows:",
+        len(final_df)
+    )
+
+    # =====================================================
+    # TIME FORMAT
+    # =====================================================
+
+    def get_time(x):
+
+        try:
+
+            if pd.isna(x) or x == "":
+                return ""
+
+            return pd.to_datetime(
+                x
+            ).strftime("%H:%M:%S")
+
+        except:
+
+            return ""
+
+    # =====================================================
+    # KPT (ORDER READY - ORDER TIME)
+    # =====================================================
+
+    def calculate_kpt(row):
+
+        try:
+
+            order_time = pd.to_datetime(
+                row["invoiceDate"]
+            )
+
+            ready_time = pd.to_datetime(
+                row["orderReadyTimestamp"]
+            )
+
+            mins = (
+                ready_time
+                - order_time
+            ).total_seconds() / 60
+
+            return round(mins, 0)
+
+        except:
+
+            return ""
+
+    # =====================================================
+    # O2D
+    # DELIVERY TIME - ORDER TIME
+    # =====================================================
+
+    def calculate_o2d(row):
+
+        try:
+
+            order_time = pd.to_datetime(
+                row["invoiceDate"]
+            )
+
+            delivery_time = pd.to_datetime(
+                row["delivery.deliveryDate"]
+            )
+
+            mins = (
+                delivery_time
+                - order_time
+            ).total_seconds() / 60
+
+            return round(mins, 0)
+
+        except:
+
+            return ""
+
+    # =====================================================
+    # CREATE TIME COLUMNS
+    # =====================================================
+
+    final_df["Order Time"] = (
+        final_df["invoiceDate"]
+        .apply(get_time)
+    )
+
+    final_df["Order Ready Time"] = (
+        final_df[
+            "orderReadyTimestamp"
+        ].apply(get_time)
+    )
+
+    final_df["Delivery Time"] = (
+        final_df[
+            "delivery.deliveryDate"
+        ].apply(get_time)
+    )
+
+    final_df["KPT (Mins)"] = (
+        final_df.apply(
+            calculate_kpt,
+            axis=1
+        )
+    )
+
+    final_df["O2D (Mins)"] = (
+        final_df.apply(
+            calculate_o2d,
+            axis=1
+        )
+    )
+
+    # =====================================================
+    # REQUIRED COLUMNS
+    # =====================================================
+
+    required_columns = {
+
+        "branchName":
+        "Store Name",
+
+        "branchCode":
+        "Store Code",
+
+        "brandName":
+        "Brand Name",
+
+        "invoiceNumber":
+        "Inv. No",
+
+        "sourceInfo.invoiceNumber":
+        "Online Inv. No",
+
+        "invoiceDate":
+        "Order Date",
+
+        "Order Time":
+        "Order Time",
+
+        "Order Ready Time":
+        "Order Ready Time",
+
+        "Delivery Time":
+        "Delivery Time",
+
+        "KPT (Mins)":
+        "KPT (Mins)",
+
+        "O2D (Mins)":
+        "O2D (Mins)",
+
+        "invoiceDay":
+        "Business Date",
+
+        "createdDate":
+        "Created Date",
+
+        "fulfillmentStatus":
+        "Fulfillment Status",
+
+        "channel":
+        "Channel",
+
+        "item_baseGrossAmount":
+        "Gross Rev",
+
+        "item_baseNetDiscountAmount":
+        "Discount",
+
+        "item_baseNetAmount":
+        "Net Rev",
+
+        "totalMaterialCost":
+        "Material Cost",
+
+        "discounts":
+        "Zomato Discount Code",
+
+        "status":
+        "Status",
+
+        "item_skuCode":
+        "SKU Code",
+
+        "item_shortName":
+        "Item Name",
+
+        "item_categoryName":
+        "Category Name",
+
+        "item_quantity":
+        "Qty",
+
+        "item_unitPrice":
+        "Unit Price",
+
+        "item_discounts":
+        "Swiggy Discount Code"
+    }
+
+    # =====================================================
+    # CREATE MISSING COLUMNS
+    # =====================================================
+
+    for col in required_columns:
+
+        if col not in final_df.columns:
+
+            final_df[col] = ""
+
+    # =====================================================
+    # SELECT REQUIRED COLUMNS
+    # =====================================================
+
+    output_df = final_df[
+        list(
+            required_columns.keys()
+        )
+    ].copy()
+
+    output_df.columns = (
+        required_columns.values()
+    )
+
+    # =====================================================
+    # CLEAN
+    # =====================================================
+
+    output_df = (
+        output_df
+        .fillna("")
+        .astype(str)
+    )
+
+    print(
+        "✅ Final Output Rows:",
+        len(output_df)
+    )
+
+    return output_df
+
+
+# =========================================================
+# PROCESS TODAY
+# =========================================================
+
+today_df = process_sales_data(
+    today_raw
+)
+
+
+# =========================================================
+# PROCESS LW
+# =========================================================
+
+lw_df = process_sales_data(
+    lw_raw
+)
+
+# =========================================================
+# PUSH TO GOOGLE SHEETS
+# =========================================================
+
+refresh_sheet(
+    "Today_Data",
+    today_df
+)
+
+refresh_sheet(
+    "LW_Data",
+    lw_df
+)
+
+
+# =========================================================
+# COMPLETED
+# =========================================================
+
+print("🎉 SALES SCRIPT COMPLETED")
+print(
+    "✅ Today_Data Refreshed"
+)
+print(
+    "✅ LW_Data Refreshed"
+)
