@@ -1419,16 +1419,14 @@ MIS Team
 """
 
 # =========================================================
-# SEND MAIL
+# PART 6 : CC SUMMARY DASHBOARD MAIL
 # =========================================================
 
 cc_mails = []
 
 for x in help_df["CC Mail"].dropna():
 
-    mails = str(x).split(",")
-
-    for m in mails:
+    for m in str(x).split(","):
 
         m = m.strip()
 
@@ -1438,67 +1436,99 @@ for x in help_df["CC Mail"].dropna():
 
 cc_mails = list(set(cc_mails))
 
-print("📧 CC Mail Count:", len(cc_mails))
+
+# =========================================================
+# AVG KPT (CHANNEL LEVEL)
+# =========================================================
+
+channel_kpt = final_df.groupby(
+    "channel"
+)["KPT (Mins)"].mean().reset_index()
+
+channel_kpt.columns = [
+    "Channel",
+    "Avg KPT"
+]
 
 
 # =========================================================
-# TO MAILS (FIXED - MUST BE OUTSIDE msg block)
+# REGION LEVEL
 # =========================================================
 
-to_mails = list(set(
-    help_df["AM Email"]
-    .dropna()
-    .astype(str)
-    .str.strip()
-    .tolist()
-))
+region_kpt = final_df.groupby(
+    "Region"
+)["KPT (Mins)"].mean().reset_index()
 
-print("📧 TO Mail Count:", len(to_mails))
+region_kpt.columns = [
+    "Region",
+    "Avg KPT"
+]
 
 
 # =========================================================
-# EMAIL SEND
+# STORE LEVEL
+# =========================================================
+
+store_kpt = final_df.groupby(
+    ["Region", "branchName"]
+)["KPT (Mins)"].mean().reset_index()
+
+store_kpt.columns = [
+    "Region",
+    "Store",
+    "Avg KPT"
+]
+
+
+# =========================================================
+# HTML BUILD
+# =========================================================
+
+summary_html = f"""
+<html>
+<body style="font-family:Arial;">
+
+<h2>📊 SALES DASHBOARD SUMMARY</h2>
+
+<h3>🔥 Channel Wise Avg KPT</h3>
+{style_dashboard_table(channel_kpt)}
+
+<br>
+
+<h3>🌍 Region Wise Avg KPT</h3>
+{style_dashboard_table(region_kpt)}
+
+<br>
+
+<h3>🏪 Store Wise Avg KPT</h3>
+{style_dashboard_table(store_kpt)}
+
+<br>
+
+<p>Regards,<br>Sales Automation</p>
+
+</body>
+</html>
+"""
+
+
+# =========================================================
+# SEND MAIL
 # =========================================================
 
 try:
 
-    msg = MIMEMultipart()
-
-    msg["From"] = EMAIL_USER
-    msg["To"] = ", ".join(to_mails)
-    msg["Cc"] = ", ".join(cc_mails)
-
-    msg["Subject"] = f"KPT Dashboard - {today_date}"
-
-    msg.attach(
-        MIMEText(summary_html, "html")
+    send_mail(
+        cc_mails,
+        f"📊 Sales Dashboard Summary - {business_day}",
+        summary_html
     )
 
-    server = smtplib.SMTP(
-        "smtp.gmail.com",
-        587
-    )
-
-    server.starttls()
-
-    server.login(
-        EMAIL_USER,
-        EMAIL_PASSWORD
-    )
-
-    # IMPORTANT: send TO + CC together
-    all_recipients = to_mails + cc_mails
-
-    server.sendmail(
-        EMAIL_USER,
-        all_recipients,
-        msg.as_string()
-    )
-
-    server.quit()
-
-    print("✅ Summary Mail Sent")
+    print("✅ CC Summary Mail Sent")
 
 except Exception as e:
 
-    print("❌ Summary Mail Failed:", str(e))
+    print(
+        "❌ CC Summary Failed:",
+        str(e)
+    )
