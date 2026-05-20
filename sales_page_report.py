@@ -388,198 +388,175 @@ def process_sales_data(df):
         len(final_df)
     )
 
-# =====================================================
-# TIME FORMAT
-# =====================================================
+    # =====================================================
+    # TIME FORMAT
+    # =====================================================
 
-def get_time(x):
+    def get_time(x):
 
-    try:
+        try:
 
-        if pd.isna(x) or x == "":
+            if pd.isna(x) or x == "":
+                return ""
+
+            return pd.to_datetime(
+                x
+            ).strftime("%H:%M:%S")
+
+        except:
+
             return ""
 
-        return pd.to_datetime(
-            x
-        ).strftime("%H:%M:%S")
+    # =====================================================
+    # CREATE TIME COLUMNS
+    # =====================================================
 
-    except:
+    # Order Time = invoiceDate
+    final_df["Order Time"] = (
+        final_df["invoiceDate"]
+        .apply(get_time)
+    )
 
-        return ""
+    # Delivery Time = orderReadyTimestamp
+    final_df["Delivery Time"] = (
+        final_df["orderReadyTimestamp"]
+        .apply(get_time)
+    )
 
-# =====================================================
-# CREATE TIME COLUMNS
-# =====================================================
-
-# Order Time = invoiceDate
-final_df["Order Time"] = (
-    final_df["invoiceDate"]
-    .apply(get_time)
-)
-
-# Delivery Time = orderReadyTimestamp
-final_df["Delivery Time"] = (
-    final_df["orderReadyTimestamp"]
-    .apply(get_time)
-)
-
-# Order Ready Time = delivery.deliveryDate
-final_df["Order Ready Time"] = (
-    final_df[
-        "delivery.deliveryDate"
-    ].apply(get_time)
-)
-
-# =====================================================
-# KPT & O2D
-# =====================================================
-
-def calculate_minutes(start, end):
-
-    try:
-
-        if (
-            pd.isna(start)
-            or pd.isna(end)
-            or start == ""
-            or end == ""
-        ):
-            return ""
-
-        start_dt = pd.to_datetime(
-            start
-        )
-
-        end_dt = pd.to_datetime(
-            end
-        )
-
-        return int(
-            round(
-                (
-                    end_dt - start_dt
-                ).total_seconds() / 60
-            )
-        )
-
-    except:
-
-        return ""
-
-# KPT = Order → Delivery
-final_df["KPT (Mins)"] = final_df.apply(
-
-    lambda x: calculate_minutes(
-        x["invoiceDate"],
-        x["orderReadyTimestamp"]
-    ),
-
-    axis=1
-)
-
-# O2D = Order → Ready
-final_df["O2D (Mins)"] = final_df.apply(
-
-    lambda x: calculate_minutes(
-        x["invoiceDate"],
-        x[
+    # Order Ready Time = delivery.deliveryDate
+    final_df["Order Ready Time"] = (
+        final_df[
             "delivery.deliveryDate"
-        ]
-    ),
+        ].apply(get_time)
+    )
 
-    axis=1
-)
+    # =====================================================
+    # KPT & O2D
+    # =====================================================
 
+    def calculate_minutes(
+        start,
+        end
+    ):
 
-# =====================================================
-# REQUIRED OUTPUT COLUMNS
-# =====================================================
+        try:
 
-required_columns = [
+            if (
+                pd.isna(start)
+                or pd.isna(end)
+                or start == ""
+                or end == ""
+            ):
+                return ""
 
-    "branchName",
-    "branchCode",
-    "brandName",
-    "invoiceNumber",
-    "sourceInfo.invoiceNumber",
-    "invoiceDate",
-    "Order Time",
-    "Order Ready Time",
-    "Delivery Time",
-    "KPT (Mins)",
-    "O2D (Mins)",
-    "invoiceDay",
-    "createdDate",
-    "fulfillmentStatus",
-    "channel",
-    "item_baseGrossAmount",
-    "item_baseNetDiscountAmount",
-    "item_baseNetAmount",
-    "totalMaterialCost",
-    "discounts",
-    "status",
-    "item_skuCode",
-    "item_shortName",
-    "item_categoryName",
-    "item_quantity",
-    "item_unitPrice",
-    "item_discounts"
-]
+            start_dt = pd.to_datetime(
+                start
+            )
 
-for col in required_columns:
+            end_dt = pd.to_datetime(
+                end
+            )
 
-    if col not in final_df.columns:
+            return int(
+                round(
+                    (
+                        end_dt - start_dt
+                    ).total_seconds() / 60
+                )
+            )
 
-        final_df[col] = ""
+        except:
 
-final_df = final_df[
-    required_columns
-].copy()
+            return ""
 
-print(
-    "✅ Final Columns:",
-    len(final_df.columns)
-)
+    # KPT = Order → Delivery
+    final_df["KPT (Mins)"] = (
+        final_df.apply(
 
-return final_df
+            lambda x:
+            calculate_minutes(
+                x["invoiceDate"],
+                x["orderReadyTimestamp"]
+            ),
+
+            axis=1
+        )
+    )
+
+    # O2D = Order → Ready
+    final_df["O2D (Mins)"] = (
+        final_df.apply(
+
+            lambda x:
+            calculate_minutes(
+                x["invoiceDate"],
+                x[
+                    "delivery.deliveryDate"
+                ]
+            ),
+
+            axis=1
+        )
+    )
 
     # =====================================================
     # REQUIRED OUTPUT COLUMNS
     # =====================================================
 
-required_columns = {
+    required_columns = {
 
         "branchName": "Store Name",
         "branchCode": "Store Code",
         "brandName": "Brand Name",
         "invoiceNumber": "Inv. No",
-        "sourceInfo.invoiceNumber": "Online Inv. No",
+        "sourceInfo.invoiceNumber":
+        "Online Inv. No",
         "invoiceDate": "Order Date",
         "Order Time": "Order Time",
-        "Order Ready Time": "Order Ready Time",
-        "Delivery Time": "Delivery Time",
-        "KPT (Mins)": "KPT (Mins)",
-        "O2D (Mins)": "O2D (Mins)",
-        "invoiceDay": "Business Date",
-        "createdDate": "Created Date",
-        "fulfillmentStatus": "Fulfillment Status",
-        "channel": "Channel",
-        "item_baseGrossAmount": "Gross Rev",
-        "item_baseNetDiscountAmount": "Discount",
-        "item_baseNetAmount": "Net Rev",
-        "totalMaterialCost": "Material Cost",
-        "discounts": "Zomato Discount Code",
-        "status": "Status",
-        "item_skuCode": "SKU Code",
-        "item_shortName": "Item Name",
-        "item_categoryName": "Category Name",
-        "item_quantity": "Qty",
-        "item_unitPrice": "Unit Price",
-        "item_discounts": "Swiggy Discount Code"
-}
+        "Order Ready Time":
+        "Order Ready Time",
+        "Delivery Time":
+        "Delivery Time",
+        "KPT (Mins)":
+        "KPT (Mins)",
+        "O2D (Mins)":
+        "O2D (Mins)",
+        "invoiceDay":
+        "Business Date",
+        "createdDate":
+        "Created Date",
+        "fulfillmentStatus":
+        "Fulfillment Status",
+        "channel":
+        "Channel",
+        "item_baseGrossAmount":
+        "Gross Rev",
+        "item_baseNetDiscountAmount":
+        "Discount",
+        "item_baseNetAmount":
+        "Net Rev",
+        "totalMaterialCost":
+        "Material Cost",
+        "discounts":
+        "Zomato Discount Code",
+        "status":
+        "Status",
+        "item_skuCode":
+        "SKU Code",
+        "item_shortName":
+        "Item Name",
+        "item_categoryName":
+        "Category Name",
+        "item_quantity":
+        "Qty",
+        "item_unitPrice":
+        "Unit Price",
+        "item_discounts":
+        "Swiggy Discount Code"
+    }
 
     # add missing columns
-    for col in required_columns.keys():
+    for col in required_columns:
 
         if col not in final_df.columns:
 
@@ -607,6 +584,7 @@ required_columns = {
     )
 
     return output_df
+
 
 
 # =========================================================
