@@ -544,26 +544,59 @@ print(
 return final_df
 
     # =====================================================
-    # SELECT REQUIRED COLUMNS
+    # REQUIRED OUTPUT COLUMNS
     # =====================================================
 
+    required_columns = {
+
+        "branchName": "Store Name",
+        "branchCode": "Store Code",
+        "brandName": "Brand Name",
+        "invoiceNumber": "Inv. No",
+        "sourceInfo.invoiceNumber": "Online Inv. No",
+        "invoiceDate": "Order Date",
+        "Order Time": "Order Time",
+        "Order Ready Time": "Order Ready Time",
+        "Delivery Time": "Delivery Time",
+        "KPT (Mins)": "KPT (Mins)",
+        "O2D (Mins)": "O2D (Mins)",
+        "invoiceDay": "Business Date",
+        "createdDate": "Created Date",
+        "fulfillmentStatus": "Fulfillment Status",
+        "channel": "Channel",
+        "item_baseGrossAmount": "Gross Rev",
+        "item_baseNetDiscountAmount": "Discount",
+        "item_baseNetAmount": "Net Rev",
+        "totalMaterialCost": "Material Cost",
+        "discounts": "Zomato Discount Code",
+        "status": "Status",
+        "item_skuCode": "SKU Code",
+        "item_shortName": "Item Name",
+        "item_categoryName": "Category Name",
+        "item_quantity": "Qty",
+        "item_unitPrice": "Unit Price",
+        "item_discounts": "Swiggy Discount Code"
+    }
+
+    # add missing columns
+    for col in required_columns.keys():
+
+        if col not in final_df.columns:
+            final_df[col] = ""
+
+    # keep only required columns
     output_df = final_df[
-        list(
-            required_columns.keys()
-        )
+        list(required_columns.keys())
     ].copy()
 
-    output_df.columns = (
-        required_columns.values()
+    # rename columns
+    output_df.rename(
+        columns=required_columns,
+        inplace=True
     )
 
-    # =====================================================
-    # CLEAN
-    # =====================================================
-
     output_df = (
-        output_df
-        .fillna("")
+        output_df.fillna("")
         .astype(str)
     )
 
