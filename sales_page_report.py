@@ -407,167 +407,165 @@ def process_sales_data(df):
 
             return ""
 
-   # =====================================================
-# CREATE TIME COLUMNS
-# =====================================================
+    # =====================================================
+    # CREATE TIME COLUMNS
+    # =====================================================
 
-# Order Time = invoiceDate
-final_df["Order Time"] = (
-    final_df["invoiceDate"]
-    .apply(get_time)
-)
+    # Order Time = invoiceDate
+    final_df["Order Time"] = (
+        final_df["invoiceDate"]
+        .apply(get_time)
+    )
 
-# Order Ready Time = orderReadyTimestamp
-final_df["Order Ready Time"] = (
-    final_df[
-        "orderReadyTimestamp"
-    ].apply(get_time)
-)
+    # Order Ready Time = orderReadyTimestamp
+    final_df["Order Ready Time"] = (
+        final_df[
+            "orderReadyTimestamp"
+        ].apply(get_time)
+    )
 
-# Delivery Time = delivery.deliveryDate
-final_df["Delivery Time"] = (
-    final_df[
-        "delivery.deliveryDate"
-    ].apply(get_time)
-)
+    # Delivery Time = delivery.deliveryDate
+    final_df["Delivery Time"] = (
+        final_df[
+            "delivery.deliveryDate"
+        ].apply(get_time)
+    )
 
+    # =====================================================
+    # KPT & O2D
+    # =====================================================
 
-# =====================================================
-# KPT & O2D
-# =====================================================
+    def calculate_minutes(
+        start,
+        end
+    ):
 
-def calculate_minutes(
-    start,
-    end
-):
+        try:
 
-    try:
+            if (
+                pd.isna(start)
+                or pd.isna(end)
+                or start == ""
+                or end == ""
+            ):
+                return ""
 
-        if (
-            pd.isna(start)
-            or pd.isna(end)
-            or start == ""
-            or end == ""
-        ):
+            start_dt = pd.to_datetime(
+                start
+            )
+
+            end_dt = pd.to_datetime(
+                end
+            )
+
+            mins = int(
+                round(
+                    (
+                        end_dt - start_dt
+                    ).total_seconds() / 60
+                )
+            )
+
+            return max(mins, 0)
+
+        except:
+
             return ""
 
-        start_dt = pd.to_datetime(
-            start
+    # KPT = Order → Ready
+    final_df["KPT (Mins)"] = (
+        final_df.apply(
+
+            lambda x:
+            calculate_minutes(
+                x["invoiceDate"],
+                x["orderReadyTimestamp"]
+            ),
+
+            axis=1
         )
-
-        end_dt = pd.to_datetime(
-            end
-        )
-
-        mins = int(
-            round(
-                (
-                    end_dt - start_dt
-                ).total_seconds() / 60
-            )
-        )
-
-        return max(mins, 0)
-
-    except Exception:
-
-        return ""
-
-
-# KPT = Order → Ready
-final_df["KPT (Mins)"] = (
-    final_df.apply(
-
-        lambda x:
-        calculate_minutes(
-            x["invoiceDate"],
-            x["orderReadyTimestamp"]
-        ),
-
-        axis=1
     )
-)
 
-# O2D = Order → Delivery
-final_df["O2D (Mins)"] = (
-    final_df.apply(
+    # O2D = Order → Delivery
+    final_df["O2D (Mins)"] = (
+        final_df.apply(
 
-        lambda x:
-        calculate_minutes(
-            x["invoiceDate"],
-            x[
-                "delivery.deliveryDate"
-            ]
-        ),
+            lambda x:
+            calculate_minutes(
+                x["invoiceDate"],
+                x[
+                    "delivery.deliveryDate"
+                ]
+            ),
 
-        axis=1
+            axis=1
+        )
     )
-)
 
-# =====================================================
-# REQUIRED OUTPUT COLUMNS
-# =====================================================
+    # =====================================================
+    # REQUIRED OUTPUT COLUMNS
+    # =====================================================
 
-required_columns = {
+    required_columns = {
 
-    "branchName": "Store Name",
-    "branchCode": "Store Code",
-    "brandName": "Brand Name",
-    "invoiceNumber": "Inv. No",
-    "sourceInfo.invoiceNumber": "Online Inv. No",
-    "invoiceDate": "Order Date",
-    "Order Time": "Order Time",
-    "Order Ready Time": "Order Ready Time",
-    "Delivery Time": "Delivery Time",
-    "KPT (Mins)": "KPT (Mins)",
-    "O2D (Mins)": "O2D (Mins)",
-    "invoiceDay": "Business Date",
-    "createdDate": "Created Date",
-    "fulfillmentStatus": "Fulfillment Status",
-    "channel": "Channel",
-    "item_baseGrossAmount": "Gross Rev",
-    "item_baseNetDiscountAmount": "Discount",
-    "item_baseNetAmount": "Net Rev",
-    "totalMaterialCost": "Material Cost",
-    "discounts": "Zomato Discount Code",
-    "status": "Status",
-    "item_skuCode": "SKU Code",
-    "item_shortName": "Item Name",
-    "item_categoryName": "Category Name",
-    "item_quantity": "Qty",
-    "item_unitPrice": "Unit Price",
-    "item_discounts": "Swiggy Discount Code"
-}
+        "branchName": "Store Name",
+        "branchCode": "Store Code",
+        "brandName": "Brand Name",
+        "invoiceNumber": "Inv. No",
+        "sourceInfo.invoiceNumber": "Online Inv. No",
+        "invoiceDate": "Order Date",
+        "Order Time": "Order Time",
+        "Order Ready Time": "Order Ready Time",
+        "Delivery Time": "Delivery Time",
+        "KPT (Mins)": "KPT (Mins)",
+        "O2D (Mins)": "O2D (Mins)",
+        "invoiceDay": "Business Date",
+        "createdDate": "Created Date",
+        "fulfillmentStatus": "Fulfillment Status",
+        "channel": "Channel",
+        "item_baseGrossAmount": "Gross Rev",
+        "item_baseNetDiscountAmount": "Discount",
+        "item_baseNetAmount": "Net Rev",
+        "totalMaterialCost": "Material Cost",
+        "discounts": "Zomato Discount Code",
+        "status": "Status",
+        "item_skuCode": "SKU Code",
+        "item_shortName": "Item Name",
+        "item_categoryName": "Category Name",
+        "item_quantity": "Qty",
+        "item_unitPrice": "Unit Price",
+        "item_discounts": "Swiggy Discount Code"
+    }
 
-# add missing columns
-for col in required_columns.keys():
+    # add missing columns
+    for col in required_columns.keys():
 
-    if col not in final_df.columns:
+        if col not in final_df.columns:
 
-        final_df[col] = ""
+            final_df[col] = ""
 
     # keep only required columns
     output_df = final_df[
         list(required_columns.keys())
     ].copy()
-    
+
     # rename columns
     output_df.rename(
         columns=required_columns,
         inplace=True
     )
-    
+
     output_df = (
         output_df.fillna("")
         .astype(str)
     )
-    
+
     print(
         "✅ Final Output Rows:",
         len(output_df)
     )
 
-        return output_df
+    return output_df
 
 # =========================================================
 # PROCESS TODAY
