@@ -494,99 +494,50 @@ final_df["O2D (Mins)"] = final_df.apply(
     # REQUIRED COLUMNS
     # =====================================================
 
-    required_columns = {
+# =====================================================
+# REQUIRED OUTPUT COLUMNS
+# =====================================================
 
-        "branchName":
-        "Store Name",
+required_columns = [
 
-        "branchCode":
-        "Store Code",
+    "branchName",
+    "branchCode",
+    "brandName",
+    "invoiceNumber",
+    "sourceInfo.invoiceNumber",
+    "invoiceDate",
+    "Order Time",
+    "Order Ready Time",
+    "Delivery Time",
+    "KPT (Mins)",
+    "O2D (Mins)",
+    "invoiceDay",
+    "createdDate",
+    "fulfillmentStatus",
+    "channel",
+    "item_baseGrossAmount",
+    "item_baseNetDiscountAmount",
+    "item_baseNetAmount",
+    "totalMaterialCost",
+    "discounts",
+    "status",
+    "item_skuCode",
+    "item_shortName",
+    "item_categoryName",
+    "item_quantity",
+    "item_unitPrice",
+    "item_discounts"
+]
 
-        "brandName":
-        "Brand Name",
+for col in required_columns:
 
-        "invoiceNumber":
-        "Inv. No",
+    if col not in final_df.columns:
 
-        "sourceInfo.invoiceNumber":
-        "Online Inv. No",
+        final_df[col] = ""
 
-        "invoiceDate":
-        "Order Date",
-
-        "Order Time":
-        "Order Time",
-
-        "Order Ready Time":
-        "Order Ready Time",
-
-        "Delivery Time":
-        "Delivery Time",
-
-        "KPT (Mins)":
-        "KPT (Mins)",
-
-        "O2D (Mins)":
-        "O2D (Mins)",
-
-        "invoiceDay":
-        "Business Date",
-
-        "createdDate":
-        "Created Date",
-
-        "fulfillmentStatus":
-        "Fulfillment Status",
-
-        "channel":
-        "Channel",
-
-        "item_baseGrossAmount":
-        "Gross Rev",
-
-        "item_baseNetDiscountAmount":
-        "Discount",
-
-        "item_baseNetAmount":
-        "Net Rev",
-
-        "totalMaterialCost":
-        "Material Cost",
-
-        "discounts":
-        "Zomato Discount Code",
-
-        "status":
-        "Status",
-
-        "item_skuCode":
-        "SKU Code",
-
-        "item_shortName":
-        "Item Name",
-
-        "item_categoryName":
-        "Category Name",
-
-        "item_quantity":
-        "Qty",
-
-        "item_unitPrice":
-        "Unit Price",
-
-        "item_discounts":
-        "Swiggy Discount Code"
-    }
-
-    available_cols = {
-
-        k: v
-
-        for k, v in
-        required_columns.items()
-
-        if k in final_df.columns
-    }
+final_df = final_df[
+    required_columns
+].copy()
 
     final_df = final_df[
         list(
