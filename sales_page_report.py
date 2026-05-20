@@ -147,10 +147,15 @@ help_ws = spreadsheet.worksheet(
     "Help Sheet"
 )
 
-help_df = pd.DataFrame(
-   help_data = help_ws.get('A:H')
-)
+help_data = help_ws.get('A:H')
 
+if not help_data or len(help_data) < 2:
+    help_df = pd.DataFrame()
+else:
+    headers = help_data[0]
+    rows = help_data[1:]
+    help_df = pd.DataFrame(rows, columns=headers)
+    
 # =========================================================
 # REQUIRED COLUMNS
 # =========================================================
