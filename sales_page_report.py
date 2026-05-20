@@ -88,49 +88,41 @@ print("✅ Connected Google Sheet")
 # DATE
 # =========================================================
 
-today_date = (
-    datetime.now() - timedelta(days=1)
-).strftime("%Y-%m-%d")
+today_date = datetime.now().strftime(
+    "%Y-%m-%d"
+)
 
 lw_date = (
-    datetime.now() - timedelta(days=8)
+    datetime.now()
+    - timedelta(days=7)
 ).strftime("%Y-%m-%d")
 
-print("📅 Today Data:", today_date)
-print("📅 LW Data:", lw_date)
+print(
+    "📅 Today Data:",
+    today_date
+)
 
+print(
+    "📅 LW Data:",
+    lw_date
+)
 
 # =========================================================
-# REFRESH SHEET FUNCTION
+# REFRESH SHEET
 # =========================================================
 
-def refresh_sheet(
-    sheet_name,
-    df
-):
+def refresh_sheet(sheet_name, df):
 
-    try:
+    ws = spreadsheet.worksheet(
+        sheet_name
+    )
 
-        ws = spreadsheet.worksheet(
-            sheet_name
-        )
-
-        ws.clear()
-
-    except:
-
-        ws = spreadsheet.add_worksheet(
-            title=sheet_name,
-            rows=50000,
-            cols=100
-        )
+    ws.clear()
 
     if df.empty:
 
-        ws.update([["No Data"]])
-
-        print(
-            f"⚠️ Empty Sheet: {sheet_name}"
+        ws.update(
+            [["No Data"]]
         )
 
         return
@@ -143,7 +135,8 @@ def refresh_sheet(
     )
 
     print(
-        f"✅ Refreshed: {sheet_name}"
+        f"✅ Refreshed: "
+        f"{sheet_name}"
     )
 
 # =========================================================
@@ -368,6 +361,33 @@ def process_sales_data(df):
         len(final_df)
     )
 
+# =====================================================
+# CHANNEL FILTER
+# =====================================================
+
+allowed_channels = [
+
+    "Zomato Boba Bar",
+    "Zomato Frozen Bottle",
+    "Zomato Madno",
+    "Zomato Lubov",
+
+    "Swiggy Frozen Bottle",
+    "Swiggy Boba Bar",
+    "Swiggy Madno",
+    "Swiggy Lubov"
+]
+
+final_df = final_df[
+    final_df["channel"]
+    .astype(str)
+    .isin(allowed_channels)
+].copy()
+
+print(
+    "✅ Filtered Channels Rows:",
+    len(final_df)
+)
     # =====================================================
     # TIME FORMAT
     # =====================================================
