@@ -147,49 +147,63 @@ def refresh_sheet(
     )
 
 # =========================================================
-# FETCH ACTIVE BRANCHES
+# HELP SHEET
 # =========================================================
 
-branch_url = (
-    "https://api.ristaapps.com/v1/branch/list"
+help_ws = spreadsheet.worksheet(
+    "Help Sheet"
 )
 
-branch_response = requests.get(
-    branch_url,
-    headers=headers()
+help_df = pd.DataFrame(
+    help_ws.get_all_records()
 )
 
-branch_json = branch_response.json()
+# =========================================================
+# REQUIRED COLUMNS
+# =========================================================
 
-if isinstance(branch_json, dict):
-
-    branch_data = branch_json.get(
-        "data",
-        []
-    )
-
-else:
-
-    branch_data = branch_json
-
-
-branch_df = pd.DataFrame(
-    branch_data
-)
-
-branch_df = branch_df[
-    branch_df["status"] == "Active"
+required_cols = [
+    "branchCode",
+    "Ownership"
 ]
 
+for c in required_cols:
+
+    if c not in help_df.columns:
+
+        help_df[c] = ""
+
+
+# =========================================================
+# FILTER COCO ONLY
+# =========================================================
+
+help_df = help_df[
+    help_df["Ownership"]
+    .astype(str)
+    .str.upper()
+    == "COCO"
+]
+
+# =========================================================
+# BRANCH LIST FROM HELP SHEET
+# =========================================================
+
 branches = (
-    branch_df["branchCode"]
+    help_df["branchCode"]
     .dropna()
     .astype(str)
-    .tolist()
+    .str.strip()
 )
 
+branches = branches[
+    branches != ""
+]
+
+branches = branches.unique().tolist()
+
 print(
-    "🏪 Active Branches:",
+    "🏪 COCO Branch Count:",
     len(branches)
 )
 
