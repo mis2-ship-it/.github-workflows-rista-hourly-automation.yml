@@ -143,19 +143,40 @@ def refresh_sheet(sheet_name, df):
 # HELP SHEET
 # =========================================================
 
-help_ws = spreadsheet.worksheet(
-    "Help Sheet"
-)
+help_ws = spreadsheet.worksheet("Help Sheet")
 
-help_data = help_ws.get('A:H')
+help_data = help_ws.get("A:H")
 
-if not help_data or len(help_data) < 2:
+# Remove fully empty rows
+help_data = [row for row in help_data if any(row)]
+
+if len(help_data) < 2:
     help_df = pd.DataFrame()
 else:
-    headers = help_data[0]
-    rows = help_data[1:]
-    help_df = pd.DataFrame(rows, columns=headers)
 
+    clean_headers = help_data[0]
+
+    # FIX: ensure headers are not empty
+    if not any(clean_headers):
+        print("❌ Help Sheet headers are empty")
+        print("Check Row 1 in Help Sheet")
+        help_df = pd.DataFrame()
+    else:
+
+        rows = help_data[1:]
+
+        # FIX: normalize row length
+        max_len = len(clean_headers)
+
+        fixed_rows = [
+            r[:max_len] + [""] * (max_len - len(r))
+            for r in rows
+        ]
+
+        help_df = pd.DataFrame(
+            fixed_rows,
+            columns=clean_headers
+        )
 # =========================================================
 # STEP 2: CLEAN HEADERS (ADD HERE)
 # =========================================================
