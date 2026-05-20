@@ -148,7 +148,7 @@ help_ws = spreadsheet.worksheet(
 )
 
 help_df = pd.DataFrame(
-    help_ws.get_all_records()
+   help_data = help_ws.get('A:H')
 )
 
 # =========================================================
