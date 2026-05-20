@@ -459,7 +459,7 @@ def process_sales_data(df):
                 end
             )
 
-            mins int(
+            return int(
                 round(
                     (
                         end_dt - start_dt
