@@ -21,7 +21,11 @@ from google.oauth2.service_account import (
 )
 
 print("🚀 Sales Script Started")
-
+print("DEBUG types:")
+print("list =", type(list))
+print("json =", type(json))
+print("requests =", type(requests))
+print("headers =", type(headers))
 
 # =========================================================
 # AUTH
@@ -354,6 +358,9 @@ def process_sales_data(df):
     if df.empty:
         return pd.DataFrame()
 
+if "Store Code" in today_df.columns:
+    today_df.rename(columns={"Store Code": "branchCode"}, inplace=True)
+    
     # =====================================================
     # EXPLODE ITEMS
     # =====================================================
@@ -656,11 +663,8 @@ today_df.rename(columns={
     "Store Code": "branchCode"
 }, inplace=True)
 
-today_df["branchCode"] = (
-    today_df["branchCode"]
-    .astype(str)
-    .str.strip()
-)
+if "Store Code" in today_df.columns:
+    today_df["branchCode"] = today_df["Store Code"]
 
 today_df = today_df.merge(
     help_merge,
