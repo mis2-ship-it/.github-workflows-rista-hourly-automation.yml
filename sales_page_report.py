@@ -1071,10 +1071,7 @@ def get_cell_color(val, metric="KPT"):
     return ""
 
 
-def style_dashboard_table(
-    region_dashboard,
-    metric="KPT":
-)
+def style_dashboard_table(df, metric="KPT"):
 
     if df.empty:
         return "<p>No Data</p>"
