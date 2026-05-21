@@ -646,7 +646,7 @@ brand_dashboard = brand_df.groupby("Channel").agg({
     "KPT Breach": "sum",
     "O2D Breach": "sum"
 
-}).reset_index()
+}).reset_index().fillna("-")
 
 # =========================================================
 # TOTAL ORDERS
@@ -790,7 +790,7 @@ region_dashboard = pd.pivot_table(
     index="Channel",
     columns="Region",
     aggfunc="mean"
-).round(1).reset_index()
+).round(1).reset_index().fillna("-")
 
 # =========================================================
 # STORE DASHBOARD
@@ -802,7 +802,7 @@ store_dashboard = pd.pivot_table(
     index=["Region", "Store Name"],
     columns="Channel",
     aggfunc="mean"
-).round(1).reset_index()
+).round(1).reset_index().fillna("-")
 
 # =========================================================
 # WRITE TO GOOGLE SHEET
