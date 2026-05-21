@@ -435,21 +435,308 @@ if "invoiceDay" in sales_df.columns:
 print("✅ Orders:", len(sales_df))
 
 # =========================================================
-# KPT CLEAN
+# COLUMN STANDARDIZATION
 # =========================================================
 
-if "KPT (Mins)" in sales_df.columns:
+print("📋 API Columns:")
+print(sales_df.columns.tolist())
 
-    sales_df["KPT (Mins)"] = pd.to_numeric(
-        sales_df["KPT (Mins)"],
+# =========================================================
+# CREATE REQUIRED TIMESTAMP COLUMNS
+# =========================================================
+
+# ORDER TIME
+if "createdDate" in sales_df.columns:
+
+    sales_df["Order Time"] = pd.to_datetime(
+        sales_df["createdDate"],
         errors="coerce"
     )
 
-    sales_df = sales_df[
-        sales_df["KPT (Mins)"].notna()
-    ]
+else:
+
+    sales_df["Order Time"] = pd.NaT
+
+# READY TIME
+if "orderReadyTimestamp" in sales_df.columns:
+
+    sales_df["Order Ready Time"] = pd.to_datetime(
+        sales_df["orderReadyTimestamp"],
+        errors="coerce"
+    )
+
+else:
+
+    sales_df["Order Ready Time"] = pd.NaT
+
+# DELIVERY TIME
+if "modifiedDate" in sales_df.columns:
+
+    sales_df["Delivery Time"] = pd.to_datetime(
+        sales_df["modifiedDate"],
+        errors="coerce"
+    )
+
+else:
+
+    sales_df["Delivery Time"] = pd.NaT
+
+# =========================================================
+# CREATE KPT COLUMN IF MISSING
+# =========================================================
+
+if "KPT (Mins)" not in sales_df.columns:
+
+    print("⚠️ KPT (Mins) Missing")
+    print("✅ Calculating KPT")
+
+    sales_df["KPT (Mins)"] = (
+        (
+            sales_df["Order Ready Time"]
+            - sales_df["Order Time"]
+        ).dt.total_seconds() / 60
+    )
+
+# =========================================================
+# CREATE O2D COLUMN
+# =========================================================
+
+if "O2D (Mins)" not in sales_df.columns:
+
+    print("✅ Calculating O2D")
+
+    sales_df["O2D (Mins)"] = (
+        (
+            sales_df["Delivery Time"]
+            - sales_df["Order Time"]
+        ).dt.total_seconds() / 60
+    )
+
+# =========================================================
+# CLEAN NUMERIC VALUES
+# =========================================================
+
+sales_df["KPT (Mins)"] = pd.to_numeric(
+    sales_df["KPT (Mins)"],
+    errors="coerce"
+)
+
+sales_df["O2D (Mins)"] = pd.to_numeric(
+    sales_df["O2D (Mins)"],
+    errors="coerce"
+)
+
+# =========================================================
+# REMOVE INVALID ROWS
+# =========================================================
+
+sales_df = sales_df[
+    sales_df["KPT (Mins)"].notna()
+].copy()
+
+sales_df = sales_df[
+    sales_df["KPT (Mins)"] >= 0
+].copy()
 
 print("✅ Valid KPT Rows:", len(sales_df))
+
+# =========================================================
+# KPI
+# =========================================================
+
+swiggy_avg = round(
+    sales_df[
+        sales_df["Channel"]
+        .str.contains("Swiggy", na=False)
+    ]["KPT (Mins)"].mean(),
+    1
+)
+
+zomato_avg = round(
+    sales_df[
+        sales_df["Channel"]
+        .str.contains("Zomato", na=False)
+    ]["KPT (Mins)"].mean(),
+    1
+)
+
+overall_avg = round(
+    sales_df["KPT (Mins)"].mean(),
+    1
+)
+
+overall_o2d = round(
+    sales_df["O2D (Mins)"].mean(),
+    1
+)
+
+total_orders = len(sales_df)
+
+top_kpi = pd.DataFrame({
+
+    "Metric": [
+        "Swiggy Avg KPT",
+        "Zomato Avg KPT",
+        "Overall Avg KPT",
+        "Overall Avg O2D",
+        "Total Orders"
+    ],
+
+    "Value": [
+        swiggy_avg,
+        zomato_avg,
+        overall_avg,
+        overall_o2d,
+        total_orders
+    ]
+})
+
+print("✅ KPI Created")
+
+# =========================================================
+# BRAND LEVEL BREACH DASHBOARD
+# =========================================================
+
+# SLA DEFINITIONS
+KPT_SLA = 15
+O2D_SLA = 40
+
+# REQUIRED CHANNELS
+brand_channels = [
+    "Swiggy Frozen Bottle",
+    "Swiggy Boba Bar",
+    "Swiggy Madno",
+    "Swiggy Lubov",
+    "Lubov Website",
+    "Zomato Boba Bar",
+    "Zomato Frozen Bottle",
+    "Zomato Madno",
+    "Zomato Lubov"
+]
+
+# FILTER CHANNELS
+brand_df = sales_df[
+    sales_df["Channel"]
+    .astype(str)
+    .isin(brand_channels)
+].copy()
+
+print("✅ Brand Rows:", len(brand_df))
+
+# =========================================================
+# CREATE BREACH FLAGS
+# =========================================================
+
+brand_df["KPT Breach"] = (
+    brand_df["KPT (Mins)"] > KPT_SLA
+)
+
+brand_df["O2D Breach"] = (
+    brand_df["O2D (Mins)"] > O2D_SLA
+)
+
+# =========================================================
+# BRAND LEVEL DASHBOARD
+# =========================================================
+
+brand_dashboard = brand_df.groupby("Channel").agg({
+
+    "KPT (Mins)": "mean",
+    "O2D (Mins)": "mean",
+    "KPT Breach": "sum",
+    "O2D Breach": "sum"
+
+}).reset_index()
+
+# =========================================================
+# TOTAL ORDERS
+# =========================================================
+
+order_counts = (
+    brand_df.groupby("Channel")
+    .size()
+    .reset_index(name="Total Orders")
+)
+
+brand_dashboard = brand_dashboard.merge(
+    order_counts,
+    on="Channel",
+    how="left"
+)
+
+# =========================================================
+# ROUND VALUES
+# =========================================================
+
+brand_dashboard["KPT (Mins)"] = (
+    brand_dashboard["KPT (Mins)"]
+    .round(1)
+)
+
+brand_dashboard["O2D (Mins)"] = (
+    brand_dashboard["O2D (Mins)"]
+    .round(1)
+)
+
+# =========================================================
+# BREACH %
+# =========================================================
+
+brand_dashboard["KPT Breach %"] = round(
+    (
+        brand_dashboard["KPT Breach"]
+        / brand_dashboard["Total Orders"]
+    ) * 100,
+    1
+)
+
+brand_dashboard["O2D Breach %"] = round(
+    (
+        brand_dashboard["O2D Breach"]
+        / brand_dashboard["Total Orders"]
+    ) * 100,
+    1
+)
+
+# =========================================================
+# SLA STATUS
+# =========================================================
+
+brand_dashboard["KPT SLA Status"] = brand_dashboard[
+    "KPT (Mins)"
+].apply(
+    lambda x: "✅ Within SLA"
+    if x <= KPT_SLA
+    else "❌ Breach"
+)
+
+brand_dashboard["O2D SLA Status"] = brand_dashboard[
+    "O2D (Mins)"
+].apply(
+    lambda x: "✅ Within SLA"
+    if x <= O2D_SLA
+    else "❌ Breach"
+)
+
+# =========================================================
+# FINAL COLUMN ORDER
+# =========================================================
+
+brand_dashboard = brand_dashboard[[
+    "Channel",
+    "Total Orders",
+    "KPT (Mins)",
+    "KPT Breach",
+    "KPT Breach %",
+    "KPT SLA Status",
+    "O2D (Mins)",
+    "O2D Breach",
+    "O2D Breach %",
+    "O2D SLA Status"
+]]
+
+print("✅ Brand Breach Dashboard Ready")
+print(brand_dashboard.head())
 
 # =========================================================
 # KPI
@@ -616,6 +903,11 @@ summary_html = f"""
 
 <br>
 
+<h3>🚨 Brand Level SLA Dashboard</h3>
+{style_table(brand_dashboard)}
+
+<br>
+
 <h3>Region Dashboard</h3>
 {style_table(region_dashboard)}
 
@@ -625,6 +917,7 @@ summary_html = f"""
 {style_table(store_dashboard)}
 
 <br>
+
 
 <p>
 Regards,<br>
