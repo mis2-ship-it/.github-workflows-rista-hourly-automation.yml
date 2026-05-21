@@ -93,25 +93,27 @@ print("📅 Business Day:", business_day)
 # HELP SHEET
 # =========================================================
 
+help_ws = spreadsheet.worksheet(
+    "Help Sheet"
+)
+
+print("✅ Help Sheet Connected")
+
 help_values = help_ws.get_all_values()
 
-headers = [
-    str(h).strip()
-    for h in help_values[0]
-]
-
-# FIX EMPTY / DUPLICATE HEADERS
-headers = [
-    f"col_{i}" if h == "" else h
-    for i, h in enumerate(headers)
-]
+headers = help_values[0]
 
 rows = help_values[1:]
 
-help_df = pd.DataFrame(rows, columns=headers)
+help_df = pd.DataFrame(
+    rows,
+    columns=headers
+)
 
-print("HELP SHEET COLUMNS:")
-print(help_df.columns.tolist())
+print(
+    "✅ Help Sheet Loaded:",
+    len(help_df)
+)
 
 
 # =========================================================
