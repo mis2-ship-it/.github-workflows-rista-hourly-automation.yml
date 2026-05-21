@@ -101,7 +101,23 @@ branches = (
     .str.strip()
 )
 
-branches = branches[branches != ""].unique().tolist()
+help_df["ownership"] = help_df["ownership"].astype(str).str.upper()
+
+help_df = help_df[
+    help_df["ownership"] == "COCO"
+].copy()
+
+help_df = help_df.rename(columns={
+    "branchcode": "branchCode",
+    "storename": "Store Name",
+    "amemail": "AM Email",
+    "rmemail": "RM Email",
+    "amname": "AM Name",
+    "ccmail": "CC Mail",
+    "region": "Region"
+})
+
+branches = help_df["branchCode"].astype(str).str.strip().unique().tolist()
 
 print("🏪 COCO Branch Count:", len(branches))
 
