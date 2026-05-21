@@ -94,15 +94,6 @@ help_df.columns = (
     .str.replace(" ", "")
 )
 
-branches = (
-    help_df["branchCode"]
-    .dropna()
-    .astype(str)
-    .str.strip()
-)
-
-help_df["ownership"] = help_df["ownership"].astype(str).str.upper()
-
 help_df = help_df[
     help_df["ownership"] == "COCO"
 ].copy()
@@ -116,6 +107,15 @@ help_df = help_df.rename(columns={
     "ccmail": "CC Mail",
     "region": "Region"
 })
+
+
+branches = (
+    help_df["branchCode"]
+    .dropna()
+    .astype(str)
+    .str.strip()
+)
+
 
 branches = help_df["branchCode"].astype(str).str.strip().unique().tolist()
 
