@@ -72,6 +72,7 @@ lw_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
 print("📅 Today Data:", today_date)
 print("📅 LW Data:", lw_date)
 
+
 # =========================================================
 # HELP SHEET
 # =========================================================
@@ -84,7 +85,7 @@ rows = help_data[1:]
 
 help_df = pd.DataFrame(rows, columns=headers_row)
 
-# normalize columns
+# normalize columns (IMPORTANT FIX)
 help_df.columns = (
     help_df.columns
     .astype(str)
@@ -93,46 +94,9 @@ help_df.columns = (
     .str.replace(" ", "")
 )
 
-print("📌 Help Sheet Columns:", help_df.columns.tolist())
-
-# required columns
-required_cols = [
-    "branchcode",
-    "ownership",
-    "storename",
-    "amemail",
-    "rmemail",
-    "amname",
-    "ccmail",
-    "region"
-]
-
-for c in required_cols:
-    if c not in help_df.columns:
-        help_df[c] = ""
-
-# filter COCO
-help_df = help_df[
-    help_df["ownership"].astype(str).str.upper() == "COCO"
-].copy()
-
-# rename for final use
-help_df.rename(columns={
-    "branchcode": "branchCode",
-    "storename": "Store Name",
-    "amemail": "AM Email",
-    "rmemail": "RM Email",
-    "amname": "AM Name",
-    "ccmail": "CC Mail",
-    "region": "Region"
-}, inplace=True)
-
-# =========================================================
-# BRANCH LIST
-# =========================================================
-
 branches = (
     help_df["branchCode"]
+    .dropna()
     .astype(str)
     .str.strip()
 )
@@ -140,6 +104,7 @@ branches = (
 branches = branches[branches != ""].unique().tolist()
 
 print("🏪 COCO Branch Count:", len(branches))
+
 
 # =========================================================
 # SALES API
@@ -208,24 +173,27 @@ def process_sales_data(df):
     final_df = df.copy()
 
     # =========================================================
-    # SAFE branchCode FIX (IMPORTANT)
+    # SAFE branchCode FIX (IMPORTANT - FINAL VERSION)
     # =========================================================
-    
+
     if "branchCode" not in final_df.columns:
-    
+
         if "Store Code" in final_df.columns:
             final_df["branchCode"] = final_df["Store Code"]
-    
+
         elif "storeCode" in final_df.columns:
             final_df["branchCode"] = final_df["storeCode"]
-    
+
         elif "branch" in final_df.columns:
             final_df["branchCode"] = final_df["branch"]
-    
+
         else:
             print("❌ NO branchCode FOUND IN API RESPONSE")
             print(final_df.columns.tolist())
             return pd.DataFrame()
+
+    # IMPORTANT CLEANING (THIS FIXES YOUR MERGE BUG)
+    final_df["branchCode"] = final_df["branchCode"].astype(str).str.strip()
 
     # channel filter
     allowed_channels = [
@@ -260,6 +228,9 @@ lw_df = process_sales_data(lw_raw)
 help_merge = help_df[
     ["branchCode", "Store Name", "AM Email", "RM Email", "AM Name", "CC Mail", "Region"]
 ].copy()
+
+help_merge["branchCode"] = help_merge["branchCode"].astype(str).str.strip()
+today_df["branchCode"] = today_df["branchCode"].astype(str).str.strip()
 
 today_df = today_df.merge(help_merge, on="branchCode", how="left")
 
