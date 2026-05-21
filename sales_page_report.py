@@ -600,12 +600,9 @@ if "Store Code" in today_df.columns:
         .astype(str)
     )
 
-    print(
-        "✅ Final Output Rows:",
-        len(output_df)
-    )
+    print("✅ Final Output Rows:", len(output_df))
 
-    return output_df
+    return output_df   # MUST be inside function
 
 # =========================================================
 # PROCESS TODAY
