@@ -1,53 +1,51 @@
-# =========================================================
-# IMPORT
-# =========================================================
-
 import os
 import json
 import time
 import jwt
 import requests
 import pandas as pd
-import smtplib
-
 from datetime import datetime, timedelta
-
 import gspread
 from google.oauth2.service_account import Credentials
 
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+print("🚀 Script Started")
 
-print("🚀 Sales Script Started")
-
-# =========================================================
+# =========================================
 # AUTH
-# =========================================================
+# =========================================
 
 API_KEY = os.environ["API_KEY"]
 SECRET_KEY = os.environ["SECRET_KEY"]
 
 def get_token():
+
     payload = {
         "iss": API_KEY,
         "iat": int(time.time())
     }
-    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
+    return jwt.encode(
+        payload,
+        SECRET_KEY,
+        algorithm="HS256"
+    )
 
 def headers():
+
     return {
         "x-api-key": API_KEY,
         "x-api-token": get_token(),
         "content-type": "application/json"
     }
 
-# =========================================================
+# =========================================
 # GOOGLE AUTH
-# =========================================================
+# =========================================
 
 creds = Credentials.from_service_account_info(
+
     json.loads(os.environ["GOOGLE_CREDENTIALS"]),
+
     scopes=[
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
@@ -56,385 +54,213 @@ creds = Credentials.from_service_account_info(
 
 client = gspread.authorize(creds)
 
+# =========================================
+# GOOGLE SHEET
+# =========================================
+
 spreadsheet = client.open_by_key(
     "19z6KkVBFoLC33_wcNqVhDLyQEC2dDQ8YQE0gE38BhVg"
 )
 
-print("✅ Connected Google Sheet")
+print("✅ Connected to Google Sheet")
 
-# =========================================================
+# =========================================
 # DATE
-# =========================================================
+# =========================================
 
-today_date = datetime.now().strftime("%Y-%m-%d")
-lw_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+yesterday = (
+    datetime.now() - timedelta(days=1)
+).strftime("%Y-%m-%d")
 
-print("📅 Today Data:", today_date)
-print("📅 LW Data:", lw_date)
+sheet_name = f"{yesterday}_sample"
 
+print("📅 Fetching Date:", yesterday)
 
-# =========================================================
-# HELP SHEET
-# =========================================================
+# =========================================
+# CREATE / OPEN SHEET
+# =========================================
 
-help_ws = spreadsheet.worksheet("Help Sheet")
-help_data = help_ws.get("A:H")
+try:
 
-headers_row = help_data[0]
-rows = help_data[1:]
+    ws = spreadsheet.worksheet(sheet_name)
 
-help_df = pd.DataFrame(rows, columns=headers_row)
+    ws.clear()
 
-# normalize columns (IMPORTANT FIX)
-help_df.columns = (
-    help_df.columns
-    .astype(str)
-    .str.strip()
-    .str.lower()
-    .str.replace(" ", "")
-)
+except:
 
-help_df = help_df[
-    help_df["ownership"] == "COCO"
-].copy()
-
-help_df = help_df.rename(columns={
-    "branchcode": "branchCode",
-    "storename": "Store Name",
-    "amemail": "AM Email",
-    "rmemail": "RM Email",
-    "amname": "AM Name",
-    "ccmail": "CC Mail",
-    "region": "Region"
-})
-
-
-branches = (
-    help_df["branchCode"]
-    .dropna()
-    .astype(str)
-    .str.strip()
-)
-
-
-branches = help_df["branchCode"].astype(str).str.strip().unique().tolist()
-
-print("🏪 COCO Branch Count:", len(branches))
-
-
-# =========================================================
-# SALES API
-# =========================================================
-
-sales_url = "https://api.ristaapps.com/v1/sales/page"
-
-def fetch_sales_data(fetch_date):
-
-    all_sales = []
-
-    print(f"\n📦 Fetching Data: {fetch_date}")
-
-    for branch in branches:
-
-        print("Fetching:", branch)
-
-        params = {
-            "branch": branch,
-            "day": fetch_date
-        }
-
-        try:
-            response = requests.get(
-                sales_url,
-                headers=headers(),
-                params=params,
-                timeout=120
-            )
-
-            if response.status_code != 200:
-                continue
-
-            data = response.json().get("data", [])
-
-            if not data:
-                continue
-
-            df = pd.json_normalize(data)
-            all_sales.append(df)
-
-        except Exception as e:
-            print(f"❌ Error {branch}: {e}")
-
-    if not all_sales:
-        return pd.DataFrame()
-
-    return pd.concat(all_sales, ignore_index=True)
-
-# =========================================================
-# FETCH DATA
-# =========================================================
-
-today_raw = fetch_sales_data(today_date)
-lw_raw = fetch_sales_data(lw_date)
-
-# =========================================================
-# PROCESS DATA
-# =========================================================
-
-def process_sales_data(df):
-
-    if df.empty:
-        return pd.DataFrame()
-
-    final_df = df.copy()
-
-    # branchCode fix
-    if "branchCode" not in final_df.columns:
-
-        if "Store Code" in final_df.columns:
-            final_df["branchCode"] = final_df["Store Code"]
-
-        elif "storeCode" in final_df.columns:
-            final_df["branchCode"] = final_df["storeCode"]
-
-        elif "branch" in final_df.columns:
-            final_df["branchCode"] = final_df["branch"]
-
-        else:
-            print("❌ NO branchCode FOUND")
-            print(final_df.columns.tolist())
-            return pd.DataFrame()
-
-    final_df["branchCode"] = (
-        final_df["branchCode"]
-        .astype(str)
-        .str.strip()
+    ws = spreadsheet.add_worksheet(
+        title=sheet_name,
+        rows="500",
+        cols="200"
     )
 
-    # STANDARDIZE CHANNEL COLUMN
-    if "channel" in final_df.columns:
-        final_df.rename(columns={"channel": "Channel"}, inplace=True)
+print(f"✅ Worksheet Ready: {sheet_name}")
 
-    allowed_channels = [
-        "Zomato Frozen Bottle",
-        "Zomato Boba Bar",
-        "Zomato Madno",
-        "Zomato Lubov",
-        "Swiggy Frozen Bottle",
-        "Swiggy Boba Bar",
-        "Swiggy Madno",
-        "Swiggy Lubov"
-    ]
+# =========================================
+# FETCH ACTIVE BRANCHES
+# =========================================
 
-    if "Channel" in final_df.columns:
-        final_df = final_df[
-            final_df["Channel"].astype(str).isin(allowed_channels)
-        ].copy()
+b_url = "https://api.ristaapps.com/v1/branch/list"
 
-    return final_df
-
-# =========================================================
-# PROCESS DATASETS
-# =========================================================
-
-today_df = process_sales_data(today_raw)
-lw_df = process_sales_data(lw_raw)
-
-
-# =========================================================
-# MERGE HELP SHEET (SAFE VERSION)
-# =========================================================
-
-help_merge = help_df[
-    ["branchCode", "Store Name", "AM Email", "RM Email", "AM Name", "CC Mail", "Region"]
-].copy()
-
-help_merge["branchCode"] = (
-    help_merge["branchCode"]
-    .astype(str)
-    .str.strip()
+b_resp = requests.get(
+    b_url,
+    headers=headers()
 )
 
-# SAFE CHECK
-if today_df.empty:
-    print("❌ today_df is EMPTY after API fetch")
-    today_df = pd.DataFrame(columns=["branchCode"])
+b_json = b_resp.json()
 
-if "branchCode" not in today_df.columns:
-    print("❌ branchCode column missing in today_df")
-    print("Available Columns:", today_df.columns.tolist())
+if isinstance(b_json, dict):
 
-    today_df["branchCode"] = ""
+    b_data = b_json.get("data", [])
 
-today_df["branchCode"] = (
-    today_df["branchCode"]
-    .astype(str)
-    .str.strip()
+else:
+
+    b_data = b_json
+
+branch_df = pd.DataFrame(b_data)
+
+branch_df = branch_df[
+    branch_df["status"] == "Active"
+]
+
+branches = branch_df["branchCode"].tolist()
+
+print("🏪 Active Branches:", len(branches))
+
+# =========================================
+# FETCH SALES PAGE SAMPLE
+# =========================================
+
+s_url = "https://api.ristaapps.com/v1/sales/page"
+
+sales_data = []
+
+total_rows = 0
+
+for branch in branches:
+
+    print(f"Fetching: {branch}")
+
+    params = {
+        "branch": branch,
+        "day": yesterday
+    }
+
+    try:
+
+        response = requests.get(
+            s_url,
+            headers=headers(),
+            params=params,
+            timeout=60
+        )
+
+        if response.status_code != 200:
+
+            print(f"❌ Failed: {branch}")
+
+            continue
+
+        js = response.json()
+
+        data = js.get("data", [])
+
+        if not data:
+            continue
+
+        df = pd.json_normalize(data)
+
+        sales_data.append(df)
+
+        total_rows += len(df)
+
+        print(f"✅ Rows: {len(df)}")
+
+        # =====================================
+        # ONLY 100 SAMPLE ROWS
+        # =====================================
+
+        if total_rows >= 100:
+            break
+
+    except Exception as e:
+
+        print(f"❌ Error: {str(e)}")
+
+# =========================================
+# CONCAT
+# =========================================
+
+if not sales_data:
+
+    print("❌ No data fetched")
+
+    exit()
+
+sales_df = pd.concat(
+    sales_data,
+    ignore_index=True
 )
 
-today_df = today_df.merge(
-    help_merge,
-    on="branchCode",
-    how="left"
+# =========================================
+# LIMIT 100 ROWS
+# =========================================
+
+sales_df = sales_df.head(100)
+
+print("✅ Raw Rows:", len(sales_df))
+print("✅ Raw Columns:", len(sales_df.columns))
+
+# =========================================
+# EXPLODE ITEMS
+# =========================================
+
+if "items" in sales_df.columns:
+
+    exploded_df = sales_df.explode("items")
+
+    item_df = pd.json_normalize(
+        exploded_df["items"]
+    ).add_prefix("item_")
+
+    exploded_df = exploded_df.drop(
+        columns=["items"]
+    )
+
+    final_df = pd.concat(
+        [
+            exploded_df.reset_index(drop=True),
+            item_df.reset_index(drop=True)
+        ],
+        axis=1
+    )
+
+else:
+
+    final_df = sales_df.copy()
+
+print("✅ Final Rows:", len(final_df))
+print("✅ Final Columns:", len(final_df.columns))
+
+# =========================================
+# CLEAN
+# =========================================
+
+final_df = final_df.fillna("")
+
+final_df = final_df.astype(str)
+
+# =========================================
+# PUSH TO SHEET
+# =========================================
+
+ws.update(
+    [final_df.columns.tolist()] +
+    final_df.values.tolist(),
+    value_input_option="USER_ENTERED"
 )
 
-print("✅ Help Sheet Merged")
+print("✅ Data Uploaded Successfully")
 
-# =========================================================
-# TODAY FILTER
-# =========================================================
-
-if "invoiceDay" in today_df.columns:
-    today_df = today_df[
-        today_df["invoiceDay"].astype(str) == today_date
-    ].copy()
-
-print("✅ Today Orders:", len(today_df))
-
-# =========================================================
-# KPT CLEAN
-# =========================================================
-
-if "KPT (Mins)" in today_df.columns:
-    today_df["KPT (Mins)"] = pd.to_numeric(today_df["KPT (Mins)"], errors="coerce")
-    today_df = today_df[today_df["KPT (Mins)"].notna()]
-
-print("✅ KPT Valid Rows:", len(today_df))
-
-# =========================================================
-# KPI
-# =========================================================
-
-swiggy_avg = round(
-    today_df[today_df["Channel"].str.contains("Swiggy", na=False)]["KPT (Mins)"].mean(), 1
-)
-
-zomato_avg = round(
-    today_df[today_df["Channel"].str.contains("Zomato", na=False)]["KPT (Mins)"].mean(), 1
-)
-
-overall_avg = round(today_df["KPT (Mins)"].mean(), 1)
-
-total_orders = len(today_df)
-
-top_kpi = pd.DataFrame({
-    "Metric": ["Swiggy Avg", "Zomato Avg", "Overall Avg", "Total Orders"],
-    "Value": [swiggy_avg, zomato_avg, overall_avg, total_orders]
-})
-
-# =========================================================
-# REGION DASHBOARD
-# =========================================================
-
-region_dashboard = pd.pivot_table(
-    today_df,
-    values="KPT (Mins)",
-    index="Channel",
-    columns="Region",
-    aggfunc="mean"
-).round(1).reset_index()
-
-# =========================================================
-# STORE DASHBOARD
-# =========================================================
-
-store_dashboard = pd.pivot_table(
-    today_df,
-    values="KPT (Mins)",
-    index=["Region", "Store Name"],
-    columns="Channel",
-    aggfunc="mean"
-).round(1).reset_index()
-
-# =========================================================
-# EMAIL LIST
-# =========================================================
-
-cc_mails = []
-
-for x in help_df["CC Mail"].dropna():
-    for m in str(x).split(","):
-        if m.strip():
-            cc_mails.append(m.strip())
-
-cc_mails = list(set(cc_mails))
-
-# =========================================================
-# HTML FUNCTION
-# =========================================================
-
-def style_table(df):
-
-    if df.empty:
-        return "<p>No Data</p>"
-
-    html = "<table border='1' style='border-collapse:collapse;width:100%'>"
-
-    html += "<tr>"
-    for c in df.columns:
-        html += f"<th style='background:#1F4E78;color:white'>{c}</th>"
-    html += "</tr>"
-
-    for _, row in df.iterrows():
-        html += "<tr>"
-        for c in df.columns:
-            html += f"<td>{row[c]}</td>"
-        html += "</tr>"
-
-    html += "</table>"
-
-    return html
-
-# =========================================================
-# SUMMARY HTML
-# =========================================================
-
-summary_html = f"""
-<html>
-<body>
-
-<h2>📊 SALES DASHBOARD</h2>
-
-<h3>KPI</h3>
-{style_table(top_kpi)}
-
-<h3>Region Dashboard</h3>
-{style_table(region_dashboard)}
-
-<h3>Store Dashboard</h3>
-{style_table(store_dashboard)}
-
-<p>Regards,<br>MIS Team</p>
-
-</body>
-</html>
-"""
-
-# =========================================================
-# SEND MAIL
-# =========================================================
-
-EMAIL_USER = os.environ["EMAIL_USER"]
-EMAIL_PASSWORD = os.environ["EMAIL_PASSWORD"]
-
-msg = MIMEMultipart()
-msg["From"] = EMAIL_USER
-msg["To"] = EMAIL_USER
-msg["Cc"] = ",".join(cc_mails)
-msg["Subject"] = f"📊 Sales Dashboard - {today_date}"
-
-msg.attach(MIMEText(summary_html, "html"))
-
-server = smtplib.SMTP("smtp.gmail.com", 587)
-server.starttls()
-server.login(EMAIL_USER, EMAIL_PASSWORD)
-
-server.sendmail(
-    EMAIL_USER,
-    cc_mails,
-    msg.as_string()
-)
-
-server.quit()
-
-print("✅ Mail Sent Successfully")
+print("📄 Sheet URL:")
+print(spreadsheet.url)
