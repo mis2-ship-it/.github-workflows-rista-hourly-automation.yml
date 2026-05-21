@@ -443,17 +443,18 @@ print(sales_df.columns.tolist())
 # CREATE REQUIRED TIMESTAMP COLUMNS
 # =========================================================
 
-# ORDER TIME
-if "createdDate" in sales_df.columns:
+# ORDER TIME (Correct = invoiceDate)
+if "invoiceDate" in sales_df.columns:
 
     sales_df["Order Time"] = pd.to_datetime(
-        sales_df["createdDate"],
+        sales_df["invoiceDate"],
         errors="coerce"
     )
 
 else:
 
     sales_df["Order Time"] = pd.NaT
+
 
 # READY TIME
 if "orderReadyTimestamp" in sales_df.columns:
@@ -467,11 +468,12 @@ else:
 
     sales_df["Order Ready Time"] = pd.NaT
 
-# DELIVERY TIME
-if "modifiedDate" in sales_df.columns:
+
+# DELIVERY TIME (Correct = delivery.deliveryDate)
+if "delivery.deliveryDate" in sales_df.columns:
 
     sales_df["Delivery Time"] = pd.to_datetime(
-        sales_df["modifiedDate"],
+        sales_df["delivery.deliveryDate"],
         errors="coerce"
     )
 
@@ -479,36 +481,50 @@ else:
 
     sales_df["Delivery Time"] = pd.NaT
 
+
 # =========================================================
-# CREATE KPT COLUMN IF MISSING
+# CREATE KPT COLUMN
 # =========================================================
 
-if "KPT (Mins)" not in sales_df.columns:
+print("✅ Calculating KPT")
 
-    print("⚠️ KPT (Mins) Missing")
-    print("✅ Calculating KPT")
+sales_df["KPT (Mins)"] = (
+    (
+        sales_df["Order Ready Time"]
+        -
+        sales_df["Order Time"]
+    ).dt.total_seconds() / 60
+)
 
-    sales_df["KPT (Mins)"] = (
-        (
-            sales_df["Order Ready Time"]
-            - sales_df["Order Time"]
-        ).dt.total_seconds() / 60
-    )
+
+# remove negatives
+sales_df["KPT (Mins)"] = (
+    sales_df["KPT (Mins)"]
+    .clip(lower=0)
+    .round(1)
+)
+
 
 # =========================================================
 # CREATE O2D COLUMN
 # =========================================================
 
-if "O2D (Mins)" not in sales_df.columns:
+print("✅ Calculating O2D")
 
-    print("✅ Calculating O2D")
+sales_df["O2D (Mins)"] = (
+    (
+        sales_df["Delivery Time"]
+        -
+        sales_df["Order Time"]
+    ).dt.total_seconds() / 60
+)
 
-    sales_df["O2D (Mins)"] = (
-        (
-            sales_df["Delivery Time"]
-            - sales_df["Order Time"]
-        ).dt.total_seconds() / 60
-    )
+sales_df["O2D (Mins)"] = (
+    sales_df["O2D (Mins)"]
+    .clip(lower=0)
+    .round(1)
+)
+
 
 # =========================================================
 # CLEAN NUMERIC VALUES
@@ -524,6 +540,7 @@ sales_df["O2D (Mins)"] = pd.to_numeric(
     errors="coerce"
 )
 
+
 # =========================================================
 # REMOVE INVALID ROWS
 # =========================================================
@@ -536,7 +553,10 @@ sales_df = sales_df[
     sales_df["KPT (Mins)"] >= 0
 ].copy()
 
-print("✅ Valid KPT Rows:", len(sales_df))
+print(
+    "✅ Valid KPT Rows:",
+    len(sales_df)
+)
 
 # =========================================================
 # KPI
@@ -966,7 +986,7 @@ o2d_store_dashboard = pd.pivot_table(
 
 try:
 
-    report_ws = spreadsheet.worksheet("Sales Page Report")
+    report_ws = spreadsheet.worksheet("Sales Dashboard")
 
     report_ws.clear()
 
