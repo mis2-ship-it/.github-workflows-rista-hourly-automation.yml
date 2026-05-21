@@ -1265,7 +1265,7 @@ EMAIL_PASSWORD = os.environ["EMAIL_PASSWORD"]
 msg = MIMEMultipart()
 
 msg["From"] = EMAIL_USER
-msg["To"] = EMAIL_USER
+msg["To"] = "ops.all@frozenbottle.in"
 msg["Cc"] = ",".join(cc_mails)
 
 msg["Subject"] = f"📊 KPT & O2D Dashboard - {yesterday_date}"
