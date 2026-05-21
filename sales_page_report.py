@@ -71,11 +71,11 @@ print("✅ Connected Google Sheet")
 # DATE
 # =========================================================
 
-yesterday_date = (
+fetch_date = (
     datetime.now() - timedelta(days=1)
 ).strftime("%Y-%m-%d")
 
-print("📅 Fetching Yesterday Data:", yesterday_date)
+print("📅 Fetching Yesterday Data:", fetch_date)
 
 # =========================================================
 # HELP SHEET
@@ -324,7 +324,7 @@ def fetch_sales_data(fetch_date):
 # FETCH DATA
 # =========================================================
 
-raw_df = fetch_sales_data(yesterday_date)
+raw_df = fetch_sales_data(fetch_date)
 
 # =========================================================
 # PROCESS DATA
@@ -427,7 +427,7 @@ if "invoiceDay" in sales_df.columns:
 
     sales_df = sales_df[
         sales_df["invoiceDay"]
-        .astype(str) == yesterday_date
+        .astype(str) == fetch_date
     ].copy()
 
 print("✅ Orders:", len(sales_df))
@@ -1193,7 +1193,7 @@ summary_html = f"""
 
 <h2>
 📊 KPT and O2D Performance Dashboard
-({business_date})
+({fetch_date})
 </h2>
 
 <br>
@@ -1289,7 +1289,7 @@ msg["From"] = EMAIL_USER
 msg["To"] = "ops.all@frozenbottle.in"
 msg["Cc"] = ",".join(cc_mails)
 
-msg["Subject"] = f"📊 KPT & O2D Dashboard - {yesterday_date}"
+msg["Subject"] = f"📊 KPT & O2D Dashboard - {fetch_date}"
 
 msg.attach(
     MIMEText(summary_html, "html")
