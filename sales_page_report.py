@@ -697,11 +697,14 @@ def create_sla_dashboard(
     # SLA STATUS
     # =====================================================
 
-   dashboard["SLA Status"] = dashboard["P80"].apply(
-    lambda x:
-    "✅ Within SLA"
-    if pd.notna(x) and x <= sla_limit
-    else "❌ Breach"
+    dashboard["SLA Status"] = (
+        dashboard["P80"]
+        .apply(
+            lambda x:
+            "✅ Within SLA"
+            if pd.notna(x) and x <= sla_limit
+            else "❌ Breach"
+        )
     )
 
     dashboard = (
