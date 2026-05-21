@@ -83,11 +83,43 @@ print("📅 Fetching Yesterday Data:", yesterday_date)
 
 help_ws = spreadsheet.worksheet("Help Sheet")
 
-help_data = help_ws.get_all_records()
+# FETCH RAW DATA
+help_data = help_ws.get()
 
-help_df = pd.DataFrame(help_data)
+if not help_data:
+    print("❌ Help Sheet Empty")
+    exit()
 
-# normalize columns
+# HEADER ROW
+headers_row = help_data[0]
+
+# MAKE HEADERS SAFE
+safe_headers = []
+
+for i, h in enumerate(headers_row):
+
+    h = str(h).strip()
+
+    # blank header fix
+    if h == "":
+        h = f"blank_col_{i}"
+
+    # duplicate header fix
+    if h in safe_headers:
+        h = f"{h}_{i}"
+
+    safe_headers.append(h)
+
+# DATA ROWS
+rows = help_data[1:]
+
+# CREATE DATAFRAME
+help_df = pd.DataFrame(
+    rows,
+    columns=safe_headers
+)
+
+# NORMALIZE COLUMNS
 help_df.columns = (
     help_df.columns
     .astype(str)
@@ -96,12 +128,27 @@ help_df.columns = (
     .str.replace(" ", "")
 )
 
-# filter COCO
+print("✅ Help Sheet Loaded")
+
+# =========================================================
+# FILTER COCO
+# =========================================================
+
+if "ownership" not in help_df.columns:
+    print("❌ ownership column missing")
+    print(help_df.columns.tolist())
+    exit()
+
 help_df = help_df[
-    help_df["ownership"].astype(str).str.upper() == "COCO"
+    help_df["ownership"]
+    .astype(str)
+    .str.upper() == "COCO"
 ].copy()
 
-# rename columns
+# =========================================================
+# RENAME COLUMNS
+# =========================================================
+
 help_df = help_df.rename(columns={
     "branchcode": "branchCode",
     "storename": "Store Name",
@@ -111,6 +158,35 @@ help_df = help_df.rename(columns={
     "ccmail": "CC Mail",
     "region": "Region"
 })
+
+# =========================================================
+# CHECK REQUIRED COLUMNS
+# =========================================================
+
+required_cols = [
+    "branchCode",
+    "Store Name",
+    "AM Email",
+    "RM Email",
+    "AM Name",
+    "CC Mail",
+    "Region"
+]
+
+missing_cols = [
+    c for c in required_cols
+    if c not in help_df.columns
+]
+
+if missing_cols:
+    print("❌ Missing Columns:", missing_cols)
+    print("Available Columns:")
+    print(help_df.columns.tolist())
+    exit()
+
+# =========================================================
+# CLEAN BRANCH CODE
+# =========================================================
 
 help_df["branchCode"] = (
     help_df["branchCode"]
