@@ -188,10 +188,7 @@ def process_sales_data(df):
 
     final_df = df.copy()
 
-    # =========================================================
-    # SAFE branchCode FIX (IMPORTANT - FINAL VERSION)
-    # =========================================================
-
+    # branchCode fix
     if "branchCode" not in final_df.columns:
 
         if "Store Code" in final_df.columns:
@@ -204,14 +201,20 @@ def process_sales_data(df):
             final_df["branchCode"] = final_df["branch"]
 
         else:
-            print("❌ NO branchCode FOUND IN API RESPONSE")
+            print("❌ NO branchCode FOUND")
             print(final_df.columns.tolist())
             return pd.DataFrame()
 
-    # IMPORTANT CLEANING (THIS FIXES YOUR MERGE BUG)
-    final_df["branchCode"] = final_df["branchCode"].astype(str).str.strip()
+    final_df["branchCode"] = (
+        final_df["branchCode"]
+        .astype(str)
+        .str.strip()
+    )
 
-    # channel filter
+    # STANDARDIZE CHANNEL COLUMN
+    if "channel" in final_df.columns:
+        final_df.rename(columns={"channel": "Channel"}, inplace=True)
+
     allowed_channels = [
         "Zomato Frozen Bottle",
         "Zomato Boba Bar",
@@ -223,9 +226,9 @@ def process_sales_data(df):
         "Swiggy Lubov"
     ]
 
-    if "channel" in final_df.columns:
+    if "Channel" in final_df.columns:
         final_df = final_df[
-            final_df["channel"].astype(str).isin(allowed_channels)
+            final_df["Channel"].astype(str).isin(allowed_channels)
         ].copy()
 
     return final_df
@@ -237,18 +240,43 @@ def process_sales_data(df):
 today_df = process_sales_data(today_raw)
 lw_df = process_sales_data(lw_raw)
 
+
 # =========================================================
-# MERGE HELP SHEET
+# MERGE HELP SHEET (SAFE VERSION)
 # =========================================================
 
 help_merge = help_df[
     ["branchCode", "Store Name", "AM Email", "RM Email", "AM Name", "CC Mail", "Region"]
 ].copy()
 
-help_merge["branchCode"] = help_merge["branchCode"].astype(str).str.strip()
-today_df["branchCode"] = today_df["branchCode"].astype(str).str.strip()
+help_merge["branchCode"] = (
+    help_merge["branchCode"]
+    .astype(str)
+    .str.strip()
+)
 
-today_df = today_df.merge(help_merge, on="branchCode", how="left")
+# SAFE CHECK
+if today_df.empty:
+    print("❌ today_df is EMPTY after API fetch")
+    today_df = pd.DataFrame(columns=["branchCode"])
+
+if "branchCode" not in today_df.columns:
+    print("❌ branchCode column missing in today_df")
+    print("Available Columns:", today_df.columns.tolist())
+
+    today_df["branchCode"] = ""
+
+today_df["branchCode"] = (
+    today_df["branchCode"]
+    .astype(str)
+    .str.strip()
+)
+
+today_df = today_df.merge(
+    help_merge,
+    on="branchCode",
+    how="left"
+)
 
 print("✅ Help Sheet Merged")
 
