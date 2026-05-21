@@ -101,13 +101,13 @@ print("✅ Help Sheet Connected")
 
 help_values = help_ws.get_all_values()
 
-headers = help_values[0]
+sheet_headers = help_values[0]
 
 rows = help_values[1:]
 
 help_df = pd.DataFrame(
     rows,
-    columns=headers
+    columns=sheet_headers
 )
 
 print(
