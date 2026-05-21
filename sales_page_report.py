@@ -896,9 +896,9 @@ summary_html = f"""
 
 <body>
 
-<h2>📊 Sales Dashboard - {yesterday_date}</h2>
+<h2>📊 KPT & O2D Dashboard - {yesterday_date}</h2>
 
-<h3>KPI</h3>
+<h3>KPI Metrics</h3>
 {style_table(top_kpi)}
 
 <br>
@@ -941,7 +941,7 @@ msg["From"] = EMAIL_USER
 msg["To"] = EMAIL_USER
 msg["Cc"] = ",".join(cc_mails)
 
-msg["Subject"] = f"📊 Sales Dashboard - {yesterday_date}"
+msg["Subject"] = f"📊 KPT & O2D Dashboard - {yesterday_date}"
 
 msg.attach(
     MIMEText(summary_html, "html")
