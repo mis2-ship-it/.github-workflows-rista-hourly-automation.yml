@@ -372,11 +372,9 @@ def process_sales_data(df):
         "Zomato Frozen Bottle",
         "Zomato Boba Bar",
         "Zomato Madno",
-        "Zomato Lubov",
         "Swiggy Frozen Bottle",
         "Swiggy Boba Bar",
         "Swiggy Madno",
-        "Swiggy Lubov"
     ]
 
     final_df = final_df[
@@ -606,12 +604,9 @@ brand_channels = [
     "Swiggy Frozen Bottle",
     "Swiggy Boba Bar",
     "Swiggy Madno",
-    "Swiggy Lubov",
-    "Lubov Website",
     "Zomato Boba Bar",
     "Zomato Frozen Bottle",
     "Zomato Madno",
-    "Zomato Lubov"
 ]
 
 # FILTER CHANNELS
@@ -784,24 +779,185 @@ top_kpi = pd.DataFrame({
 # REGION DASHBOARD
 # =========================================================
 
+region_dashboard = (
+    sales_df
+    .groupby(
+        ["Region", "Channel"]
+    )
+    .agg(
+
+        Orders=(
+            "invoiceNumber",
+            "count"
+        ),
+
+        Avg_KPT=(
+            "KPT (Mins)",
+            "mean"
+        ),
+
+        Avg_O2D=(
+            "O2D (Mins)",
+            "mean"
+        )
+
+    )
+    .round(1)
+    .reset_index()
+)
+
+# pivot for clean format
 region_dashboard = pd.pivot_table(
-    sales_df,
-    values="KPT (Mins)",
-    index="Channel",
-    columns="Region",
-    aggfunc="mean"
-).round(1).reset_index().fillna("-")
+
+    region_dashboard,
+
+    index="Region",
+
+    columns="Channel",
+
+    values=[
+        "Orders",
+        "Avg_KPT",
+        "Avg_O2D"
+    ],
+
+    aggfunc="first"
+
+)
+
+region_dashboard = (
+    region_dashboard
+    .round(1)
+    .fillna("-")
+)
+
+region_dashboard.columns = [
+    f"{a}_{b}"
+    for a, b
+    in region_dashboard.columns
+]
+
+region_dashboard.reset_index(
+    inplace=True
+)
+
+print(
+    "✅ Region Dashboard Ready"
+)
 
 # =========================================================
 # STORE DASHBOARD
 # =========================================================
 
+store_dashboard = (
+    sales_df
+    .groupby(
+        [
+            "Region",
+            "Store Name",
+            "Channel"
+        ]
+    )
+    .agg(
+
+        Orders=(
+            "invoiceNumber",
+            "count"
+        ),
+
+        Avg_KPT=(
+            "KPT (Mins)",
+            "mean"
+        ),
+
+        Avg_O2D=(
+            "O2D (Mins)",
+            "mean"
+        )
+
+    )
+    .round(1)
+    .reset_index()
+)
+
 store_dashboard = pd.pivot_table(
-    sales_df,
-    values="KPT (Mins)",
-    index=["Region", "Store Name"],
+
+    store_dashboard,
+
+    index=[
+        "Region",
+        "Store Name"
+    ],
+
     columns="Channel",
+
+    values=[
+        "Orders",
+        "Avg_KPT",
+        "Avg_O2D"
+    ],
+
+    aggfunc="first"
+)
+
+store_dashboard = (
+    store_dashboard
+    .round(1)
+    .fillna("-")
+)
+
+store_dashboard.columns = [
+    f"{a}_{b}"
+    for a, b
+    in store_dashboard.columns
+]
+
+store_dashboard.reset_index(
+    inplace=True
+)
+
+print(
+    "✅ Store Dashboard Ready"
+)
+
+# =========================================================
+# O2D REGION DASHBOARD
+# =========================================================
+
+o2d_region_dashboard = pd.pivot_table(
+
+    sales_df,
+
+    values="O2D (Mins)",
+
+    index="Channel",
+
+    columns="Region",
+
     aggfunc="mean"
+
+).round(1).reset_index().fillna("-")
+
+
+# =========================================================
+# O2D STORE DASHBOARD
+# =========================================================
+
+o2d_store_dashboard = pd.pivot_table(
+
+    sales_df,
+
+    values="O2D (Mins)",
+
+    index=[
+        "Region",
+        "Store Name"
+    ],
+
+    columns="Channel",
+
+    aggfunc="mean"
+
 ).round(1).reset_index().fillna("-")
 
 # =========================================================
@@ -841,43 +997,161 @@ for x in help_df["CC Mail"].dropna():
 cc_mails = list(set(cc_mails))
 
 # =========================================================
-# HTML FUNCTION
+# HTML STYLE FUNCTION
 # =========================================================
 
-def style_table(df):
+def get_cell_color(val, metric="KPT"):
+
+    try:
+        val = float(val)
+
+        
+
+        # =====================================================
+        # KPT LOGIC
+        # Green <12
+        # Yellow 12-15
+        # Red >15
+        # =====================================================
+        if metric == "KPT":
+
+            if val < 12:
+                return (
+                    "background-color:#d9ead3;"
+                    "color:#006100;"
+                    "font-weight:bold;"
+                )
+
+            elif val <= 15:
+                return (
+                    "background-color:#fff2cc;"
+                    "color:#9c6500;"
+                    "font-weight:bold;"
+                )
+
+            else:
+                return (
+                    "background-color:#f4cccc;"
+                    "color:#9c0006;"
+                    "font-weight:bold;"
+                )
+
+        # =====================================================
+        # O2D LOGIC
+        # Green <30
+        # Yellow 30-35
+        # Red >35
+        # =====================================================
+        elif metric == "O2D":
+
+            if val < 30:
+                return (
+                    "background-color:#d9ead3;"
+                    "color:#006100;"
+                    "font-weight:bold;"
+                )
+
+            elif val <= 35:
+                return (
+                    "background-color:#fff2cc;"
+                    "color:#9c6500;"
+                    "font-weight:bold;"
+                )
+
+            else:
+                return (
+                    "background-color:#f4cccc;"
+                    "color:#9c0006;"
+                    "font-weight:bold;"
+                )
+
+    except:
+        return ""
+
+    return ""
+
+
+def style_dashboard_table(
+    region_dashboard,
+    metric="KPT"
+)
 
     if df.empty:
         return "<p>No Data</p>"
 
+    # replace nan with "-"
+    df = df.fillna("-")
+
     html = """
-    <table border='1'
-    style='border-collapse:collapse;width:100%'>
+    <table style="
+        border-collapse:collapse;
+        width:100%;
+        font-family:Arial;
+        font-size:13px;
+    ">
     """
 
-    # header
+    # =====================================================
+    # HEADER
+    # =====================================================
+
     html += "<tr>"
 
-    for c in df.columns:
+    for col in df.columns:
 
         html += f"""
-        <th style='background:#1F4E78;
-        color:white;padding:6px'>
-        {c}
+        <th style="
+        background:#1F4E78;
+        color:white;
+        border:1px solid #d9d9d9;
+        padding:8px;
+        text-align:center;
+        ">
+        {col}
         </th>
         """
 
     html += "</tr>"
 
-    # rows
+    # =====================================================
+    # BODY
+    # =====================================================
+
     for _, row in df.iterrows():
 
         html += "<tr>"
 
-        for c in df.columns:
+        for col in df.columns:
+
+            val = row[col]
+
+            style = ""
+
+            # only highlight metric columns
+            if col not in [
+                "Region",
+                "Store Name",
+                "Channel",
+                "Total Orders"
+            ]:
+
+                try:
+                    float(val)
+                    style = get_cell_color(
+                        val,
+                        metric
+                    )
+                except:
+                    pass
 
             html += f"""
-            <td style='padding:6px;text-align:center'>
-            {row[c]}
+            <td style="
+            border:1px solid #d9d9d9;
+            padding:8px;
+            text-align:center;
+            {style}
+            ">
+            {val}
             </td>
             """
 
@@ -894,33 +1168,86 @@ def style_table(df):
 summary_html = f"""
 <html>
 
-<body>
+<body style="font-family:Arial;">
 
-<h2>📊 KPT & O2D Dashboard - {yesterday_date}</h2>
-
-<h3>KPI Metrics</h3>
-{style_table(top_kpi)}
-
-<br>
-
-<h3>🚨 Brand Level SLA Dashboard</h3>
-{style_table(brand_dashboard)}
+<h2>
+📊 Sales Performance Dashboard
+({today_date})
+</h2>
 
 <br>
 
-<h3>Region Dashboard</h3>
-{style_table(region_dashboard)}
+<!-- ================================================= -->
+<!-- KPT DASHBOARD -->
+<!-- ================================================= -->
+
+<h2>
+🔥 KPT Dashboard
+</h2>
+
+<h3>
+📍 Region Level KPT
+</h3>
+
+{
+style_dashboard_table(
+    region_dashboard,
+    metric="KPT"
+)
+}
 
 <br>
 
-<h3>Store Dashboard</h3>
-{style_table(store_dashboard)}
+<h3>
+🏪 Store Level KPT
+</h3>
+
+{
+style_dashboard_table(
+    store_dashboard,
+    metric="KPT"
+)
+}
+
+<br><br>
+
+<!-- ================================================= -->
+<!-- O2D DASHBOARD -->
+<!-- ================================================= -->
+
+<h2>
+🚚 O2D Dashboard
+</h2>
+
+<h3>
+📍 Region Level O2D
+</h3>
+
+{
+style_dashboard_table(
+    o2d_region_dashboard,
+    metric="O2D"
+)
+}
 
 <br>
 
+<h3>
+🏪 Store Level O2D
+</h3>
+
+{
+style_dashboard_table(
+    o2d_store_dashboard,
+    metric="O2D"
+)
+}
+
+<br><br>
 
 <p>
-Regards,<br>
+Regards,
+<br>
 MIS Team
 </p>
 
