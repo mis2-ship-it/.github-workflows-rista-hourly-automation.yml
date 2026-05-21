@@ -143,16 +143,24 @@ def refresh_sheet(sheet_name, df):
 
 help_ws = spreadsheet.worksheet("Help Sheet")
 
-help_data = help_ws.get('A:H')
+help_data = help_ws.get("A:H")
 
 if not help_data or len(help_data) < 2:
     help_df = pd.DataFrame()
 
 else:
-    headers = [h.strip() for h in help_data[0]]   # CLEAN HEADER SPACES
+    headers = help_data[0]
     rows = help_data[1:]
 
     help_df = pd.DataFrame(rows, columns=headers)
+
+    # 🔥 NORMALIZE ALL COLUMNS (IMPORTANT FIX)
+    help_df.columns = (
+        help_df.columns
+        .astype(str)
+        .str.strip()
+        .str.lower()
+    )
 
 print("📌 Help Sheet Columns:", help_df.columns.tolist())
 
@@ -178,18 +186,21 @@ for c in required_cols:
         help_df[c] = ""
         
 # =========================================================
-# FILTER COCO ONLY
+# FILTER COCO ONLY (FIXED)
 # =========================================================
 
-if "Ownership" not in help_df.columns:
-    print("❌ Ownership column missing in Help Sheet")
+# normalize ownership column check
+if "ownership" not in help_df.columns:
+    print("❌ ownership column missing in Help Sheet")
     print(help_df.columns.tolist())
     exit()
 
+# filter COCO first
 help_df = help_df[
-    help_df["Ownership"].astype(str).str.upper() == "COCO"
-]
+    help_df["ownership"].astype(str).str.upper() == "COCO"
+].copy()
 
+# rename AFTER filtering (clean mapping)
 help_df.rename(columns={
     "branchcode": "branchCode",
     "storename": "Store Name",
@@ -198,6 +209,7 @@ help_df.rename(columns={
     "ccmail": "CC Mail",
     "region": "Region"
 }, inplace=True)
+
 
 # =========================================================
 # BRANCH LIST FROM HELP SHEET
