@@ -208,8 +208,25 @@ def process_sales_data(df):
     final_df = df.copy()
 
     # safe rename
+# =========================================================
+# SAFE branchCode FIX (IMPORTANT)
+# =========================================================
+
+if "branchCode" not in final_df.columns:
+
     if "Store Code" in final_df.columns:
-        final_df["branchCode"] = final_df["Store Code"].astype(str).str.strip()
+        final_df["branchCode"] = final_df["Store Code"]
+
+    elif "storeCode" in final_df.columns:
+        final_df["branchCode"] = final_df["storeCode"]
+
+    elif "branch" in final_df.columns:
+        final_df["branchCode"] = final_df["branch"]
+
+    else:
+        print("❌ NO branchCode FOUND IN API RESPONSE")
+        print(final_df.columns.tolist())
+        return pd.DataFrame()
 
     # channel filter
     allowed_channels = [
