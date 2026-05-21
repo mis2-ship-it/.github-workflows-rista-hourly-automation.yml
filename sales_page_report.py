@@ -966,7 +966,7 @@ o2d_store_dashboard = pd.pivot_table(
 
 try:
 
-    report_ws = spreadsheet.worksheet("Sales Dashboard")
+    report_ws = spreadsheet.worksheet("Sales Page Report")
 
     report_ws.clear()
 
@@ -979,7 +979,11 @@ try:
     print("✅ Dashboard Updated in GSheet")
 
 except Exception as e:
-    print("❌ Sheet Update Error:", e)
+
+    print(
+        "❌ Sheet Update Error:",
+        str(e)
+    )
 
 # =========================================================
 # EMAIL LIST
@@ -1168,8 +1172,8 @@ summary_html = f"""
 <body style="font-family:Arial;">
 
 <h2>
-📊 Sales Performance Dashboard
-({today_date})
+📊 KPT and O2D Performance Dashboard
+({business_date})
 </h2>
 
 <br>
