@@ -83,20 +83,22 @@ print("📅 Fetching Yesterday Data:", yesterday_date)
 
 help_ws = spreadsheet.worksheet("Help Sheet")
 
-# FETCH RAW DATA
+# GET RAW DATA
 help_data = help_ws.get()
 
 if not help_data:
     print("❌ Help Sheet Empty")
     exit()
 
-# HEADER ROW
-headers_row = help_data[0]
+# =========================================================
+# HEADER
+# =========================================================
 
-# MAKE HEADERS SAFE
+raw_headers = help_data[0]
+
 safe_headers = []
 
-for i, h in enumerate(headers_row):
+for i, h in enumerate(raw_headers):
 
     h = str(h).strip()
 
@@ -110,16 +112,43 @@ for i, h in enumerate(headers_row):
 
     safe_headers.append(h)
 
-# DATA ROWS
-rows = help_data[1:]
+header_len = len(safe_headers)
 
+print("✅ Header Count:", header_len)
+
+# =========================================================
+# NORMALIZE ROWS
+# =========================================================
+
+normalized_rows = []
+
+for row in help_data[1:]:
+
+    row = list(row)
+
+    # ADD MISSING COLUMNS
+    if len(row) < header_len:
+        row.extend([""] * (header_len - len(row)))
+
+    # REMOVE EXTRA COLUMNS
+    elif len(row) > header_len:
+        row = row[:header_len]
+
+    normalized_rows.append(row)
+
+# =========================================================
 # CREATE DATAFRAME
+# =========================================================
+
 help_df = pd.DataFrame(
-    rows,
+    normalized_rows,
     columns=safe_headers
 )
 
-# NORMALIZE COLUMNS
+# =========================================================
+# CLEAN COLUMN NAMES
+# =========================================================
+
 help_df.columns = (
     help_df.columns
     .astype(str)
@@ -129,21 +158,30 @@ help_df.columns = (
 )
 
 print("✅ Help Sheet Loaded")
+print("📋 Columns:", help_df.columns.tolist())
+
+# =========================================================
+# CHECK ownership COLUMN
+# =========================================================
+
+if "ownership" not in help_df.columns:
+
+    print("❌ ownership column missing")
+    print(help_df.columns.tolist())
+    exit()
 
 # =========================================================
 # FILTER COCO
 # =========================================================
 
-if "ownership" not in help_df.columns:
-    print("❌ ownership column missing")
-    print(help_df.columns.tolist())
-    exit()
-
 help_df = help_df[
     help_df["ownership"]
     .astype(str)
-    .str.upper() == "COCO"
+    .str.upper()
+    .str.strip() == "COCO"
 ].copy()
+
+print("✅ COCO Rows:", len(help_df))
 
 # =========================================================
 # RENAME COLUMNS
@@ -160,7 +198,7 @@ help_df = help_df.rename(columns={
 })
 
 # =========================================================
-# CHECK REQUIRED COLUMNS
+# REQUIRED COLUMNS CHECK
 # =========================================================
 
 required_cols = [
@@ -179,9 +217,11 @@ missing_cols = [
 ]
 
 if missing_cols:
+
     print("❌ Missing Columns:", missing_cols)
-    print("Available Columns:")
+    print("📋 Available Columns:")
     print(help_df.columns.tolist())
+
     exit()
 
 # =========================================================
@@ -197,6 +237,8 @@ help_df["branchCode"] = (
 branches = (
     help_df["branchCode"]
     .dropna()
+    .astype(str)
+    .str.strip()
     .unique()
     .tolist()
 )
