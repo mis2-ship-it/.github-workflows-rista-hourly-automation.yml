@@ -139,56 +139,22 @@ def refresh_sheet(sheet_name, df):
         f"{sheet_name}"
     )
 
+# Help Sheet
+
 help_ws = spreadsheet.worksheet("Help Sheet")
 
-help_data = help_ws.get("A:H")
+help_data = help_ws.get('A:H')
 
-if not help_data or len(help_data) == 0:
+if not help_data or len(help_data) < 2:
     help_df = pd.DataFrame()
 
 else:
+    headers = [h.strip() for h in help_data[0]]   # CLEAN HEADER SPACES
+    rows = help_data[1:]
 
-    # remove fully empty rows
-    help_data = [
-        row for row in help_data
-        if any(str(x).strip() for x in row)
-    ]
+    help_df = pd.DataFrame(rows, columns=headers)
 
-    if len(help_data) == 0:
-        help_df = pd.DataFrame()
-
-    else:
-
-        # FIRST ROW = HEADERS
-        raw_headers = help_data[0]
-
-        # remaining rows
-        rows = help_data[1:]
-
-        # normalize header length
-        max_len = max(len(r) for r in help_data)
-
-        raw_headers = list(raw_headers) + [""] * (max_len - len(raw_headers))
-
-        # clean headers safely
-        clean_headers = []
-
-        for i, h in enumerate(raw_headers):
-            h = str(h).strip()
-
-            if h == "" or h.lower() == "nan":
-                h = f"col_{i}"
-
-            clean_headers.append(h)
-
-        # normalize row length
-        fixed_rows = [
-            r + [""] * (len(clean_headers) - len(r))
-            for r in rows
-        ]
-
-        help_df = pd.DataFrame(fixed_rows, columns=clean_headers)
-
+print("📌 Help Sheet Columns:", help_df.columns.tolist())
 
 help_df.columns = (
     help_df.columns
@@ -215,11 +181,13 @@ for c in required_cols:
 # FILTER COCO ONLY
 # =========================================================
 
+if "Ownership" not in help_df.columns:
+    print("❌ Ownership column missing in Help Sheet")
+    print(help_df.columns.tolist())
+    exit()
+
 help_df = help_df[
-    help_df["Ownership"]
-    .astype(str)
-    .str.upper()
-    == "COCO"
+    help_df["Ownership"].astype(str).str.upper() == "COCO"
 ]
 
 help_df.rename(columns={
