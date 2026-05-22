@@ -1117,10 +1117,10 @@ print(
 )
 
 print("Store KPT Shape:",
-      store_kpt.shape)
+      store_kpt)
 
 print("Store O2D Shape:",
-      store_o2d.shape)
+      store_o2d)
 
 # =========================================================
 # SEND EMAIL
