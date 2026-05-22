@@ -961,6 +961,16 @@ summary_html = f"""
 </body>
 </html>
 """
+print("✅ Overall Dashboard Ready")
+
+print("Region Dashboard Shape:",
+      region_dashboards.shape)
+
+print("Store KPT Shape:",
+      store_kpt.shape)
+
+print("Store O2D Shape:",
+      store_o2d.shape)
 
 # =========================================================
 # SEND EMAIL
