@@ -924,6 +924,20 @@ def style_dashboard_table(df, metric="KPT"):
     return html
 
 # =========================================================
+# REGION HTML
+# =========================================================
+
+region_html = ""
+
+for region, df in region_dashboards.items():
+
+    region_html += f"""
+    <h3>{region}</h3>
+    {style_dashboard_table(df)}
+    <br>
+    """
+
+# =========================================================
 # SUMMARY HTML
 # =========================================================
 
@@ -932,7 +946,10 @@ summary_html = f"""
 
 <body style="font-family:Arial;">
 
-<h2>📊 KPT and O2D Performance Dashboard ({fetch_date})</h2>
+<h2>
+📊 KPT and O2D Performance Dashboard
+({fetch_date})
+</h2>
 
 <br>
 
@@ -942,17 +959,8 @@ summary_html = f"""
 <br>
 
 <h2>Region Dashboards</h2>
+{region_html}
 
-{
-"".join([
-    f"""
-    <h3>{region}</h3>
-    {style_dashboard_table(df)}
-    <br>
-    """
-    for region, df in region_dashboards.items()
-])
-}
 <br>
 
 <h2>Region + Store KPT Dashboard</h2>
@@ -965,11 +973,16 @@ summary_html = f"""
 
 <br><br>
 
-<p>Regards,<br>MIS Team</p>
+<p>
+Regards,
+<br>
+MIS Team
+</p>
 
 </body>
 </html>
 """
+
 print("✅ Overall Dashboard Ready")
 
 print(
