@@ -612,390 +612,114 @@ top_kpi = pd.DataFrame({
 
 print("✅ KPI Created")
 
-# =========================================================
-# KPI FUNCTION (AVG + P80 + MEDIAN + BREACH)
-# =========================================================
+def sla_metrics(df, group_col, metric, sla_limit):
 
-def create_sla_dashboard(
-    df,
-    group_col,
-    metric,
-    sla_limit
-):
-
-    dashboard = df.groupby(
-        group_col
-    ).agg(
-
-        Total_Orders=(
-            metric,
-            "count"
-        ),
-
-        Average=(
-            metric,
-            "mean"
-        ),
-
-        Median=(
-            metric,
-            "median"
-        ),
-
-        P80=(
-            metric,
-            lambda x:
-            x.quantile(0.80)
-        ),
-
-        Breached_Orders=(
-            metric,
-            lambda x:
-            (x > sla_limit)
-            .sum()
-        )
-
+    g = df.groupby(group_col).agg(
+        Orders=(metric, "count"),
+        Avg=(metric, "mean"),
+        Median=(metric, "median"),
+        P80=(metric, lambda x: x.quantile(0.80)),
+        Breach=(metric, lambda x: (x > sla_limit).sum())
     ).reset_index()
 
-    # =====================================================
-    # ROUND
-    # =====================================================
+    g["Breach %"] = (g["Breach"] / g["Orders"] * 100).round(1)
 
-    dashboard["Average"] = (
-        dashboard["Average"]
-        .round(1)
-    )
+    g["Avg"] = g["Avg"].round(1)
+    g["Median"] = g["Median"].round(1)
+    g["P80"] = g["P80"].round(1)
 
-    dashboard["Median"] = (
-        dashboard["Median"]
-        .round(1)
-    )
+    return g
 
-    dashboard["P80"] = (
-        dashboard["P80"]
-        .round(1)
-    )
+def overall_dashboard(df):
 
-    # =====================================================
-    # BREACH %
-    # =====================================================
+    swiggy = df[df["Channel"].str.contains("Swiggy")]
+    zomato = df[df["Channel"].str.contains("Zomato")]
 
-    dashboard["Breach %"] = (
-        (
-            dashboard[
-                "Breached_Orders"
-            ]
-            /
-            dashboard[
-                "Total_Orders"
-            ]
-        )
-        * 100
-    ).round(1)
+    def calc(metric):
 
-    # =====================================================
-    # SLA STATUS
-    # =====================================================
+        return {
+            "Swiggy": round(swiggy[metric].mean(), 1),
+            "Zomato": round(zomato[metric].mean(), 1),
+            "Overall": round(df[metric].mean(), 1)
+        }
 
-    dashboard["SLA Status"] = (
-        dashboard["P80"]
-        .apply(
-            lambda x:
-            "✅ Within SLA"
-            if pd.notna(x) and x <= sla_limit
-            else "❌ Breach"
-        )
-    )
+    out = pd.DataFrame({
+        "Parameters": [
+            "Orders",
+            "KPT",
+            "O2D",
+            "KPT P80",
+            "O2D P80",
+            "KPT Median",
+            "O2D Median",
+            "Breached Orders KPT",
+            "Breached Orders O2D"
+        ],
 
-    dashboard = (
-        dashboard
-        .fillna("-")
-    )
+        "Swiggy": [
+            len(swiggy),
+            swiggy["KPT (Mins)"].mean(),
+            swiggy["O2D (Mins)"].mean(),
+            swiggy["KPT (Mins)"].quantile(0.80),
+            swiggy["O2D (Mins)"].quantile(0.80),
+            swiggy["KPT (Mins)"].median(),
+            swiggy["O2D (Mins)"].median(),
+            (swiggy["KPT (Mins)"] > 12).sum(),
+            (swiggy["O2D (Mins)"] > 30).sum()
+        ],
 
-    return dashboard
+        "Zomato": [
+            len(zomato),
+            zomato["KPT (Mins)"].mean(),
+            zomato["O2D (Mins)"].mean(),
+            zomato["KPT (Mins)"].quantile(0.80),
+            zomato["O2D (Mins)"].quantile(0.80),
+            zomato["KPT (Mins)"].median(),
+            zomato["O2D (Mins)"].median(),
+            (zomato["KPT (Mins)"] > 12).sum(),
+            (zomato["O2D (Mins)"] > 30).sum()
+        ],
 
+        "Overall": [
+            len(df),
+            df["KPT (Mins)"].mean(),
+            df["O2D (Mins)"].mean(),
+            df["KPT (Mins)"].quantile(0.80),
+            df["O2D (Mins)"].quantile(0.80),
+            df["KPT (Mins)"].median(),
+            df["O2D (Mins)"].median(),
+            (df["KPT (Mins)"] > 12).sum(),
+            (df["O2D (Mins)"] > 30).sum()
+        ]
+    })
 
-# =========================================================
-# REGION DASHBOARD
-# =========================================================
+    return out.round(1)
 
-region_dashboard = (
-    sales_df
-    .groupby(
-        ["Region", "Channel"]
-    )
-    .agg(
+region_dashboards = {}
 
-        Orders=(
-            "invoiceNumber",
-            "count"
-        ),
+for r in sales_df["Region"].unique():
 
-        Avg_KPT=(
-            "KPT (Mins)",
-            "mean"
-        ),
+    temp = sales_df[sales_df["Region"] == r]
 
-        Avg_O2D=(
-            "O2D (Mins)",
-            "mean"
-        )
+    region_dashboards[r] = overall_dashboard(temp)
 
-    )
-    .round(1)
-    .reset_index()
-)
-
-# =========================================================
-# CHANNEL DASHBOARD
-# =========================================================
-
-channel_kpt_dashboard = create_sla_dashboard(
-    sales_df,
-    "Channel",
-    "KPT (Mins)",
-    12
-)
-
-channel_o2d_dashboard = create_sla_dashboard(
-    sales_df,
-    "Channel",
-    "O2D (Mins)",
-    30
-)
-
-print(
-    "✅ Channel Dashboard Ready"
-)
-
-# =========================================================
-# BRAND DASHBOARD
-# =========================================================
-
-brand_kpt_dashboard = create_sla_dashboard(
-    sales_df,
-    "brandName",
-    "KPT (Mins)",
-    12
-)
-
-brand_o2d_dashboard = create_sla_dashboard(
-    sales_df,
-    "brandName",
-    "O2D (Mins)",
-    30
-)
-
-print(
-    "✅ Brand Dashboard Ready"
-)
-
-# =========================================================
-# REGION DASHBOARD
-# =========================================================
-
-region_kpt_dashboard = create_sla_dashboard(
-    sales_df,
-    "Region",
-    "KPT (Mins)",
-    12
-)
-
-region_o2d_dashboard = create_sla_dashboard(
-    sales_df,
-    "Region",
-    "O2D (Mins)",
-    30
-)
-
-print(
-    "✅ Region Dashboard Ready"
-)
-
-# =========================================================
-# STORE DASHBOARD
-# =========================================================
-
-store_kpt_dashboard = create_sla_dashboard(
-    sales_df,
-    ["Region", "Store Name"],
-    "KPT (Mins)",
-    12
-)
-
-store_o2d_dashboard = create_sla_dashboard(
-    sales_df,
-    ["Region", "Store Name"],
-    "O2D (Mins)",
-    30
-)
-
-print(
-    "✅ Store Dashboard Ready"
-)
-
-#Region Dashboard Pivotable
-
-region_dashboard = sales_df.groupby(
-    ["Region", "Channel"]
+store_kpt = sales_df.groupby(
+    ["Region", "Store Name", "Channel"]
 ).agg(
-
-    Orders=(
-        "invoiceNumber",
-        "count"
-    ),
-
-    Avg_KPT=(
-        "KPT (Mins)",
-        "mean"
-    ),
-
-    Median_KPT=(
-        "KPT (Mins)",
-        "median"
-    ),
-
-    P80_KPT=(
-        "KPT (Mins)",
-        lambda x: x.quantile(0.80)
-    ),
-
-    Avg_O2D=(
-        "O2D (Mins)",
-        "mean"
-    ),
-
-    Median_O2D=(
-        "O2D (Mins)",
-        "median"
-    ),
-
-    P80_O2D=(
-        "O2D (Mins)",
-        lambda x: x.quantile(0.80)
-    )
-
+    Orders=("KPT (Mins)", "count"),
+    Avg=("KPT (Mins)", "mean"),
+    P80=("KPT (Mins)", lambda x: x.quantile(0.80)),
+    Median=("KPT (Mins)", "median")
 ).reset_index()
 
-region_dashboard = pd.pivot_table(
-
-    region_dashboard,
-
-    index="Region",
-
-    columns="Channel",
-
-    values=[
-        "Orders",
-        "Avg_KPT",
-        "Median_KPT",
-        "P80_KPT",
-        "Avg_O2D",
-        "Median_O2D",
-        "P80_O2D"
-    ],
-
-    aggfunc="first"
-
-)
-
-region_dashboard.columns = [
-    f"{a}_{b}"
-    for a, b in region_dashboard.columns
-]
-
-region_dashboard = (
-    region_dashboard
-    .round(1)
-    .reset_index()
-    .fillna("-")
-)
-
-print("✅ Region Dashboard Ready")
-
-store_dashboard = sales_df.groupby(
-    [
-        "Region",
-        "Store Name",
-        "Channel"
-    ]
+store_o2d = sales_df.groupby(
+    ["Region", "Store Name", "Channel"]
 ).agg(
-
-    Orders=(
-        "invoiceNumber",
-        "count"
-    ),
-
-    Avg_KPT=(
-        "KPT (Mins)",
-        "mean"
-    ),
-
-    Median_KPT=(
-        "KPT (Mins)",
-        "median"
-    ),
-
-    P80_KPT=(
-        "KPT (Mins)",
-        lambda x: x.quantile(0.80)
-    ),
-
-    Avg_O2D=(
-        "O2D (Mins)",
-        "mean"
-    ),
-
-    Median_O2D=(
-        "O2D (Mins)",
-        "median"
-    ),
-
-    P80_O2D=(
-        "O2D (Mins)",
-        lambda x: x.quantile(0.80)
-    )
-
+    Orders=("O2D (Mins)", "count"),
+    Avg=("O2D (Mins)", "mean"),
+    P80=("O2D (Mins)", lambda x: x.quantile(0.80)),
+    Median=("O2D (Mins)", "median")
 ).reset_index()
-
-store_dashboard = pd.pivot_table(
-
-    store_dashboard,
-
-    index=[
-        "Region",
-        "Store Name"
-    ],
-
-    columns="Channel",
-
-    values=[
-        "Orders",
-        "Avg_KPT",
-        "Median_KPT",
-        "P80_KPT",
-        "Avg_O2D",
-        "Median_O2D",
-        "P80_O2D"
-    ],
-
-    aggfunc="first"
-
-)
-
-store_dashboard.columns = [
-    f"{a}_{b}"
-    for a, b in store_dashboard.columns
-]
-
-store_dashboard = (
-    store_dashboard
-    .round(1)
-    .reset_index()
-    .fillna("-")
-)
-
-print("✅ Store Dashboard Ready")
 
 # =========================================================
 # WRITE TO GOOGLE SHEET
@@ -1123,9 +847,9 @@ def style_dashboard_table(df, metric="KPT"):
     html = """
     <table style="
         border-collapse:collapse;
-        width:100%;
+        width:50%;
         font-family:Arial;
-        font-size:13px;
+        font-size:10px;
     ">
     """
 
@@ -1208,86 +932,31 @@ summary_html = f"""
 
 <body style="font-family:Arial;">
 
-<h2>
-📊 KPT and O2D Performance Dashboard
-({fetch_date})
-</h2>
+<h2>📊 KPT and O2D Performance Dashboard ({fetch_date})</h2>
 
 <br>
 
-<!-- ================================================= -->
-<!-- KPT DASHBOARD -->
-<!-- ================================================= -->
-
-<h2>
-🔥 KPT Dashboard
-</h2>
-
-<h3>
-📍 Region Level KPT
-</h3>
-
-{
-style_dashboard_table(
-    region_dashboard,
-    metric="KPT"
-)
-}
+<h2>Overall Dashboard</h2>
+{style_dashboard_table(overall_dashboard(sales_df))}
 
 <br>
 
-<h3>
-🏪 Store Level KPT
-</h3>
+<h2>Region Dashboards</h2>
+{style_dashboard_table(region_dashboard_final)}
 
-{
-style_dashboard_table(
-    store_dashboard,
-    metric="KPT"
-)
-}
+<br>
+
+<h2>Region + Store KPT Dashboard</h2>
+{style_dashboard_table(store_kpt)}
+
+<br>
+
+<h2>Region + Store O2D Dashboard</h2>
+{style_dashboard_table(store_o2d)}
 
 <br><br>
 
-<!-- ================================================= -->
-<!-- O2D DASHBOARD -->
-<!-- ================================================= -->
-
-<h2>
-🚚 O2D Dashboard
-</h2>
-
-<h3>
-📍 Region Level O2D
-</h3>
-
-{
-style_dashboard_table(
-    region_dashboard,
-    metric="O2D"
-)
-}
-
-<br>
-
-<h3>
-🏪 Store Level O2D
-</h3>
-
-{
-style_dashboard_table(
-    store_dashboard,
-    metric="O2D"
-)
-}
-
-<br><br>
-
-<p>
-Regards,
-<br>
-MIS Team
-</p>
+<p>Regards,<br>MIS Team</p>
 
 </body>
 </html>
