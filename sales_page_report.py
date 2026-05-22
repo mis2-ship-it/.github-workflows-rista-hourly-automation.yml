@@ -942,8 +942,17 @@ summary_html = f"""
 <br>
 
 <h2>Region Dashboards</h2>
-{style_dashboard_table(region_dashboards)}
 
+{
+"".join([
+    f"""
+    <h3>{region}</h3>
+    {style_dashboard_table(df)}
+    <br>
+    """
+    for region, df in region_dashboards.items()
+])
+}
 <br>
 
 <h2>Region + Store KPT Dashboard</h2>
@@ -963,8 +972,10 @@ summary_html = f"""
 """
 print("✅ Overall Dashboard Ready")
 
-print("Region Dashboard Shape:",
-      region_dashboards.shape)
+print(
+    "✅ Region Dashboards:",
+    len(region_dashboards)
+)
 
 print("Store KPT Shape:",
       store_kpt.shape)
