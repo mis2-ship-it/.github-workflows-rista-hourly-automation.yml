@@ -955,6 +955,20 @@ def style_dashboard_table(df, metric="KPT"):
     ">
     """
 
+    # =========================================================
+    # REGION HTML
+    # =========================================================
+    
+    region_html = ""
+    
+    for region, df in region_dashboards.items():
+    
+        region_html += f"""
+        <h3>{region}</h3>
+        {style_dashboard_table(df)}
+        <br>
+        """
+    
     # =====================================================
     # HEADER
     # =====================================================
@@ -1040,19 +1054,7 @@ def style_dashboard_table(df, metric="KPT"):
 
     return html
 
-# =========================================================
-# REGION HTML
-# =========================================================
 
-region_html = ""
-
-for region, df in region_dashboards.items():
-
-    region_html += f"""
-    <h3>{region}</h3>
-    {style_dashboard_table(df)}
-    <br>
-    """
 
 # =========================================================
 # SUMMARY HTML
