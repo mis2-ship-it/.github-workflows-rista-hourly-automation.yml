@@ -703,23 +703,125 @@ for r in sales_df["Region"].unique():
 
     region_dashboards[r] = overall_dashboard(temp)
 
-store_kpt = sales_df.groupby(
-    ["Region", "Store Name", "Channel"]
-).agg(
-    Orders=("KPT (Mins)", "count"),
-    Avg=("KPT (Mins)", "mean"),
-    P80=("KPT (Mins)", lambda x: x.quantile(0.80)),
-    Median=("KPT (Mins)", "median")
-).reset_index()
+# =========================================================
+# REGION + STORE DASHBOARD
+# =========================================================
 
-store_o2d = sales_df.groupby(
-    ["Region", "Store Name", "Channel"]
-).agg(
-    Orders=("O2D (Mins)", "count"),
-    Avg=("O2D (Mins)", "mean"),
-    P80=("O2D (Mins)", lambda x: x.quantile(0.80)),
-    Median=("O2D (Mins)", "median")
-).reset_index()
+region_store_html = ""
+
+for region in sorted(sales_df["Region"].dropna().unique()):
+
+    temp = sales_df[
+        sales_df["Region"] == region
+    ].copy()
+
+    # =====================================================
+    # SWIGGY
+    # =====================================================
+
+    swiggy = temp[
+        temp["Channel"]
+        .str.contains("Swiggy", na=False)
+    ]
+
+    swiggy_store = swiggy.groupby(
+        "Store Name"
+    ).agg(
+        **{
+            "Swiggy Orders": (
+                "KPT (Mins)",
+                "count"
+            ),
+            "KPT": (
+                "KPT (Mins)",
+                "mean"
+            ),
+            "KPT P80": (
+                "KPT (Mins)",
+                lambda x: x.quantile(0.80)
+            ),
+            "KPT Median": (
+                "KPT (Mins)",
+                "median"
+            ),
+            "O2D": (
+                "O2D (Mins)",
+                "mean"
+            ),
+            "O2D P80": (
+                "O2D (Mins)",
+                lambda x: x.quantile(0.80)
+            ),
+            "O2D Median": (
+                "O2D (Mins)",
+                "median"
+            )
+        }
+    ).reset_index().round(2)
+
+    # =====================================================
+    # ZOMATO
+    # =====================================================
+
+    zomato = temp[
+        temp["Channel"]
+        .str.contains("Zomato", na=False)
+    ]
+
+    zomato_store = zomato.groupby(
+        "Store Name"
+    ).agg(
+        **{
+            "Zomato Orders": (
+                "KPT (Mins)",
+                "count"
+            ),
+            "KPT": (
+                "KPT (Mins)",
+                "mean"
+            ),
+            "KPT P80": (
+                "KPT (Mins)",
+                lambda x: x.quantile(0.80)
+            ),
+            "KPT Median": (
+                "KPT (Mins)",
+                "median"
+            ),
+            "O2D": (
+                "O2D (Mins)",
+                "mean"
+            ),
+            "O2D P80": (
+                "O2D (Mins)",
+                lambda x: x.quantile(0.80)
+            ),
+            "O2D Median": (
+                "O2D (Mins)",
+                "median"
+            )
+        }
+    ).reset_index().round(2)
+
+    region_store_html += f"""
+    <h2>{region}</h2>
+
+    <h3>Swiggy</h3>
+    {style_dashboard_table(
+        swiggy_store,
+        metric="KPT"
+    )}
+
+    <br>
+
+    <h3>Zomato</h3>
+    {style_dashboard_table(
+        zomato_store,
+        metric="KPT"
+    )}
+
+    <br><br>
+    """
 
 # =========================================================
 # WRITE TO GOOGLE SHEET
@@ -889,20 +991,35 @@ def style_dashboard_table(df, metric="KPT"):
 
             style = ""
 
-            # only highlight metric columns
-            if col not in [
-                "Region",
-                "Store Name",
-                "Channel",
-                "Total Orders"
-            ]:
-
+    
+            # highlight only KPI columns
+            highlight_cols = [
+                "KPT",
+                "O2D",
+                "Avg",
+                "P80",
+                "Median"
+            ]
+            
+            if any(x in str(col) for x in highlight_cols):
+            
                 try:
                     float(val)
-                    style = get_cell_color(
-                        val,
-                        metric
-                    )
+            
+                    # O2D columns
+                    if "O2D" in str(col):
+                        style = get_cell_color(
+                            val,
+                            "O2D"
+                        )
+            
+                    # KPT columns
+                    else:
+                        style = get_cell_color(
+                            val,
+                            "KPT"
+                        )
+            
                 except:
                     pass
 
@@ -963,13 +1080,8 @@ summary_html = f"""
 
 <br>
 
-<h2>Region + Store KPT Dashboard</h2>
-{style_dashboard_table(store_kpt)}
-
-<br>
-
-<h2>Region + Store O2D Dashboard</h2>
-{style_dashboard_table(store_o2d)}
+<h2>Region + Store Dashboard</h2>
+{region_store_html}
 
 <br><br>
 
