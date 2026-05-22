@@ -942,7 +942,7 @@ summary_html = f"""
 <br>
 
 <h2>Region Dashboards</h2>
-{style_dashboard_table(region_dashboard_final)}
+{style_dashboard_table(region_dashboards)}
 
 <br>
 
