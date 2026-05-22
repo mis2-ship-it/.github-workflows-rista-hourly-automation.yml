@@ -1094,7 +1094,10 @@ summary_html = f"""
 
 <br>
 
-<h2>Region + Store Dashboard</h2>
+<h2>
+🏪 Region + Store Dashboard
+</h2>
+
 {region_store_html}
 
 <br><br>
@@ -1116,12 +1119,7 @@ print(
     len(region_dashboards)
 )
 
-print("Store KPT Shape:",
-      store_kpt)
-
-print("Store O2D Shape:",
-      store_o2d)
-
+print("✅ Region Store Dashboard Ready")
 # =========================================================
 # SEND EMAIL
 # =========================================================
