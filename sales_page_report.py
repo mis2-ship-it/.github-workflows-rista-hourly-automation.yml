@@ -704,126 +704,6 @@ for r in sales_df["Region"].unique():
     region_dashboards[r] = overall_dashboard(temp)
 
 # =========================================================
-# REGION + STORE DASHBOARD
-# =========================================================
-
-region_store_html = ""
-
-for region in sorted(sales_df["Region"].dropna().unique()):
-
-    temp = sales_df[
-        sales_df["Region"] == region
-    ].copy()
-
-    # =====================================================
-    # SWIGGY
-    # =====================================================
-
-    swiggy = temp[
-        temp["Channel"]
-        .str.contains("Swiggy", na=False)
-    ]
-
-    swiggy_store = swiggy.groupby(
-        "Store Name"
-    ).agg(
-        **{
-            "Swiggy Orders": (
-                "KPT (Mins)",
-                "count"
-            ),
-            "KPT": (
-                "KPT (Mins)",
-                "mean"
-            ),
-            "KPT P80": (
-                "KPT (Mins)",
-                lambda x: x.quantile(0.80)
-            ),
-            "KPT Median": (
-                "KPT (Mins)",
-                "median"
-            ),
-            "O2D": (
-                "O2D (Mins)",
-                "mean"
-            ),
-            "O2D P80": (
-                "O2D (Mins)",
-                lambda x: x.quantile(0.80)
-            ),
-            "O2D Median": (
-                "O2D (Mins)",
-                "median"
-            )
-        }
-    ).reset_index().round(2)
-
-    # =====================================================
-    # ZOMATO
-    # =====================================================
-
-    zomato = temp[
-        temp["Channel"]
-        .str.contains("Zomato", na=False)
-    ]
-
-    zomato_store = zomato.groupby(
-        "Store Name"
-    ).agg(
-        **{
-            "Zomato Orders": (
-                "KPT (Mins)",
-                "count"
-            ),
-            "KPT": (
-                "KPT (Mins)",
-                "mean"
-            ),
-            "KPT P80": (
-                "KPT (Mins)",
-                lambda x: x.quantile(0.80)
-            ),
-            "KPT Median": (
-                "KPT (Mins)",
-                "median"
-            ),
-            "O2D": (
-                "O2D (Mins)",
-                "mean"
-            ),
-            "O2D P80": (
-                "O2D (Mins)",
-                lambda x: x.quantile(0.80)
-            ),
-            "O2D Median": (
-                "O2D (Mins)",
-                "median"
-            )
-        }
-    ).reset_index().round(2)
-
-    region_store_html += f"""
-    <h2>{region}</h2>
-
-    <h3>Swiggy</h3>
-    {style_dashboard_table(
-        swiggy_store,
-        metric="KPT"
-    )}
-
-    <br>
-
-    <h3>Zomato</h3>
-    {style_dashboard_table(
-        zomato_store,
-        metric="KPT"
-    )}
-
-    <br><br>
-    """
-
-# =========================================================
 # WRITE TO GOOGLE SHEET
 # =========================================================
 
@@ -955,20 +835,7 @@ def style_dashboard_table(df, metric="KPT"):
     ">
     """
 
-    # =========================================================
-    # REGION HTML
-    # =========================================================
-    
-    region_html = ""
-    
-    for region, df in region_dashboards.items():
-    
-        region_html += f"""
-        <h3>{region}</h3>
-        {style_dashboard_table(df)}
-        <br>
-        """
-    
+ 
     # =====================================================
     # HEADER
     # =====================================================
@@ -1054,7 +921,152 @@ def style_dashboard_table(df, metric="KPT"):
 
     return html
 
+# =========================================================
+# REGION HTML
+# =========================================================
 
+region_html = ""
+
+for region, df in region_dashboards.items():
+
+    region_html += f"""
+    <h3>{region}</h3>
+    {style_dashboard_table(df)}
+    <br>
+    """
+
+
+# =========================================================
+# REGION + STORE DASHBOARD
+# =========================================================
+
+region_store_html = ""
+
+for region in sorted(
+    sales_df["Region"]
+    .dropna()
+    .unique()
+):
+
+    temp = sales_df[
+        sales_df["Region"] == region
+    ].copy()
+
+    # SWIGGY
+    swiggy = temp[
+        temp["Channel"]
+        .str.contains(
+            "Swiggy",
+            na=False
+        )
+    ]
+
+    swiggy_store = (
+        swiggy.groupby(
+            "Store Name"
+        )
+        .agg(
+            **{
+                "Swiggy Orders": (
+                    "KPT (Mins)",
+                    "count"
+                ),
+                "KPT": (
+                    "KPT (Mins)",
+                    "mean"
+                ),
+                "KPT P80": (
+                    "KPT (Mins)",
+                    lambda x:
+                    x.quantile(0.80)
+                ),
+                "KPT Median": (
+                    "KPT (Mins)",
+                    "median"
+                ),
+                "O2D": (
+                    "O2D (Mins)",
+                    "mean"
+                ),
+                "O2D P80": (
+                    "O2D (Mins)",
+                    lambda x:
+                    x.quantile(0.80)
+                ),
+                "O2D Median": (
+                    "O2D (Mins)",
+                    "median"
+                )
+            }
+        )
+        .reset_index()
+        .round(2)
+    )
+
+    # ZOMATO
+    zomato = temp[
+        temp["Channel"]
+        .str.contains(
+            "Zomato",
+            na=False
+        )
+    ]
+
+    zomato_store = (
+        zomato.groupby(
+            "Store Name"
+        )
+        .agg(
+            **{
+                "Zomato Orders": (
+                    "KPT (Mins)",
+                    "count"
+                ),
+                "KPT": (
+                    "KPT (Mins)",
+                    "mean"
+                ),
+                "KPT P80": (
+                    "KPT (Mins)",
+                    lambda x:
+                    x.quantile(0.80)
+                ),
+                "KPT Median": (
+                    "KPT (Mins)",
+                    "median"
+                ),
+                "O2D": (
+                    "O2D (Mins)",
+                    "mean"
+                ),
+                "O2D P80": (
+                    "O2D (Mins)",
+                    lambda x:
+                    x.quantile(0.80)
+                ),
+                "O2D Median": (
+                    "O2D (Mins)",
+                    "median"
+                )
+            }
+        )
+        .reset_index()
+        .round(2)
+    )
+
+    region_store_html += f"""
+    <h2>{region}</h2>
+
+    <h3>Swiggy</h3>
+    {style_dashboard_table(swiggy_store)}
+
+    <br>
+
+    <h3>Zomato</h3>
+    {style_dashboard_table(zomato_store)}
+
+    <br><br>
+    """
 
 # =========================================================
 # SUMMARY HTML
