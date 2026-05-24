@@ -1130,7 +1130,8 @@ EMAIL_PASSWORD = os.environ["EMAIL_PASSWORD"]
 msg = MIMEMultipart()
 
 msg["From"] = EMAIL_USER
-msg["To"] = "mis2@frozenbottle.in"
+msg["To"] = "ops.all@frozenbottle.in"
+msg["CC"] = "vivek@frozenbottle.in"
 
 
 msg["Subject"] = f"📊 KPT & O2D Dashboard - {fetch_date}"
