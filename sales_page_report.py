@@ -1155,7 +1155,8 @@ try:
     )
 
     recipients = [
-        "mis2@frozenbottle.in"
+        "ops.all@frozenbottle.in",
+        "vivek@frozenbottle.in"
     ]
     server.sendmail(
         EMAIL_USER,
