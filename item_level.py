@@ -2743,8 +2743,13 @@ except Exception as e:
 
 import smtplib
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
-current_hour = datetime.now().hour
+ist_now = datetime.now(
+    ZoneInfo("Asia/Kolkata")
+)
+
+current_hour = ist_now.hour
 
 # =========================================================
 # SEND ONLY AT 10 AM
