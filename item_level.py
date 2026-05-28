@@ -237,13 +237,13 @@ print(
 )
 
 # =========================================================
-# REQUIRED COLS
+# REQUIRED COLUMNS CHECK
 # =========================================================
 
 required_cols = [
-    "branchcode",
-    "storename",
-    "ownership",
+    "branchCode",
+    "Store Name",
+    "Ownership",
     "Region",
     "Channel",
     "Source"
@@ -260,24 +260,14 @@ if missing_cols:
         "❌ Missing Help Columns:",
         missing_cols
     )
+
+    print(
+        "📋 Available Columns:",
+        help_df.columns.tolist()
+    )
+
     exit()
 
-# =========================================================
-# FILTER COCO
-# =========================================================
-
-help_df = help_df[
-    help_df["ownership"]
-    .astype(str)
-    .str.upper()
-    .str.strip()
-    == "COCO"
-].copy()
-
-print(
-    "✅ COCO Stores:",
-    len(help_df)
-)
 
 # =========================================================
 # RENAME
