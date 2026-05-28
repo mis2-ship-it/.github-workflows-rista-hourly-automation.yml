@@ -610,20 +610,13 @@ def fetch_sales_window(
 # FETCH CURRENT
 # =========================================================
 
-current_df = fetch_sales_window(
-    business_start,
-    end_time,
+current_df = fetch_sales_data(
+    current_start.date(),
     "CURRENT"
 )
 
-
-# =========================================================
-# FETCH LAST WEEK
-# =========================================================
-
-lw_df = fetch_sales_window(
-    lw_start,
-    lw_end,
+lw_df = fetch_sales_data(
+    last_week_start.date(),
     "LW"
 )
 
@@ -632,26 +625,39 @@ lw_df = fetch_sales_window(
 # COMBINE
 # =========================================================
 
-sales_df = pd.concat(
-    [
-        current_df,
-        lw_df
-    ],
-    ignore_index=True
+sales_df["createdDate"] = pd.to_datetime(
+    sales_df["createdDate"],
+    errors="coerce"
 )
 
-print(
-    "✅ Total Rows:",
-    len(sales_df)
+sales_df = sales_df[
+    (
+        sales_df["createdDate"]
+        >= current_start
+    )
+    &
+    (
+        sales_df["createdDate"]
+        <= current_end
+    )
+].copy()
+
+lw_df["createdDate"] = pd.to_datetime(
+    lw_df["createdDate"],
+    errors="coerce"
 )
 
-print(
-    "📋 API Columns:"
-)
-
-print(
-    sales_df.columns.tolist()
-)
+lw_df = lw_df[
+    (
+        lw_df["createdDate"]
+        >= last_week_start
+    )
+    &
+    (
+        lw_df["createdDate"]
+        <= last_week_end
+    )
+].copy()
 
 # =========================================================
 # EMPTY CHECK
