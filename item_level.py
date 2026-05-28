@@ -610,17 +610,21 @@ def fetch_sales_window(
 # FETCH CURRENT
 # =========================================================
 
-current_df = fetch_sales_data(
-    current_start.date(),
+current_df = fetch_sales_window(
+    current_start,
+    current_end,
     "CURRENT"
 )
 
-lw_df = fetch_sales_data(
-    last_week_start.date(),
+# =========================================================
+# FETCH LAST WEEK
+# =========================================================
+
+lw_df = fetch_sales_window(
+    lw_start,
+    lw_end,
     "LW"
 )
-
-
 # =========================================================
 # COMBINE
 # =========================================================
