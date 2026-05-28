@@ -1003,19 +1003,58 @@ ist_now = datetime.now(
 print("🕒 Current Time:", ist_now)
 
 # =========================================================
-# BUSINESS DATE
-# 9AM → Next Day 5AM
+# BUSINESS DATE LOGIC
 # =========================================================
 
-if ist_now.hour < 5:
+today = ist_now.date()
+
+# before 9 AM
+if ist_now.hour < 9:
 
     business_date = (
-        ist_now - timedelta(days=1)
-    ).date()
+        today - timedelta(days=1)
+    )
 
+    current_start = datetime.combine(
+        business_date,
+        datetime.min.time()
+    ).replace(
+        hour=9,
+        tzinfo=ZoneInfo("Asia/Kolkata")
+    )
+
+    current_end = datetime.combine(
+        today,
+        datetime.min.time()
+    ).replace(
+        hour=ist_now.hour - 1,
+        minute=59,
+        second=59,
+        tzinfo=ZoneInfo("Asia/Kolkata")
+    )
+
+# after 9 AM
 else:
 
-    business_date = ist_now.date()
+    business_date = today
+
+    current_start = datetime.combine(
+        business_date,
+        datetime.min.time()
+    ).replace(
+        hour=9,
+        tzinfo=ZoneInfo("Asia/Kolkata")
+    )
+
+    current_end = datetime.combine(
+        business_date,
+        datetime.min.time()
+    ).replace(
+        hour=ist_now.hour - 1,
+        minute=59,
+        second=59,
+        tzinfo=ZoneInfo("Asia/Kolkata")
+    )
 
 print(
     "📅 Business Date:",
@@ -1023,53 +1062,17 @@ print(
 )
 
 # =========================================================
-# HOUR WINDOW
-# Example:
-# 12PM run → 11:59:59
-# 2PM run → 1:59:59
+# LAST WEEK SAME WINDOW
 # =========================================================
 
-end_hour = ist_now.hour - 1
-
-current_start = datetime.combine(
-    business_date,
-    datetime.min.time()
-).replace(
-    hour=9,
-    tzinfo=ZoneInfo("Asia/Kolkata")
-)
-
-current_end = datetime.combine(
-    business_date,
-    datetime.min.time()
-).replace(
-    hour=end_hour,
-    minute=59,
-    second=59,
-    tzinfo=ZoneInfo("Asia/Kolkata")
-)
-
-last_week_date = (
-    business_date
+last_week_start = (
+    current_start
     - timedelta(days=7)
 )
 
-last_week_start = datetime.combine(
-    last_week_date,
-    datetime.min.time()
-).replace(
-    hour=9,
-    tzinfo=ZoneInfo("Asia/Kolkata")
-)
-
-last_week_end = datetime.combine(
-    last_week_date,
-    datetime.min.time()
-).replace(
-    hour=end_hour,
-    minute=59,
-    second=59,
-    tzinfo=ZoneInfo("Asia/Kolkata")
+last_week_end = (
+    current_end
+    - timedelta(days=7)
 )
 
 print(
