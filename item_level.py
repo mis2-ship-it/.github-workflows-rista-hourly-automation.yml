@@ -244,7 +244,9 @@ required_cols = [
     "branchcode",
     "storename",
     "ownership",
-    "region"
+    "Region",
+    "Channel",
+    "Source"
 ]
 
 missing_cols = [
@@ -1001,81 +1003,98 @@ print(
     len(lw_sales)
 )
 
-# =========================================================
-# BUSINESS HOUR LOGIC
-# 9AM → NEXT DAY 5AM
-# =========================================================
-
 from datetime import datetime, timedelta
-import pytz
+from zoneinfo import ZoneInfo
 
-IST = pytz.timezone("Asia/Kolkata")
+ist_now = datetime.now(
+    ZoneInfo("Asia/Kolkata")
+)
 
-now = datetime.now(IST)
-
-print("🕒 Current IST Time:", now)
+print("🕒 Current Time:", ist_now)
 
 # =========================================================
-# BUSINESS DAY START
+# BUSINESS DATE
+# 9AM → Next Day 5AM
 # =========================================================
 
-if now.hour < 5:
+if ist_now.hour < 5:
+
     business_date = (
-        now - timedelta(days=1)
+        ist_now - timedelta(days=1)
     ).date()
 
 else:
-    business_date = now.date()
 
-business_start = IST.localize(
-    datetime.combine(
-        business_date,
-        datetime.min.time()
-    )
+    business_date = ist_now.date()
+
+print(
+    "📅 Business Date:",
+    business_date
+)
+
+# =========================================================
+# HOUR WINDOW
+# Example:
+# 12PM run → 11:59:59
+# 2PM run → 1:59:59
+# =========================================================
+
+end_hour = ist_now.hour - 1
+
+current_start = datetime.combine(
+    business_date,
+    datetime.min.time()
 ).replace(
     hour=9,
-    minute=0,
-    second=0
+    tzinfo=ZoneInfo("Asia/Kolkata")
 )
 
-# =========================================================
-# CURRENT HOUR CUT OFF
-# Example:
-# 2PM run →
-# 1:59 PM cutoff
-# =========================================================
-
-cutoff_time = now.replace(
+current_end = datetime.combine(
+    business_date,
+    datetime.min.time()
+).replace(
+    hour=end_hour,
     minute=59,
     second=59,
-    microsecond=0
+    tzinfo=ZoneInfo("Asia/Kolkata")
 )
 
-print("📅 Business Date:",
-      business_date)
-
-print("⏰ Current Cutoff:",
-      cutoff_time)
-
-# =========================================================
-# LAST WEEK SAME DAY SAME HOUR
-# =========================================================
-
-last_week_start = (
-    business_start
+last_week_date = (
+    business_date
     - timedelta(days=7)
 )
 
-last_week_cutoff = (
-    cutoff_time
-    - timedelta(days=7)
+last_week_start = datetime.combine(
+    last_week_date,
+    datetime.min.time()
+).replace(
+    hour=9,
+    tzinfo=ZoneInfo("Asia/Kolkata")
 )
 
-print("📅 Last Week Start:",
-      last_week_start)
+last_week_end = datetime.combine(
+    last_week_date,
+    datetime.min.time()
+).replace(
+    hour=end_hour,
+    minute=59,
+    second=59,
+    tzinfo=ZoneInfo("Asia/Kolkata")
+)
 
-print("📅 Last Week Cutoff:",
-      last_week_cutoff)
+print(
+    "🟢 Current Window:",
+    current_start,
+    "to",
+    current_end
+)
+
+print(
+    "🟡 LW Window:",
+    last_week_start,
+    "to",
+    last_week_end
+)
 
 # =========================================================
 # ORDER TIME CONVERSION
