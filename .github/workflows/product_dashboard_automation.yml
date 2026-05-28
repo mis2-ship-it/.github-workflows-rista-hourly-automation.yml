@@ -1,0 +1,68 @@
+name: Product Dashboard Automation
+
+on:
+
+  schedule:
+
+    # ==================================================
+    # HOURLY RUN
+    # Every Hour
+    # ==================================================
+    - cron: '0 * * * *'
+
+  workflow_dispatch:
+
+jobs:
+
+  run-product-dashboard:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # ==================================================
+      # CHECKOUT REPO
+      # ==================================================
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # ==================================================
+      # PYTHON SETUP
+      # ==================================================
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # ==================================================
+      # INSTALL DEPENDENCIES
+      # ==================================================
+      - name: Install Packages
+        run: |
+          pip install pandas
+          pip install requests
+          pip install PyJWT
+          pip install gspread
+          pip install google-auth
+          pip install google-auth-oauthlib
+          pip install google-auth-httplib2
+
+      # ==================================================
+      # RUN SCRIPT
+      # ==================================================
+      - name: Run Product Dashboard Script
+        env:
+
+          API_KEY: ${{ secrets.API_KEY }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+
+        run: |
+
+          echo "🚀 Running Product Dashboard"
+
+          python item_level.py
