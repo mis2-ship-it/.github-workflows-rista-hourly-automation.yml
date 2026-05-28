@@ -168,84 +168,72 @@ help_ws = spreadsheet.worksheet(
     "Help Sheet"
 )
 
-help_data = help_ws.get()
+help_data = help_ws.get_all_values()
 
 if not help_data:
 
     print("❌ Help Sheet Empty")
     exit()
 
-# =========================================================
-# SAFE HEADERS
-# =========================================================
-
-raw_headers = help_data[0]
-
-safe_headers = []
-
-for i, h in enumerate(raw_headers):
-
-    h = str(h).strip()
-
-    if h == "":
-        h = f"blank_col_{i}"
-
-    if h in safe_headers:
-        h = f"{h}_{i}"
-
-    safe_headers.append(h)
-
-# =========================================================
-# NORMALIZE ROWS
-# =========================================================
-
-normalized_rows = []
+help_rows = []
 
 for row in help_data[1:]:
 
     row = list(row)
 
-    if len(row) < len(safe_headers):
-
+    if len(row) < 7:
         row.extend(
-            [""] *
-            (
-                len(safe_headers)
-                - len(row)
-            )
+            [""] * (7 - len(row))
         )
 
-    elif len(row) > len(safe_headers):
-
-        row = row[:len(safe_headers)]
-
-    normalized_rows.append(row)
-
-# =========================================================
-# CREATE DF
-# =========================================================
+    help_rows.append([
+        row[0],  # A branchCode
+        row[1],  # B Store Name
+        row[2],  # C Ownership
+        row[3],  # D Region
+        row[5],  # F Channel
+        row[6],  # G Source
+    ])
 
 help_df = pd.DataFrame(
-    normalized_rows,
-    columns=safe_headers
+    help_rows,
+    columns=[
+        "branchCode",
+        "Store Name",
+        "Ownership",
+        "Region",
+        "Channel",
+        "Source"
+    ]
 )
 
-# =========================================================
-# CLEAN COLUMN NAMES
-# =========================================================
+help_df["Ownership"] = (
+    help_df["Ownership"]
+    .astype(str)
+    .str.upper()
+    .str.strip()
+)
 
-help_df.columns = (
-    help_df.columns
+help_df["branchCode"] = (
+    help_df["branchCode"]
     .astype(str)
     .str.strip()
-    .str.lower()
-    .str.replace(" ", "")
 )
+
+# COCO only
+help_df = help_df[
+    help_df["Ownership"] == "COCO"
+].copy()
 
 print("✅ Help Sheet Loaded")
 print(
     "📋 Help Columns:",
     help_df.columns.tolist()
+)
+
+print(
+    "✅ COCO Stores:",
+    len(help_df)
 )
 
 # =========================================================
@@ -334,27 +322,71 @@ print(
     len(branches)
 )
 
+# =========================================================
+# CHANNEL GROUP MAPPING
+# =========================================================
+
+channel_map = dict(
+    zip(
+        help_df["Channel"],
+        help_df["Source"]
+    )
+)
+
+print(
+    "✅ Channel Mapping:",
+    len(channel_map)
+)
+
 
 # =========================================================
-# ITEM GROUP SHEET
+# ITEM GROUP TAB
 # =========================================================
 
 item_ws = spreadsheet.worksheet(
     "Item Group"
 )
 
-item_data = item_ws.get()
+item_data = item_ws.get_all_values()
 
 if not item_data:
 
-    print(
-        "❌ Item Group Empty"
-    )
+    print("❌ Item Group Empty")
     exit()
 
+# =========================================================
+# FIXED HEADERS (A:E ONLY)
+# =========================================================
+
+item_headers = [
+    "Item Name",
+    "Item Group Name",
+    "Variant(s)",
+    "Product Mix",
+    "Category Group"
+]
+
+normalized_rows = []
+
+for row in item_data[1:]:
+
+    row = list(row)
+
+    # only take A:E
+    row = row[:5]
+
+    # fill blanks if less columns
+    if len(row) < 5:
+
+        row.extend(
+            [""] * (5 - len(row))
+        )
+
+    normalized_rows.append(row)
+
 item_df = pd.DataFrame(
-    item_data[1:],
-    columns=item_data[0]
+    normalized_rows,
+    columns=item_headers
 )
 
 # =========================================================
@@ -367,13 +399,24 @@ item_df.columns = (
     .str.strip()
 )
 
+# =========================================================
+# CLEAN ITEM NAME
+# =========================================================
+
+item_df["Item Name"] = (
+    item_df["Item Name"]
+    .astype(str)
+    .str.strip()
+    .str.lower()
+)
+
 print(
     "✅ Item Group Loaded"
 )
 
 print(
-    "📋 Item Columns:",
-    item_df.columns.tolist()
+    "📋 Item Rows:",
+    len(item_df)
 )
 
 # =========================================================
