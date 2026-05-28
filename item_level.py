@@ -110,54 +110,16 @@ print(
 # BUSINESS START
 # =========================================================
 
-business_start = datetime.combine(
-    business_date,
-    datetime.min.time()
-).replace(
-    hour=9,
-    minute=0,
-    second=0
+current_df = fetch_sales_window(
+    current_window_start,
+    current_window_end,
+    "CURRENT"
 )
 
-# =========================================================
-# END TIME
-# EXAMPLE:
-# 2PM RUN
-# TAKE 1:59PM
-# =========================================================
-
-end_time = now.replace(
-    minute=59,
-    second=59,
-    microsecond=0
-) - timedelta(hours=1)
-
-print(
-    "🟢 Current Window:",
-    business_start,
-    "to",
-    end_time
-)
-
-# =========================================================
-# LAST WEEK WINDOW
-# =========================================================
-
-lw_start = (
-    business_start
-    - timedelta(days=7)
-)
-
-lw_end = (
-    end_time
-    - timedelta(days=7)
-)
-
-print(
-    "🟡 LW Window:",
-    lw_start,
-    "to",
-    lw_end
+lw_df = fetch_sales_window(
+    lw_window_start,
+    lw_window_end,
+    "LW"
 )
 
 # =========================================================
