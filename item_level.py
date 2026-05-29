@@ -2658,6 +2658,30 @@ print(
 )
 
 # =========================================================
+# SUMMARY HTML
+# =========================================================
+
+summary_html = f"""
+<html>
+<body>
+
+<h2>📊 Product Level Sales Dashboard</h2>
+
+<p>
+Business Date:
+<b>{business_date}</b>
+</p>
+
+<p>
+Hourly Dashboard Updated Successfully
+</p>
+
+</body>
+</html>
+"""
+
+print("✅ Summary HTML Created")
+# =========================================================
 # SEND EMAIL
 # =========================================================
 
@@ -2676,11 +2700,11 @@ EMAIL_PASSWORD = os.environ["EMAIL_PASSWORD"]
 # =========================================================
 
 to_mails = [
-    "ops.all@frozenbottle.in"
+    "mis2@frozenbottle.in"
 ]
 
 cc_mails = [
-    "vivek@frozenbottle.in"
+    "mis2@frozenbottle.in"
 ]
 
 all_recipients = to_mails + cc_mails
