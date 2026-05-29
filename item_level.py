@@ -1194,11 +1194,6 @@ def create_hourly_dashboard(
         print("LW Columns:")
         print(lw.columns.tolist())
     
-        curr_mix = (
-            curr.groupby(
-                curr["Product Mix"]
-                .fillna("Others")
-            )
 
         # =================================================
         # CURRENT METRICS
