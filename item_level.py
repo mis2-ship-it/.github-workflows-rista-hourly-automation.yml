@@ -441,7 +441,7 @@ def fetch_sales_window(
         )
 
         params = {
-            "branch": branch,
+            "branchCode": branch,
         
             "fromDate":
             start_dt.replace(
@@ -455,9 +455,14 @@ def fetch_sales_window(
                 tzinfo=None
             ).strftime(
                 "%Y-%m-%d %H:%M:%S"
-            )
+            ),
+        
+            "page": 1,
+            "limit": 5000
         }
 
+        print("Params:", params)
+        
         try:
 
             response = requests.get(
@@ -470,6 +475,11 @@ def fetch_sales_window(
             print(
                 "Status:",
                 response.status_code
+            )
+
+            print(
+                "Response:",
+                response.text[:500]
             )
 
             if (
