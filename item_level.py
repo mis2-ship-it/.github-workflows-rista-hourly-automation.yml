@@ -1174,8 +1174,8 @@ def create_hourly_dashboard(
         # FILTER BRAND
         # =================================================
 
-        curr = current_df[
-            current_df["brandName"]
+        curr = current_sales[
+            current_sales["brandName"]
             .astype(str)
             .str.strip()
             .str.upper()
