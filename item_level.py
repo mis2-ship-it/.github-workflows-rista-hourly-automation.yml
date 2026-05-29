@@ -1060,7 +1060,7 @@ print(
 
 def create_hourly_dashboard(
     current_df,
-    last_week_df
+    lw_sales
 ):
 
     brands = [
@@ -1087,8 +1087,8 @@ def create_hourly_dashboard(
             brand.upper()
         ].copy()
 
-        lw = last_week_df[
-            last_week_df["brandName"]
+        lw = lw_sales[
+            lw_sales["brandName"]
             .astype(str)
             .str.strip()
             .str.upper()
@@ -1280,8 +1280,8 @@ def create_hourly_dashboard(
 # =========================================================
 
 hourly_dashboard = create_hourly_dashboard(
-    current_df,
-    last_week_df
+    current_sales,
+    lw_sales
 )
 
 print("✅ Hourly Dashboard Created")
@@ -1331,8 +1331,8 @@ current_df["item_shortName"] = (
     .str.upper()
 )
 
-last_week_df["item_shortName"] = (
-    last_week_df["item_shortName"]
+lw_sales["item_shortName"] = (
+    lw_sales["item_shortName"]
     .astype(str)
     .str.strip()
     .str.upper()
@@ -1356,7 +1356,7 @@ current_df = current_df.merge(
     how="left"
 )
 
-last_week_df = last_week_df.merge(
+lw_sales = lw_sales.merge(
     item_group_df[merge_cols],
     left_on="item_shortName",
     right_on="Item Name",
@@ -1376,8 +1376,8 @@ current_df = current_df[
     != "ADDONS"
 ].copy()
 
-last_week_df = last_week_df[
-    last_week_df["Product Mix"]
+lw_sales = lw_sales[
+    lw_sales["Product Mix"]
     .astype(str)
     .str.upper()
     != "ADDONS"
@@ -1391,7 +1391,7 @@ print("✅ AddOns Removed")
 
 def create_product_mix_dashboard(
     current_df,
-    last_week_df
+    lw_sales
 ):
 
     brands = [
@@ -1413,8 +1413,8 @@ def create_product_mix_dashboard(
             brand.upper()
         ].copy()
 
-        lw = last_week_df[
-            last_week_df["brandName"]
+        lw = lw_sales[
+            lw_sales["brandName"]
             .astype(str)
             .str.upper()
             ==
@@ -1530,7 +1530,7 @@ def create_product_mix_dashboard(
 product_mix_dashboard = (
     create_product_mix_dashboard(
         current_df,
-        last_week_df
+        lw_sales
     )
 )
 
@@ -1549,7 +1549,7 @@ for k, v in (
 
 def create_category_dashboard(
     current_df,
-    last_week_df
+    lw_sales
 ):
 
     brands = [
@@ -1575,8 +1575,8 @@ def create_category_dashboard(
             brand.upper()
         ].copy()
 
-        lw = last_week_df[
-            last_week_df["brandName"]
+        lw = lw_sales[
+            lw_sales["brandName"]
             .astype(str)
             .str.upper()
             ==
@@ -1719,7 +1719,7 @@ def create_category_dashboard(
 category_dashboard = (
     create_category_dashboard(
         current_df,
-        last_week_df
+        lw_sales
     )
 )
 
@@ -1741,7 +1741,7 @@ for k, v in (
 
 def create_item_dashboard(
     current_df,
-    last_week_df
+    lw_sales
 ):
 
     brands = [
@@ -1767,8 +1767,8 @@ def create_item_dashboard(
             brand.upper()
         ].copy()
 
-        lw = last_week_df[
-            last_week_df["brandName"]
+        lw = lw_sales[
+            lw_sales["brandName"]
             .astype(str)
             .str.upper()
             ==
@@ -1923,7 +1923,7 @@ def create_item_dashboard(
 item_dashboard = (
     create_item_dashboard(
         current_df,
-        last_week_df
+        lw_sales
     )
 )
 
