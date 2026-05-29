@@ -1743,6 +1743,41 @@ def create_category_dashboard(
 
     return category_dashboard
 
+# =========================================================
+# FIX CATEGORY GROUP COLUMN
+# =========================================================
+
+if (
+    "Category Group" not in current_sales.columns
+    and
+    "Category Group_x" in current_sales.columns
+):
+
+    current_sales["Category Group"] = (
+        current_sales["Category Group_x"]
+        .combine_first(
+            current_sales.get(
+                "Category Group_y"
+            )
+        )
+    )
+
+if (
+    "Category Group" not in lw_sales.columns
+    and
+    "Category Group_x" in lw_sales.columns
+):
+
+    lw_sales["Category Group"] = (
+        lw_sales["Category Group_x"]
+        .combine_first(
+            lw_sales.get(
+                "Category Group_y"
+            )
+        )
+    )
+
+print("✅ Category Group Fixed")
 
 # =========================================================
 # CREATE CATEGORY DASHBOARD
