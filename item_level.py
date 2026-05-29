@@ -997,11 +997,6 @@ print(
 
 closed_df["Order Time"] = pd.to_datetime(
     closed_df["invoiceDate"],
-    errors="coerce"
-)
-
-closed_df["Order Time"] = pd.to_datetime(
-    closed_df["invoiceDate"],
     utc=True,
     errors="coerce"
 ).dt.tz_convert("Asia/Kolkata")
@@ -1287,103 +1282,6 @@ hourly_dashboard = create_hourly_dashboard(
 print("✅ Hourly Dashboard Created")
 print(hourly_dashboard.head())
 
-# =========================================================
-# ITEM GROUP MASTER
-# =========================================================
-
-item_group_ws = spreadsheet.worksheet(
-    "Item Group"
-)
-
-item_group_data = (
-    item_group_ws.get_all_records()
-)
-
-item_group_df = pd.DataFrame(
-    item_group_data
-)
-
-item_group_df.columns = (
-    item_group_df.columns
-    .str.strip()
-)
-
-print(
-    "✅ Item Group Rows:",
-    len(item_group_df)
-)
-
-# =========================================================
-# CLEAN ITEM NAME
-# =========================================================
-
-item_group_df["Item Name"] = (
-    item_group_df["Item Name"]
-    .astype(str)
-    .str.strip()
-    .str.upper()
-)
-
-current_df["item_shortName"] = (
-    current_df["item_shortName"]
-    .astype(str)
-    .str.strip()
-    .str.upper()
-)
-
-lw_sales["item_shortName"] = (
-    lw_sales["item_shortName"]
-    .astype(str)
-    .str.strip()
-    .str.upper()
-)
-
-# =========================================================
-# MERGE ITEM GROUP
-# =========================================================
-
-merge_cols = [
-    "Item Name",
-    "Item Group Name",
-    "Product Mix",
-    "Category Group"
-]
-
-current_df = current_df.merge(
-    item_group_df[merge_cols],
-    left_on="item_shortName",
-    right_on="Item Name",
-    how="left"
-)
-
-lw_sales = lw_sales.merge(
-    item_group_df[merge_cols],
-    left_on="item_shortName",
-    right_on="Item Name",
-    how="left"
-)
-
-print("✅ Item Mapping Done")
-
-# =========================================================
-# REMOVE ADDONS
-# =========================================================
-
-current_df = current_df[
-    current_df["Product Mix"]
-    .astype(str)
-    .str.upper()
-    != "ADDONS"
-].copy()
-
-lw_sales = lw_sales[
-    lw_sales["Product Mix"]
-    .astype(str)
-    .str.upper()
-    != "ADDONS"
-].copy()
-
-print("✅ AddOns Removed")
 
 # =========================================================
 # PRODUCT MIX DASHBOARD
