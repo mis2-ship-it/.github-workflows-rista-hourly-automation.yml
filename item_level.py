@@ -1366,7 +1366,7 @@ print(hourly_dashboard.head())
 # =========================================================
 
 def create_product_mix_dashboard(
-    current_df,
+    current_sales,
     lw_sales
 ):
 
@@ -1505,7 +1505,7 @@ def create_product_mix_dashboard(
 
 product_mix_dashboard = (
     create_product_mix_dashboard(
-        current_df,
+        current_sales,
         lw_sales
     )
 )
@@ -1524,7 +1524,7 @@ for k, v in (
 # =========================================================
 
 def create_category_dashboard(
-    current_df,
+    current_sales,
     lw_sales
 ):
 
@@ -1543,7 +1543,7 @@ def create_category_dashboard(
         # BRAND FILTER
         # =============================================
 
-        curr = current_sales[
+        curr = current_df[
             current_sales["brandName"]
             .astype(str)
             .str.strip()
@@ -1719,7 +1719,7 @@ for k, v in (
 # =========================================================
 
 def create_item_dashboard(
-    current_df,
+    current_sales,
     lw_sales
 ):
 
@@ -1901,7 +1901,7 @@ def create_item_dashboard(
 
 item_dashboard = (
     create_item_dashboard(
-        current_df,
+        current_sales,
         lw_sales
     )
 )
