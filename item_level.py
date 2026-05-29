@@ -2123,25 +2123,81 @@ def extract_zomato_code(x):
     except:
         return "No Offer"
 
+# =========================================================
+# FIX ITEM METRIC COLUMNS
+# =========================================================
+
+for col in [
+    "item_quantity",
+    "item_baseNetAmount",
+    "item_baseNetDiscountAmount"
+]:
+
+    if (
+        col not in current_sales.columns
+        and
+        f"{col}_x" in current_sales.columns
+    ):
+
+        current_sales[col] = (
+            current_sales[f"{col}_x"]
+            .combine_first(
+                current_sales.get(
+                    f"{col}_y"
+                )
+            )
+        )
+
+print("✅ Item Metric Columns Fixed")
+# =========================================================
+# FIX DISCOUNT COLUMNS
+# =========================================================
+
+if (
+    "item_discounts" not in current_sales.columns
+    and
+    "item_discounts_x" in current_sales.columns
+):
+
+    current_sales["item_discounts"] = (
+        current_sales["item_discounts_x"]
+        .combine_first(
+            current_sales.get(
+                "item_discounts_y"
+            )
+        )
+    )
+
+if (
+    "discounts" not in current_df.columns
+    and
+    "discounts_x" in current_df.columns
+):
+
+    current_df["discounts"] = (
+        current_df["discounts_x"]
+        .combine_first(
+            current_df.get(
+                "discounts_y"
+            )
+        )
+    )
+
+print("✅ Discount Columns Fixed")
 
 # =========================================================
 # CREATE CODE COLUMNS
 # =========================================================
 
-current_df["Swiggy Code"] = (
-    current_df["item_discounts"]
-    .apply(
-        extract_swiggy_code
-    )
+current_sales["Swiggy Code"] = (
+    current_sales["item_discounts"]
+    .apply(extract_swiggy_code)
 )
 
-current_df["Zomato Code"] = (
-    current_df["discounts"]
-    .apply(
-        extract_zomato_code
-    )
+current_sales["Zomato Code"] = (
+    current_sales["discounts"]
+    .apply(extract_zomato_code)
 )
-
 print("✅ Discount Codes Extracted")
 
 # =========================================================
