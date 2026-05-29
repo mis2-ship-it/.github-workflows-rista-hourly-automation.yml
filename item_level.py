@@ -2778,6 +2778,31 @@ except Exception as e:
 print("✅ Script Completed")
 
 # =========================================================
+# TIME WINDOW
+# =========================================================
+
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+ist_now = datetime.now(
+    ZoneInfo("Asia/Kolkata")
+)
+
+current_hour = ist_now.hour
+
+start_hour = "09:00 AM"
+
+end_hour = (
+    ist_now
+    .strftime("%I:59 %p")
+)
+
+print(
+    f"⏰ Hourly Window: "
+    f"{start_hour} - {end_hour}"
+)
+
+# =========================================================
 # HOURLY PRODUCT DASHBOARD MAIL
 # =========================================================
 
