@@ -3053,11 +3053,11 @@ EMAIL_PASSWORD = os.environ["EMAIL_PASSWORD"]
 # =========================================================
 
 to_mails = [
-    "ops.all@frozenbottle.in"
+    "mis2@frozenbottle.in"
 ]
 
 cc_mails = [
-    "vivek@frozenbottle.in"
+    "mis2@frozenbottle.in"
 ]
 
 all_recipients = (
@@ -3172,11 +3172,11 @@ if current_hour == 10:
     # =====================================================
 
     to_mails = [
-        "ops.all@frozenbottle.in"
+        "mis2@frozenbottle.in"
     ]
 
     cc_mails = [
-        "vivek@frozenbottle.in"
+        "mis2@frozenbottle.in"
     ]
 
     all_recipients = (
