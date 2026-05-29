@@ -1553,6 +1553,110 @@ def create_product_mix_dashboard(
 
 
 # =========================================================
+# FIX ITEM METRIC COLUMNS
+# =========================================================
+
+metric_cols = [
+    "item_quantity",
+    "item_baseNetAmount",
+    "item_baseNetDiscountAmount"
+]
+
+for col in metric_cols:
+
+    if (
+        col not in current_sales.columns
+        and f"{col}_x" in current_sales.columns
+    ):
+
+        current_sales[col] = (
+            current_sales[f"{col}_x"]
+            .combine_first(
+                current_sales.get(
+                    f"{col}_y"
+                )
+            )
+        )
+
+    if (
+        col not in lw_sales.columns
+        and f"{col}_x" in lw_sales.columns
+    ):
+
+        lw_sales[col] = (
+            lw_sales[f"{col}_x"]
+            .combine_first(
+                lw_sales.get(
+                    f"{col}_y"
+                )
+            )
+        )
+
+print("✅ Item Metric Columns Fixed")
+
+
+# =========================================================
+# FIX DASHBOARD COLUMNS
+# =========================================================
+
+dashboard_cols = [
+    "Product Mix",
+    "Category Group",
+    "Item Group Name"
+]
+
+for col in dashboard_cols:
+
+    if (
+        col not in current_sales.columns
+        and f"{col}_x" in current_sales.columns
+    ):
+
+        current_sales[col] = (
+            current_sales[f"{col}_x"]
+            .combine_first(
+                current_sales.get(
+                    f"{col}_y"
+                )
+            )
+        )
+
+    if (
+        col not in lw_sales.columns
+        and f"{col}_x" in lw_sales.columns
+    ):
+
+        lw_sales[col] = (
+            lw_sales[f"{col}_x"]
+            .combine_first(
+                lw_sales.get(
+                    f"{col}_y"
+                )
+            )
+        )
+
+print("✅ Dashboard Columns Fixed")
+
+
+# =========================================================
+# DEBUG CHECK
+# =========================================================
+
+print("Current Sales Columns:")
+print(current_sales.columns.tolist())
+
+print(
+    current_sales[
+        [
+            "item_quantity",
+            "item_baseNetAmount",
+            "item_baseNetDiscountAmount"
+        ]
+    ].head()
+)
+
+
+# =========================================================
 # CREATE PRODUCT MIX DASHBOARD
 # =========================================================
 
