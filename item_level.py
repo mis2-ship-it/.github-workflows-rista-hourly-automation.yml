@@ -1596,7 +1596,7 @@ def create_category_dashboard(
         # BRAND FILTER
         # =============================================
 
-        curr = current_df[
+        curr = current_sales[
             current_sales["brandName"]
             .astype(str)
             .str.strip()
@@ -1791,8 +1791,8 @@ def create_item_dashboard(
         # FILTER BRAND
         # =============================================
 
-        curr = current_df[
-            current_df["brandName"]
+        curr = current_sales[
+            current_sales["brandName"]
             .astype(str)
             .str.upper()
             ==
