@@ -1736,7 +1736,7 @@ def create_category_dashboard(
 
 category_dashboard = (
     create_category_dashboard(
-        current_df,
+        current_sales,
         lw_sales
     )
 )
@@ -2160,7 +2160,7 @@ def create_discount_dashboard(
 
 swiggy_discount_dashboard = (
     create_discount_dashboard(
-        current_df,
+        current_sales,
         "Swiggy Code",
         "Swiggy"
     )
@@ -2176,7 +2176,7 @@ print(
 
 zomato_discount_dashboard = (
     create_discount_dashboard(
-        current_df,
+        current_sales,
         "Zomato Code",
         "Zomato"
     )
