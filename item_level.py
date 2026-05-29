@@ -1048,6 +1048,7 @@ print(
     len(lw_sales)
 )
 
+print("Before Product Mix Function")
 print("Current Columns:")
 print(current_sales.columns.tolist())
 
@@ -1127,12 +1128,16 @@ lw_sales = lw_sales.merge(
 print("✅ Product Mix Merged")
 
 # =========================================================
-# SAFE PRODUCT MIX COLUMN
+# SAFE PRODUCT MIX
 # =========================================================
 
-for df in [current_sales, lw_sales]:
+for df in [current_df, lw_sales]:
 
     if "Product Mix" not in df.columns:
+
+        print("⚠ Product Mix Missing")
+
+        print(df.columns.tolist())
 
         df["Product Mix"] = "Others"
 
@@ -1395,6 +1400,12 @@ def create_product_mix_dashboard(
     current_sales,
     lw_sales
 ):
+
+    print("Function Current Columns")
+    print(current_df.columns.tolist())
+
+    print("Function LW Columns")
+    print(lw_sales.columns.tolist())
 
     brands = [
         "Frozen Bottle",
