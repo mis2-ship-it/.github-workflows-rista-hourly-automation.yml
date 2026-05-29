@@ -1982,6 +1982,41 @@ def create_item_dashboard(
 
     return item_dashboard
 
+# =========================================================
+# FIX ITEM GROUP NAME COLUMN
+# =========================================================
+
+if (
+    "Item Group Name" not in current_sales.columns
+    and
+    "Item Group Name_x" in current_sales.columns
+):
+
+    current_sales["Item Group Name"] = (
+        current_sales["Item Group Name_x"]
+        .combine_first(
+            current_sales.get(
+                "Item Group Name_y"
+            )
+        )
+    )
+
+if (
+    "Item Group Name" not in lw_sales.columns
+    and
+    "Item Group Name_x" in lw_sales.columns
+):
+
+    lw_sales["Item Group Name"] = (
+        lw_sales["Item Group Name_x"]
+        .combine_first(
+            lw_sales.get(
+                "Item Group Name_y"
+            )
+        )
+    )
+
+print("✅ Item Group Name Fixed")
 
 # =========================================================
 # CREATE ITEM DASHBOARD
