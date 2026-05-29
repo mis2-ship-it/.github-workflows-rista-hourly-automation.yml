@@ -1048,6 +1048,43 @@ print(
     len(lw_sales)
 )
 
+print("Current Columns:")
+print(current_sales.columns.tolist())
+
+print("LW Columns:")
+print(lw_sales.columns.tolist())
+
+# =========================================================
+# FIX PRODUCT MIX COLUMN
+# =========================================================
+
+if "Product Mix_x" in current_sales.columns:
+
+    current_sales["Product Mix"] = (
+        current_sales["Product Mix_x"]
+    )
+
+elif "Product Mix_y" in current_sales.columns:
+
+    current_sales["Product Mix"] = (
+        current_sales["Product Mix_y"]
+    )
+
+
+if "Product Mix_x" in lw_sales.columns:
+
+    lw_sales["Product Mix"] = (
+        lw_sales["Product Mix_x"]
+    )
+
+elif "Product Mix_y" in lw_sales.columns:
+
+    lw_sales["Product Mix"] = (
+        lw_sales["Product Mix_y"]
+    )
+
+print("✅ Product Mix Fixed")
+
 # =========================================================
 # ITEM GROUP FOR WINDOW DATA
 # =========================================================
