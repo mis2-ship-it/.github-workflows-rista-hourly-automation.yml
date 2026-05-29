@@ -622,7 +622,6 @@ for col, default in required_cols.items():
 
         sales_df[col] = default
 
-
 print("✅ Safe Columns Created")
 
 
