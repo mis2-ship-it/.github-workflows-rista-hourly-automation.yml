@@ -552,7 +552,98 @@ def fetch_sales_window(
 
     return final_df
 
+# =========================================================
+# BUSINESS WINDOW
+# =========================================================
 
+from zoneinfo import ZoneInfo
+
+ist_now = datetime.now(
+    ZoneInfo("Asia/Kolkata")
+)
+
+print("🕒 Current Time:", ist_now)
+
+# =========================================================
+# BUSINESS DATE
+# =========================================================
+
+if ist_now.hour < 9:
+
+    business_date = (
+        ist_now.date()
+        - timedelta(days=1)
+    )
+
+else:
+
+    business_date = (
+        ist_now.date()
+    )
+
+print(
+    "📅 Business Date:",
+    business_date
+)
+
+# =========================================================
+# CURRENT WINDOW
+# 9 AM → PREVIOUS COMPLETED HOUR
+# =========================================================
+
+current_window_start = datetime.combine(
+    business_date,
+    datetime.min.time()
+).replace(
+    hour=9,
+    minute=0,
+    second=0,
+    tzinfo=ZoneInfo("Asia/Kolkata")
+)
+
+# previous completed hour
+end_hour = ist_now.hour - 1
+
+if end_hour < 0:
+    end_hour = 23
+
+current_window_end = datetime.combine(
+    ist_now.date(),
+    datetime.min.time()
+).replace(
+    hour=end_hour,
+    minute=59,
+    second=59,
+    tzinfo=ZoneInfo("Asia/Kolkata")
+)
+
+# =========================================================
+# LAST WEEK SAME WINDOW
+# =========================================================
+
+lw_window_start = (
+    current_window_start
+    - timedelta(days=7)
+)
+
+lw_window_end = (
+    current_window_end
+    - timedelta(days=7)
+)
+
+print(
+    "🟢 Current Window:",
+    current_window_start,
+    "to",
+    current_window_end
+)
+
+print(
+    "🟡 LW Window:",
+    lw_window_start,
+    "to",
+    lw_window_end
+)
 # =========================================================
 # FETCH DATA
 # =========================================================
@@ -921,159 +1012,6 @@ print(
     len(lw_sales)
 )
 
-from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
-
-ist_now = datetime.now(
-    ZoneInfo("Asia/Kolkata")
-)
-
-print("🕒 Current Time:", ist_now)
-
-# =========================================================
-# BUSINESS DATE LOGIC
-# =========================================================
-
-today = ist_now.date()
-
-# before 9 AM
-if ist_now.hour < 9:
-
-    business_date = (
-        today - timedelta(days=1)
-    )
-
-    current_start = datetime.combine(
-        business_date,
-        datetime.min.time()
-    ).replace(
-        hour=9,
-        tzinfo=ZoneInfo("Asia/Kolkata")
-    )
-
-    current_end = datetime.combine(
-        today,
-        datetime.min.time()
-    ).replace(
-        hour=ist_now.hour - 1,
-        minute=59,
-        second=59,
-        tzinfo=ZoneInfo("Asia/Kolkata")
-    )
-
-# after 9 AM
-else:
-
-    business_date = today
-
-    current_start = datetime.combine(
-        business_date,
-        datetime.min.time()
-    ).replace(
-        hour=9,
-        tzinfo=ZoneInfo("Asia/Kolkata")
-    )
-
-    current_end = datetime.combine(
-        business_date,
-        datetime.min.time()
-    ).replace(
-        hour=ist_now.hour - 1,
-        minute=59,
-        second=59,
-        tzinfo=ZoneInfo("Asia/Kolkata")
-    )
-
-print(
-    "📅 Business Date:",
-    business_date
-)
-
-# =========================================================
-# LAST WEEK SAME WINDOW
-# =========================================================
-
-last_week_start = (
-    current_start
-    - timedelta(days=7)
-)
-
-last_week_end = (
-    current_end
-    - timedelta(days=7)
-)
-
-print(
-    "🟢 Current Window:",
-    current_start,
-    "to",
-    current_end
-)
-
-print(
-    "🟡 LW Window:",
-    last_week_start,
-    "to",
-    last_week_end
-)
-
-# =========================================================
-# ORDER TIME CONVERSION
-# =========================================================
-
-sales_df["Order Time"] = pd.to_datetime(
-    sales_df["invoiceDate"],
-    errors="coerce"
-)
-
-sales_df["Order Time"] = (
-    sales_df["Order Time"]
-    .dt.tz_localize("UTC")
-    .dt.tz_convert("Asia/Kolkata")
-)
-
-# =========================================================
-# CURRENT BUSINESS WINDOW
-# Today 9AM → current hour
-# =========================================================
-
-current_df = sales_df[
-    (
-        sales_df["Order Time"]
-        >= business_start
-    )
-    &
-    (
-        sales_df["Order Time"]
-        <= cutoff_time
-    )
-].copy()
-
-# =========================================================
-# LAST WEEK SAME WINDOW
-# =========================================================
-
-last_week_df = sales_df[
-    (
-        sales_df["Order Time"]
-        >= last_week_start
-    )
-    &
-    (
-        sales_df["Order Time"]
-        <= last_week_cutoff
-    )
-].copy()
-
-print(
-    "✅ Current Window Orders:",
-    len(current_df)
-)
-
-print(
-    "✅ Last Week Orders:",
-    len(last_week_df)
-)
 
 # =========================================================
 # HOURLY COMPARISON DASHBOARD
