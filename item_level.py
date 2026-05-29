@@ -442,12 +442,18 @@ def fetch_sales_window(
 
         params = {
             "branch": branch,
+        
             "fromDate":
-            start_dt.strftime(
+            start_dt.replace(
+                tzinfo=None
+            ).strftime(
                 "%Y-%m-%d %H:%M:%S"
             ),
+        
             "toDate":
-            end_dt.strftime(
+            end_dt.replace(
+                tzinfo=None
+            ).strftime(
                 "%Y-%m-%d %H:%M:%S"
             )
         }
