@@ -1402,7 +1402,7 @@ def create_product_mix_dashboard(
 ):
 
     print("Function Current Columns")
-    print(current_df.columns.tolist())
+    print(current_sales.columns.tolist())
 
     print("Function LW Columns")
     print(lw_sales.columns.tolist())
@@ -1425,7 +1425,7 @@ def create_product_mix_dashboard(
             ==
             brand.upper()
         ].copy()
-
+    
         lw = lw_sales[
             lw_sales["brandName"]
             .astype(str)
@@ -1433,6 +1433,20 @@ def create_product_mix_dashboard(
             ==
             brand.upper()
         ].copy()
+    
+        required_cols = [
+            "item_quantity",
+            "item_baseNetAmount",
+            "item_baseNetDiscountAmount"
+        ]
+    
+        for col in required_cols:
+    
+            if col not in curr.columns:
+                curr[col] = 0
+    
+            if col not in lw.columns:
+                lw[col] = 0
 
         # =============================================
         # CURRENT
