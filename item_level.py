@@ -256,17 +256,29 @@ print(
 # CHANNEL GROUP MAPPING
 # =========================================================
 
-channel_map = dict(
-    zip(
-        help_df["Channel"],
-        help_df["Source"]
-    )
-)
+if (
+    "Help Channel" in help_df.columns
+    and
+    "Help Source" in help_df.columns
+):
 
-print(
-    "✅ Channel Mapping:",
-    len(channel_map)
-)
+    channel_map = dict(
+        zip(
+            help_df["Help Channel"],
+            help_df["Help Source"]
+        )
+    )
+
+    print(
+        "✅ Channel Mapping:",
+        len(channel_map)
+    )
+
+else:
+
+    print(
+        "⚠️ Channel Mapping Skipped"
+    )
 
 
 # =========================================================
