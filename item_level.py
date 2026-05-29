@@ -2658,24 +2658,117 @@ print(
 )
 
 # =========================================================
-# SUMMARY HTML
+# CREATE HTML SUMMARY
 # =========================================================
+
+print("📄 Creating Summary HTML...")
 
 summary_html = f"""
 <html>
-<body>
+<body style="font-family:Arial;">
 
 <h2>📊 Product Level Sales Dashboard</h2>
 
 <p>
-Business Date:
-<b>{business_date}</b>
+<b>Business Date:</b> {business_date}
 </p>
 
 <p>
-Hourly Dashboard Updated Successfully
+<b>Hourly Window:</b>
+{start_hour} - {end_hour}
 </p>
 
+<hr>
+
+<h3>📈 Hourly Summary</h3>
+
+{hourly_dashboard.to_html(index=False)}
+
+<hr>
+
+<h3>🍨 Product Mix Dashboard</h3>
+"""
+
+# =========================================================
+# PRODUCT MIX
+# =========================================================
+
+for brand, df in product_mix_dashboard.items():
+
+    summary_html += f"""
+    <h4>{brand}</h4>
+    """
+
+    if df.empty:
+
+        summary_html += """
+        <p>No Data Available</p>
+        """
+
+    else:
+
+        summary_html += (
+            df.head(10)
+            .to_html(index=False)
+        )
+
+# =========================================================
+# CATEGORY DASHBOARD
+# =========================================================
+
+summary_html += """
+<hr>
+<h3>📦 Category Dashboard</h3>
+"""
+
+for brand, df in category_dashboard.items():
+
+    summary_html += f"""
+    <h4>{brand}</h4>
+    """
+
+    if df.empty:
+
+        summary_html += """
+        <p>No Data Available</p>
+        """
+
+    else:
+
+        summary_html += (
+            df.head(10)
+            .to_html(index=False)
+        )
+
+# =========================================================
+# TOP ITEMS
+# =========================================================
+
+summary_html += """
+<hr>
+<h3>🏆 Top Items</h3>
+"""
+
+for brand, df in item_dashboard.items():
+
+    summary_html += f"""
+    <h4>{brand}</h4>
+    """
+
+    if df.empty:
+
+        summary_html += """
+        <p>No Data Available</p>
+        """
+
+    else:
+
+        summary_html += (
+            df.head(15)
+            .to_html(index=False)
+        )
+
+summary_html += """
 </body>
 </html>
 """
