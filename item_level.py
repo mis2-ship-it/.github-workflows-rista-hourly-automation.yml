@@ -222,19 +222,10 @@ if missing_cols:
 
 help_df = help_df.rename(
     columns={
-        "branchcode":
-        "branchCode",
-
-        "storename":
-        "Store Name",
-
-        "region":
-        "Region",
-
-        "channel":
+        "Channel":
         "Help Channel",
 
-        "source":
+        "Source":
         "Help Source"
     }
 )
@@ -411,8 +402,7 @@ sales_url = (
 # =========================================================
 
 def fetch_sales_window(
-    start_dt,
-    end_dt,
+    business_day,
     tag="CURRENT"
 ):
 
@@ -423,10 +413,8 @@ def fetch_sales_window(
     )
 
     print(
-        "Window:",
-        start_dt,
-        "to",
-        end_dt
+    "Business Day:",
+    business_day
     )
 
     # =====================================================
@@ -441,26 +429,15 @@ def fetch_sales_window(
         )
 
         params = {
-            "branchCode": branch,
+            "branch": branch,
         
-            "fromDate":
-            start_dt.replace(
-                tzinfo=None
-            ).strftime(
-                "%Y-%m-%d %H:%M:%S"
-            ),
-        
-            "toDate":
-            end_dt.replace(
-                tzinfo=None
-            ).strftime(
-                "%Y-%m-%d %H:%M:%S"
+            "day": business_day.strftime(
+                "%Y-%m-%d"
             ),
         
             "page": 1,
             "limit": 5000
         }
-
         print("Params:", params)
         
         try:
@@ -665,14 +642,12 @@ print(
 # =========================================================
 
 current_df = fetch_sales_window(
-    current_window_start,
-    current_window_end,
+    business_date,
     "CURRENT"
 )
 
 lw_df = fetch_sales_window(
-    lw_window_start,
-    lw_window_end,
+    business_date - timedelta(days=7),
     "LW"
 )
 
@@ -1005,18 +980,56 @@ print(
 
 
 # =========================================================
-# SPLIT CURRENT / LW
+# ORDER TIME CONVERSION
+# =========================================================
+
+closed_df["Order Time"] = pd.to_datetime(
+    closed_df["invoiceDate"],
+    errors="coerce"
+)
+
+closed_df["Order Time"] = pd.to_datetime(
+    closed_df["invoiceDate"],
+    utc=True,
+    errors="coerce"
+).dt.tz_convert("Asia/Kolkata")
+
+print("✅ Order Time Converted")
+
+
+# =========================================================
+# CURRENT WINDOW FILTER
 # =========================================================
 
 current_sales = closed_df[
-    closed_df["DATASET"]
-    == "CURRENT"
+    (
+        closed_df["Order Time"]
+        >= current_window_start
+    )
+    &
+    (
+        closed_df["Order Time"]
+        <= current_window_end
+    )
 ].copy()
 
+
+# =========================================================
+# LAST WEEK WINDOW FILTER
+# =========================================================
+
 lw_sales = closed_df[
-    closed_df["DATASET"]
-    == "LW"
+    (
+        closed_df["Order Time"]
+        >= lw_window_start
+    )
+    &
+    (
+        closed_df["Order Time"]
+        <= lw_window_end
+    )
 ].copy()
+
 
 print(
     "✅ Current Rows:",
@@ -1027,7 +1040,6 @@ print(
     "✅ LW Rows:",
     len(lw_sales)
 )
-
 
 # =========================================================
 # HOURLY COMPARISON DASHBOARD
