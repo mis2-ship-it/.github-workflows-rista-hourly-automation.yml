@@ -1543,17 +1543,20 @@ def create_category_dashboard(
         # BRAND FILTER
         # =============================================
 
-        curr = current_df[
-            current_df["brandName"]
+        curr = current_sales[
+            current_sales["brandName"]
             .astype(str)
+            .str.strip()
             .str.upper()
             ==
             brand.upper()
         ].copy()
-
+        
+        
         lw = lw_sales[
             lw_sales["brandName"]
             .astype(str)
+            .str.strip()
             .str.upper()
             ==
             brand.upper()
