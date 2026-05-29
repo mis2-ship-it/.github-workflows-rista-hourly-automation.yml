@@ -1127,6 +1127,24 @@ lw_sales = lw_sales.merge(
 print("✅ Product Mix Merged")
 
 # =========================================================
+# SAFE PRODUCT MIX COLUMN
+# =========================================================
+
+for df in [current_sales, lw_sales]:
+
+    if "Product Mix" not in df.columns:
+
+        df["Product Mix"] = "Others"
+
+    df["Product Mix"] = (
+        df["Product Mix"]
+        .fillna("Others")
+        .astype(str)
+        .str.strip()
+    )
+
+print("✅ Product Mix Safe")
+# =========================================================
 # HOURLY COMPARISON DASHBOARD
 # CURRENT VS LAST WEEK
 # =========================================================
@@ -1168,6 +1186,19 @@ def create_hourly_dashboard(
             ==
             brand.upper()
         ].copy()
+
+        print("Brand:", brand)
+        print("Curr Columns:")
+        print(curr.columns.tolist())
+    
+        print("LW Columns:")
+        print(lw.columns.tolist())
+    
+        curr_mix = (
+            curr.groupby(
+                curr["Product Mix"]
+                .fillna("Others")
+            )
 
         # =================================================
         # CURRENT METRICS
@@ -1403,7 +1434,8 @@ def create_product_mix_dashboard(
 
         curr_mix = (
             curr.groupby(
-                "Product Mix"
+                curr["Product Mix"]
+                .fillna("Others")
             )
             .agg(
                 **{
@@ -1449,7 +1481,8 @@ def create_product_mix_dashboard(
 
         lw_mix = (
             lw.groupby(
-                "Product Mix"
+                lw["Product Mix"]
+                .fillna("Others")
             )
             .agg(
                 **{
