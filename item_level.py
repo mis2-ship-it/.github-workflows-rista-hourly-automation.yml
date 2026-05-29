@@ -1049,6 +1049,47 @@ print(
 )
 
 # =========================================================
+# ITEM GROUP FOR WINDOW DATA
+# =========================================================
+
+merge_cols = [
+    "Item Name",
+    "Item Group Name",
+    "Product Mix",
+    "Category Group"
+]
+
+current_sales["item_shortName"] = (
+    current_sales["item_shortName"]
+    .astype(str)
+    .str.strip()
+    .str.upper()
+)
+
+lw_sales["item_shortName"] = (
+    lw_sales["item_shortName"]
+    .astype(str)
+    .str.strip()
+    .str.upper()
+)
+
+current_sales = current_sales.merge(
+    item_df[merge_cols],
+    left_on="item_shortName",
+    right_on="Item Name",
+    how="left"
+)
+
+lw_sales = lw_sales.merge(
+    item_df[merge_cols],
+    left_on="item_shortName",
+    right_on="Item Name",
+    how="left"
+)
+
+print("✅ Product Mix Merged")
+
+# =========================================================
 # HOURLY COMPARISON DASHBOARD
 # CURRENT VS LAST WEEK
 # =========================================================
