@@ -2658,6 +2658,34 @@ print(
 )
 
 # =========================================================
+# HOURLY WINDOW
+# =========================================================
+
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+ist_now = datetime.now(
+    ZoneInfo("Asia/Kolkata")
+)
+
+current_hour = ist_now.hour
+
+start_hour = "09:00 AM"
+
+end_hour = (
+    datetime.strptime(
+        f"{current_hour}:59",
+        "%H:%M"
+    )
+    .strftime("%I:%M %p")
+)
+
+print(
+    f"⏰ Hourly Window: "
+    f"{start_hour} - {end_hour}"
+)
+
+# =========================================================
 # CREATE HTML SUMMARY
 # =========================================================
 
@@ -2806,9 +2834,16 @@ all_recipients = to_mails + cc_mails
 # MAIL SUBJECT
 # =========================================================
 
+formatted_date = (
+    pd.to_datetime(
+        business_date
+    )
+    .strftime("%d-%m-%Y")
+)
+
 mail_subject = (
-    f"📊 Product Level Sales Dashboard "
-    f"- {business_date}"
+    f"Product Level Sales Dashboard _ "
+    f"{formatted_date}"
 )
 
 # Example for hourly
