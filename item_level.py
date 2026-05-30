@@ -685,6 +685,46 @@ if sales_df.empty:
     print("❌ No Sales Data")
     exit()
 
+# =========================================================
+# FIX METRIC COLUMNS AFTER MERGE
+# =========================================================
+
+metric_cols = [
+    "item_quantity",
+    "item_baseNetAmount",
+    "item_baseNetDiscountAmount"
+]
+
+for col in metric_cols:
+
+    x_col = f"{col}_x"
+    y_col = f"{col}_y"
+
+    if (
+        col not in current_df.columns
+        and x_col in current_df.columns
+    ):
+
+        current_df[col] = (
+            current_df[x_col]
+            .combine_first(
+                current_df.get(y_col)
+            )
+        )
+
+    if (
+        col not in lw_sales.columns
+        and x_col in lw_sales.columns
+    ):
+
+        lw_sales[col] = (
+            lw_sales[x_col]
+            .combine_first(
+                lw_sales.get(y_col)
+            )
+        )
+
+print("✅ Item Metric Columns Fixed")
 
 # =========================================================
 # SAFE COLUMN CREATION
@@ -1442,12 +1482,13 @@ def create_product_mix_dashboard(
     
         for col in required_cols:
     
-            if col not in curr.columns:
-                curr[col] = 0
-    
-            if col not in lw.columns:
-                lw[col] = 0
-
+            if col not in current_df.columns:
+        
+                print(
+                    f"⚠ Missing Column: {col}"
+                )
+        
+                current_df[col] = 0
         # =============================================
         # CURRENT
         # =============================================
@@ -2906,108 +2947,7 @@ summary_html += """
 """
 
 print("✅ Summary HTML Created")
-# =========================================================
-# SEND EMAIL
-# =========================================================
 
-import smtplib
-
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-
-print("📧 Preparing Mail...")
-
-EMAIL_USER = os.environ["EMAIL_USER"]
-EMAIL_PASSWORD = os.environ["EMAIL_PASSWORD"]
-
-# =========================================================
-# RECEIVERS
-# =========================================================
-
-to_mails = [
-    "mis2@frozenbottle.in"
-]
-
-cc_mails = [
-    "mis2@frozenbottle.in"
-]
-
-all_recipients = to_mails + cc_mails
-
-# =========================================================
-# MAIL SUBJECT
-# =========================================================
-
-formatted_date = (
-    pd.to_datetime(
-        business_date
-    )
-    .strftime("%d-%m-%Y")
-)
-
-mail_subject = (
-    f"Product Level Sales Dashboard _ "
-    f"{formatted_date}"
-)
-
-# Example for hourly
-# 📊 Product Level Sales Dashboard - 2026-05-27
-
-# =========================================================
-# CREATE MESSAGE
-# =========================================================
-
-msg = MIMEMultipart()
-
-msg["From"] = EMAIL_USER
-msg["To"] = ", ".join(to_mails)
-msg["CC"] = ", ".join(cc_mails)
-
-msg["Subject"] = mail_subject
-
-msg.attach(
-    MIMEText(
-        summary_html,
-        "html"
-    )
-)
-
-# =========================================================
-# SEND MAIL
-# =========================================================
-
-try:
-
-    server = smtplib.SMTP(
-        "smtp.gmail.com",
-        587
-    )
-
-    server.starttls()
-
-    server.login(
-        EMAIL_USER,
-        EMAIL_PASSWORD
-    )
-
-    server.sendmail(
-        EMAIL_USER,
-        all_recipients,
-        msg.as_string()
-    )
-
-    server.quit()
-
-    print("✅ Mail Sent Successfully")
-
-except Exception as e:
-
-    print(
-        "❌ Mail Error:",
-        str(e)
-    )
-
-print("✅ Script Completed")
 
 # =========================================================
 # TIME WINDOW
@@ -3070,13 +3010,12 @@ all_recipients = (
 # =========================================================
 
 mail_subject = (
-    f"📊 Hourly Product Dashboard "
-    f"({start_hour} - {end_hour}) "
-    f"| {business_date}"
+    f"Hourly Product Level Sales Dashboard _ "
+    f"{formatted_date}"
 )
 
 # Example:
-# 📊 Hourly Product Dashboard
+# 📊 Hourly Product Level Dashboard
 # (09:00 AM - 01:59 PM)
 # | 2026-05-27
 
