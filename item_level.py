@@ -1143,7 +1143,7 @@ print("✅ Product Mix Merged")
 # SAFE PRODUCT MIX
 # =========================================================
 
-for df in [current_df, lw_sales]:
+for df in [current_df, lw_df]:
 
     if "Product Mix" not in df.columns:
 
@@ -1167,7 +1167,7 @@ print("✅ Product Mix Safe")
 # =========================================================
 
 def create_hourly_dashboard(
-    current_df,
+    current_sales,
     lw_sales
 ):
 
@@ -1395,9 +1395,11 @@ def create_hourly_dashboard(
 # CREATE DASHBOARD
 # =========================================================
 
-hourly_dashboard = create_hourly_dashboard(
-    current_sales,
-    lw_sales
+hourly_dashboard = (
+    create_hourly_dashboard(
+        current_df,
+        lw_df
+    )
 )
 
 print("✅ Hourly Dashboard Created")
@@ -1430,14 +1432,14 @@ def create_product_mix_dashboard(
 
     for brand in brands:
 
-        curr = current_df[
-            current_df["brandName"]
+        curr = current_sales[
+            current_sales["brandName"]
             .astype(str)
             .str.upper()
             ==
             brand.upper()
         ].copy()
-    
+
         lw = lw_sales[
             lw_sales["brandName"]
             .astype(str)
@@ -1445,22 +1447,38 @@ def create_product_mix_dashboard(
             ==
             brand.upper()
         ].copy()
-    
+
+        # =============================================
+        # FIX MISSING METRIC COLUMNS
+        # =============================================
+
         required_cols = [
             "item_quantity",
             "item_baseNetAmount",
             "item_baseNetDiscountAmount"
         ]
-    
+
         for col in required_cols:
-    
-            if col not in current_df.columns:
-        
+
+            if col not in curr.columns:
+
                 print(
-                    f"⚠ Missing Column: {col}"
+                    f"⚠ Missing Column in Current: {col}"
                 )
+
+                curr[col] = 0
+
+            if col not in lw.columns:
+
+                print(
+                    f"⚠ Missing Column in LW: {col}"
+                )
+
+                lw[col] = 0
+
+        print("Curr Columns:")
+        print(curr.columns.tolist())
         
-                current_df[col] = 0
         # =============================================
         # CURRENT
         # =============================================
