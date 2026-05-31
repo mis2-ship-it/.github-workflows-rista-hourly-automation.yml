@@ -676,6 +676,17 @@ print(
 print("📋 API Columns:")
 print(sales_df.columns.tolist())
 
+
+# =========================================================
+# STANDARD DATAFRAME NAMES
+# =========================================================
+
+current_sales = current_df.copy()
+
+lw_sales = lw_df.copy()
+
+print("✅ Sales DataFrames Created")
+
 # =========================================================
 # EMPTY CHECK
 # =========================================================
