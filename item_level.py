@@ -1182,14 +1182,15 @@ def create_hourly_dashboard(
 
     for brand in brands:
 
-        # =================================================
+        print(f"Brand: {brand}")
+
+        # =============================================
         # FILTER BRAND
-        # =================================================
+        # =============================================
 
         curr = current_sales[
             current_sales["brandName"]
             .astype(str)
-            .str.strip()
             .str.upper()
             ==
             brand.upper()
@@ -1198,18 +1199,48 @@ def create_hourly_dashboard(
         lw = lw_sales[
             lw_sales["brandName"]
             .astype(str)
-            .str.strip()
             .str.upper()
             ==
             brand.upper()
         ].copy()
 
-        print("Brand:", brand)
+        # =============================================
+        # DEBUG
+        # =============================================
+
         print("Curr Columns:")
         print(curr.columns.tolist())
-    
+
         print("LW Columns:")
         print(lw.columns.tolist())
+
+        # =============================================
+        # FIX MISSING METRIC COLUMNS
+        # =============================================
+
+        required_cols = [
+            "item_quantity",
+            "item_baseNetAmount",
+            "item_baseNetDiscountAmount"
+        ]
+
+        for col in required_cols:
+
+            if col not in curr.columns:
+
+                print(
+                    f"⚠ Missing in Current: {col}"
+                )
+
+                curr[col] = 0
+
+            if col not in lw.columns:
+
+                print(
+                    f"⚠ Missing in LW: {col}"
+                )
+
+                lw[col] = 0
     
 
         # =================================================
