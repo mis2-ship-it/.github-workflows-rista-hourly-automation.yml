@@ -685,46 +685,7 @@ if sales_df.empty:
     print("❌ No Sales Data")
     exit()
 
-# =========================================================
-# FIX METRIC COLUMNS AFTER MERGE
-# =========================================================
 
-metric_cols = [
-    "item_quantity",
-    "item_baseNetAmount",
-    "item_baseNetDiscountAmount"
-]
-
-for col in metric_cols:
-
-    x_col = f"{col}_x"
-    y_col = f"{col}_y"
-
-    if (
-        col not in current_df.columns
-        and x_col in current_df.columns
-    ):
-
-        current_df[col] = (
-            current_df[x_col]
-            .combine_first(
-                current_df.get(y_col)
-            )
-        )
-
-    if (
-        col not in lw_sales.columns
-        and x_col in lw_sales.columns
-    ):
-
-        lw_sales[col] = (
-            lw_sales[x_col]
-            .combine_first(
-                lw_sales.get(y_col)
-            )
-        )
-
-print("✅ Item Metric Columns Fixed")
 
 # =========================================================
 # SAFE COLUMN CREATION
@@ -1605,33 +1566,45 @@ metric_cols = [
 
 for col in metric_cols:
 
+    x_col = f"{col}_x"
+    y_col = f"{col}_y"
+
+    # CURRENT SALES
     if (
         col not in current_sales.columns
-        and f"{col}_x" in current_sales.columns
+        and x_col in current_sales.columns
     ):
 
         current_sales[col] = (
-            current_sales[f"{col}_x"]
+            current_sales[x_col]
             .combine_first(
-                current_sales.get(
-                    f"{col}_y"
-                )
+                current_sales.get(y_col)
             )
         )
 
+    # LW SALES
     if (
         col not in lw_sales.columns
-        and f"{col}_x" in lw_sales.columns
+        and x_col in lw_sales.columns
     ):
 
         lw_sales[col] = (
-            lw_sales[f"{col}_x"]
+            lw_sales[x_col]
             .combine_first(
-                lw_sales.get(
-                    f"{col}_y"
-                )
+                lw_sales.get(y_col)
             )
         )
+
+    # NUMERIC CONVERSION
+    current_sales[col] = pd.to_numeric(
+        current_sales[col],
+        errors="coerce"
+    ).fillna(0)
+
+    lw_sales[col] = pd.to_numeric(
+        lw_sales[col],
+        errors="coerce"
+    ).fillna(0)
 
 print("✅ Item Metric Columns Fixed")
 
@@ -1648,31 +1621,30 @@ dashboard_cols = [
 
 for col in dashboard_cols:
 
+    x_col = f"{col}_x"
+    y_col = f"{col}_y"
+
     if (
         col not in current_sales.columns
-        and f"{col}_x" in current_sales.columns
+        and x_col in current_sales.columns
     ):
 
         current_sales[col] = (
-            current_sales[f"{col}_x"]
+            current_sales[x_col]
             .combine_first(
-                current_sales.get(
-                    f"{col}_y"
-                )
+                current_sales.get(y_col)
             )
         )
 
     if (
         col not in lw_sales.columns
-        and f"{col}_x" in lw_sales.columns
+        and x_col in lw_sales.columns
     ):
 
         lw_sales[col] = (
-            lw_sales[f"{col}_x"]
+            lw_sales[x_col]
             .combine_first(
-                lw_sales.get(
-                    f"{col}_y"
-                )
+                lw_sales.get(y_col)
             )
         )
 
@@ -1682,9 +1654,6 @@ print("✅ Dashboard Columns Fixed")
 # =========================================================
 # DEBUG CHECK
 # =========================================================
-
-print("Current Sales Columns:")
-print(current_sales.columns.tolist())
 
 print(
     current_sales[
@@ -2293,7 +2262,15 @@ for col in [
             )
         )
 
+    # convert numeric
+    current_sales[col] = pd.to_numeric(
+        current_sales[col],
+        errors="coerce"
+    ).fillna(0)
+
 print("✅ Item Metric Columns Fixed")
+
+
 # =========================================================
 # FIX DISCOUNT COLUMNS
 # =========================================================
@@ -2314,22 +2291,21 @@ if (
     )
 
 if (
-    "discounts" not in current_df.columns
+    "discounts" not in current_sales.columns
     and
-    "discounts_x" in current_df.columns
+    "discounts_x" in current_sales.columns
 ):
 
-    current_df["discounts"] = (
-        current_df["discounts_x"]
+    current_sales["discounts"] = (
+        current_sales["discounts_x"]
         .combine_first(
-            current_df.get(
+            current_sales.get(
                 "discounts_y"
             )
         )
     )
 
 print("✅ Discount Columns Fixed")
-
 # =========================================================
 # CREATE CODE COLUMNS
 # =========================================================
