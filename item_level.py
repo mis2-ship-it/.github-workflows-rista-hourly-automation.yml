@@ -498,6 +498,7 @@ def fetch_sales_window(
                 data
             )
 
+            
             # =========================================
             # SAFE BRANCH CODE
             # =========================================
@@ -663,6 +664,111 @@ lw_df = fetch_sales_window(
     "LW"
 )
 
+# =========================================================
+# FLATTEN ITEM LEVEL DATA
+# =========================================================
+
+def flatten_items(df):
+
+    print("📦 Flattening Item Data...")
+
+    # explode items list
+    df = df.explode("items")
+
+    # remove null items
+    df = df[
+        df["items"].notna()
+    ].copy()
+
+    # normalize item json
+    item_df = pd.json_normalize(
+        df["items"]
+    )
+
+    # rename item columns
+    item_df.columns = [
+        f"item_{col}"
+        for col in item_df.columns
+    ]
+
+    # merge invoice + item level
+    df = (
+        df
+        .drop(columns=["items"])
+        .reset_index(drop=True)
+    )
+
+    item_df = (
+        item_df
+        .reset_index(drop=True)
+    )
+
+    df = pd.concat(
+        [df, item_df],
+        axis=1
+    )
+
+    print(
+        "✅ Item Flatten Completed"
+    )
+
+    print(
+        "📋 Item Columns:"
+    )
+
+    print(
+        [
+            c for c in df.columns
+            if c.startswith("item_")
+        ]
+    )
+
+    return df
+
+
+# =========================================================
+# CREATE ITEM LEVEL DATA
+# =========================================================
+
+current_df = flatten_items(
+    current_df
+)
+
+lw_df = flatten_items(
+    lw_df
+)
+
+print(
+    "✅ Item Level Data Ready"
+)
+
+# =========================================================
+# CHECK IMPORTANT ITEM COLUMNS
+# =========================================================
+
+required_cols = [
+    "item_quantity",
+    "item_baseNetAmount",
+    "item_baseNetDiscountAmount",
+    "item_discounts",
+    "item_shortName",
+    "item_categoryName"
+]
+
+for col in required_cols:
+
+    if col in current_df.columns:
+
+        print(
+            f"✅ Found: {col}"
+        )
+
+    else:
+
+        print(
+            f"❌ Missing: {col}"
+        )
+
 sales_df = pd.concat(
     [current_df, lw_df],
     ignore_index=True
@@ -676,6 +782,11 @@ print(
 print("📋 API Columns:")
 print(sales_df.columns.tolist())
 
+print("CURRENT DF COLUMNS")
+print(current_df.columns.tolist())
+
+print("LW DF COLUMNS")
+print(lw_df.columns.tolist())
 
 # =========================================================
 # STANDARD DATAFRAME NAMES
