@@ -3418,15 +3418,27 @@ for brand, df in item_dashboard.items():
             .to_html(index=False)
         )
 
-        summary_html += create_discount_html(
-            swiggy_discount_dashboard,
-            "Swiggy Discount Dashboard"
-        )
-        
-        summary_html += create_discount_html(
-            zomato_discount_dashboard,
-            "Zomato Discount Dashboard"
-        )
+# =========================================================
+# SWIGGY DISCOUNT DASHBOARD
+# =========================================================
+
+summary_html += create_discount_html(
+    swiggy_discount_dashboard,
+    "🟠 Swiggy Discount Dashboard"
+)
+
+# =========================================================
+# ZOMATO DISCOUNT DASHBOARD
+# =========================================================
+
+summary_html += create_discount_html(
+    zomato_discount_dashboard,
+    "🔴 Zomato Discount Dashboard"
+)
+
+# =========================================================
+# HTML CLOSE
+# =========================================================
 
 summary_html += """
 </body>
@@ -3434,9 +3446,6 @@ summary_html += """
 """
 
 print("✅ Summary HTML Created")
-
-
-
 
 # =========================================================
 # TIME WINDOW
