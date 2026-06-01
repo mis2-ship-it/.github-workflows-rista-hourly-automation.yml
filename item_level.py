@@ -3255,60 +3255,7 @@ def create_discount_html(
 
 print("📄 Creating Summary HTML...")
 
-# =========================================================
-# TABLE STYLE
-# =========================================================
 
-table_style = """
-<style>
-
-body{
-    font-family: Arial, sans-serif;
-    background:#f4f6f9;
-}
-
-table{
-    border-collapse: collapse;
-    width:80%;
-    margin-bottom:25px;
-    background:white;
-    border-radius:10px;
-    overflow:hidden;
-    box-shadow:0 2px 8px rgba(0,0,0,0.08);
-}
-
-th{
-    background:#1F4E78;
-    color:white;
-    padding:10px;
-    font-size:13px;
-    border:1px solid #d9d9d9;
-    text-align:center;
-}
-
-td{
-    padding:8px;
-    border:1px solid #e5e5e5;
-    font-size:12px;
-    text-align:center;
-}
-
-tr:nth-child(even){
-    background:#f8fbff;
-}
-
-h2{
-    color:#1F4E78;
-}
-
-h3{
-    background:#EAF3FF;
-    padding:8px;
-    border-radius:8px;
-}
-
-</style>
-"""
 # =========================================================
 # TIME WINDOW
 # =========================================================
@@ -3345,13 +3292,68 @@ print(
     hourly_window
 )
 
+table_style = """
+<style>
+
+body{
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+}
+
+table{
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 20px;
+    font-size: 12px;
+}
+
+th{
+    background-color: #1F4E78;
+    color: white;
+    border: 1px solid #d9d9d9;
+    padding: 8px;
+    text-align: center;
+}
+
+td{
+    border: 1px solid #d9d9d9;
+    padding: 6px;
+    text-align: center;
+}
+
+tr:nth-child(even){
+    background-color: #f7f7f7;
+}
+
+h2{
+    color: #1F4E78;
+}
+
+h3{
+    background-color: #EAF2F8;
+    padding: 8px;
+    border-left: 5px solid #1F4E78;
+}
+
+h4{
+    color: #C55A11;
+    margin-top: 15px;
+}
+
+</style>
+"""
 # =========================================================
 # HTML BODY
 # =========================================================
 
 summary_html = f"""
 <html>
-<body style="font-family:Arial;">
+
+<head>
+{table_style}
+</head>
+
+<body>
 
 <h2>📊 Product Level Sales Dashboard</h2>
 
@@ -3368,7 +3370,11 @@ summary_html = f"""
 
 <h3>📈 Hourly Summary</h3>
 
-{hourly_dashboard.to_html(index=False)}
+{hourly_dashboard.to_html(
+    index=False,
+    border=0,
+    justify="center"
+)}
 
 <hr>
 
@@ -3395,7 +3401,11 @@ for brand, df in product_mix_dashboard.items():
 
         summary_html += (
             df.head(10)
-            .to_html(index=False)
+            df.to_html(
+                index=False,
+                border=0,
+                justify="center"
+            )
         )
 
 # =========================================================
@@ -3423,7 +3433,11 @@ for brand, df in category_dashboard.items():
 
         summary_html += (
             df.head(10)
-            .to_html(index=False)
+            df.to_html(
+                index=False,
+                border=0,
+                justify="center"
+            )
         )
 
 # =========================================================
@@ -3451,7 +3465,11 @@ for brand, df in item_dashboard.items():
 
         summary_html += (
             df.head(15)
-            .to_html(index=False)
+            df.to_html(
+                index=False,
+                border=0,
+                justify="center"
+            )
         )
 
 # =========================================================
