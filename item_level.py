@@ -1563,16 +1563,16 @@ def create_product_mix_dashboard(
     print("Function LW Columns")
     print(lw_sales.columns.tolist())
 
-    brands = [
-        "Frozen Bottle",
-        "Boba Bar",
-        "Madno",
-        "Lubov"
-    ]
+    brands = {
+    "Frozen Bottle": "Frozen Bottle",
+    "Boba Bar": "Boba Bar",
+    "Madno": "Madno",
+    "Lubov": "Lubov- Patisserie"
+    }
 
     product_mix_dashboard = {}
 
-    for brand in brands:
+    for brand, brand_filter in brands.items():
 
         curr = current_sales[
             current_sales["brandName"]
@@ -1880,16 +1880,16 @@ def create_category_dashboard(
     lw_sales
 ):
 
-    brands = [
-        "Frozen Bottle",
-        "Boba Bar",
-        "Madno",
-        "Lubov"
-    ]
+    brands = {
+    "Frozen Bottle": "Frozen Bottle",
+    "Boba Bar": "Boba Bar",
+    "Madno": "Madno",
+    "Lubov": "Lubov- Patisserie"
+    }
 
     category_dashboard = {}
 
-    for brand in brands:
+    for brand, brand_filter in brands.items():
 
         # =============================================
         # BRAND FILTER
@@ -2111,16 +2111,16 @@ def create_item_dashboard(
     lw_sales
 ):
 
-    brands = [
-        "Frozen Bottle",
-        "Boba Bar",
-        "Madno",
-        "Lubov"
-    ]
+    brands = {
+    "Frozen Bottle": "Frozen Bottle",
+    "Boba Bar": "Boba Bar",
+    "Madno": "Madno",
+    "Lubov": "Lubov- Patisserie"
+    }
 
     item_dashboard = {}
 
-    for brand in brands:
+    for brand, brand_filter in brands.items():
 
         # =============================================
         # FILTER BRAND
