@@ -3310,6 +3310,42 @@ h3{
 </style>
 """
 # =========================================================
+# TIME WINDOW
+# =========================================================
+
+from datetime import datetime
+import pytz
+
+ist = pytz.timezone(
+    "Asia/Kolkata"
+)
+
+current_time = datetime.now(ist)
+
+# START TIME
+start_hour = "09:00 AM"
+
+# END TIME → CURRENT HOUR :00
+end_hour = (
+    current_time
+    .replace(
+        minute=0,
+        second=0,
+        microsecond=0
+    )
+    .strftime("%I:%M %p")
+)
+
+hourly_window = (
+    f"{start_hour} - {end_hour}"
+)
+
+print(
+    "⏰ Hourly Window:",
+    hourly_window
+)
+
+# =========================================================
 # HTML BODY
 # =========================================================
 
@@ -3447,41 +3483,7 @@ summary_html += """
 
 print("✅ Summary HTML Created")
 
-# =========================================================
-# TIME WINDOW
-# =========================================================
 
-from datetime import datetime
-import pytz
-
-ist = pytz.timezone(
-    "Asia/Kolkata"
-)
-
-current_time = datetime.now(ist)
-
-# START TIME
-start_hour = "09:00 AM"
-
-# END TIME → CURRENT HOUR :00
-end_hour = (
-    current_time
-    .replace(
-        minute=0,
-        second=0,
-        microsecond=0
-    )
-    .strftime("%I:%M %p")
-)
-
-hourly_window = (
-    f"{start_hour} - {end_hour}"
-)
-
-print(
-    "⏰ Hourly Window:",
-    hourly_window
-)
 
 # =========================================================
 # HOURLY PRODUCT DASHBOARD MAIL
