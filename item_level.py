@@ -1282,16 +1282,16 @@ def create_hourly_dashboard(
     lw_sales
 ):
 
-    brands = [
-        "Frozen Bottle",
-        "Boba Bar",
-        "Madno",
-        "Lubov"
-    ]
+    brands = {
+    "Frozen Bottle": "Frozen Bottle",
+    "Boba Bar": "Boba Bar",
+    "Madno": "Madno",
+    "Lubov": "Lubov- Patisserie"
+    }
 
     final_output = []
 
-    for brand in brands:
+    for brand, brand_filter in brands.items():
 
         print(f"Brand: {brand}")
 
@@ -1304,7 +1304,7 @@ def create_hourly_dashboard(
             .astype(str)
             .str.upper()
             ==
-            brand.upper()
+            brand_filter.upper()
         ].copy()
 
         lw = lw_sales[
@@ -1312,7 +1312,7 @@ def create_hourly_dashboard(
             .astype(str)
             .str.upper()
             ==
-            brand.upper()
+            brand_filter.upper()
         ].copy()
 
         # =============================================
@@ -1579,7 +1579,7 @@ def create_product_mix_dashboard(
             .astype(str)
             .str.upper()
             ==
-            brand.upper()
+            brand_filter.upper()
         ].copy()
 
         lw = lw_sales[
@@ -1587,7 +1587,7 @@ def create_product_mix_dashboard(
             .astype(str)
             .str.upper()
             ==
-            brand.upper()
+            brand_filter.upper()
         ].copy()
 
         # =============================================
@@ -1696,6 +1696,20 @@ def create_product_mix_dashboard(
                 }
             )
             .reset_index()
+        )
+
+        lw_summary["LW Dis %"] = np.where(
+            lw_summary["item_baseNetAmount"] > 0,
+            (
+                lw_summary[
+                    "item_baseNetDiscountAmount"
+                ]
+                /
+                lw_summary[
+                    "item_baseNetAmount"
+                ]
+            ) * 100,
+            0
         )
 
         # =============================================
@@ -1887,7 +1901,7 @@ def create_category_dashboard(
             .str.strip()
             .str.upper()
             ==
-            brand.upper()
+            brand_filter.upper()
         ].copy()
         
         
@@ -1897,7 +1911,7 @@ def create_category_dashboard(
             .str.strip()
             .str.upper()
             ==
-            brand.upper()
+            brand_filter.upper()
         ].copy()
 
         # =============================================
@@ -2010,7 +2024,8 @@ def create_category_dashboard(
             "Dis %",
             "LW Net Rev",
             "LW Qty",
-            "LW Orders"
+            "LW Orders",
+            "LW Dis %"
         ]
 
         final_cat[
@@ -2116,7 +2131,7 @@ def create_item_dashboard(
             .astype(str)
             .str.upper()
             ==
-            brand.upper()
+            brand_filter.upper()
         ].copy()
 
         lw = lw_sales[
@@ -2124,7 +2139,7 @@ def create_item_dashboard(
             .astype(str)
             .str.upper()
             ==
-            brand.upper()
+            brand_filter.upper()
         ].copy()
 
         # =============================================
@@ -2217,6 +2232,15 @@ def create_item_dashboard(
             .fillna(0)
         )
 
+        merged["LW Dis %"] = np.where(
+            merged["LW Net Rev"] > 0,
+            (
+                merged["LW Discount"]
+                /
+                merged["LW Net Rev"]
+            ) * 100,
+            0
+        )
         # =============================================
         # SORT BY NET REV
         # =============================================
@@ -2238,6 +2262,7 @@ def create_item_dashboard(
             .head(15)
         )
 
+ 
         # =============================================
         # ROUND VALUES
         # =============================================
@@ -2248,8 +2273,8 @@ def create_item_dashboard(
             "Orders",
             "Dis %",
             "LW Net Rev",
-            "LW Qty",
-            "LW Orders"
+            "LW Orders",
+            "LW Dis %"
         ]
 
         final_item[
@@ -2497,33 +2522,38 @@ print("✅ Discount Codes Extracted")
 # =========================================================
 
 def create_discount_dashboard(
-    df,
+    current_sales,
+    lw_sales,
     code_col,
     channel_name
 ):
 
-    brands = [
-        "Frozen Bottle",
-        "Boba Bar",
-        "Madno",
-        "Lubov"
-    ]
+    brands = {
+        "Frozen Bottle": "Frozen Bottle",
+        "Boba Bar": "Boba Bar",
+        "Madno": "Madno",
+        "Lubov": "Lubov- Patisserie"
+    }
 
     dashboard = {}
 
-    for brand in brands:
+    for brand, brand_filter in brands.items():
 
-        temp = df[
+        # =====================================================
+        # CURRENT SALES
+        # =====================================================
+
+        temp = current_sales[
             (
-                df["brandName"]
+                current_sales["brandName"]
                 .astype(str)
                 .str.upper()
                 ==
-                brand.upper()
+                brand_filter.upper()
             )
             &
             (
-                df["channel"]
+                current_sales["channel"]
                 .astype(str)
                 .str.upper()
                 .str.contains(
@@ -2533,10 +2563,36 @@ def create_discount_dashboard(
             )
         ].copy()
 
-        code_df = (
-            temp.groupby(
-                code_col
+        # =====================================================
+        # LAST WEEK SALES
+        # =====================================================
+
+        lw_temp = lw_sales[
+            (
+                lw_sales["brandName"]
+                .astype(str)
+                .str.upper()
+                ==
+                brand_filter.upper()
             )
+            &
+            (
+                lw_sales["channel"]
+                .astype(str)
+                .str.upper()
+                .str.contains(
+                    channel_name.upper(),
+                    na=False
+                )
+            )
+        ].copy()
+
+        # =====================================================
+        # CURRENT SUMMARY
+        # =====================================================
+
+        code_df = (
+            temp.groupby(code_col)
             .agg(
                 **{
                     "Orders": (
@@ -2564,11 +2620,104 @@ def create_discount_dashboard(
             .reset_index()
         )
 
-        code_df["AOV"] = (
+        # =====================================================
+        # CURRENT DIS %
+        # =====================================================
+
+        code_df["Dis %"] = np.where(
+            code_df["Net Rev"] > 0,
+            (
+                code_df["Discount Given"]
+                /
+                code_df["Net Rev"]
+            ) * 100,
+            0
+        ).round(1)
+
+        # =====================================================
+        # CURRENT AOV
+        # =====================================================
+
+        code_df["AOV"] = np.where(
+            code_df["Orders"] > 0,
             code_df["Net Rev"]
             /
-            code_df["Orders"]
+            code_df["Orders"],
+            0
         ).round(1)
+
+        # =====================================================
+        # LW SUMMARY
+        # =====================================================
+
+        lw_code_df = (
+            lw_temp.groupby(code_col)
+            .agg(
+                **{
+                    "LW Orders": (
+                        "invoiceNumber",
+                        "nunique"
+                    ),
+
+                    "LW Qty": (
+                        "item_quantity",
+                        "sum"
+                    ),
+
+                    "LW Net Rev": (
+                        "item_baseNetAmount",
+                        "sum"
+                    ),
+
+                    "LW Discount": (
+                        "item_baseNetDiscountAmount",
+                        lambda x:
+                        abs(x.sum())
+                    )
+                }
+            )
+            .reset_index()
+        )
+
+        # =====================================================
+        # MERGE CURRENT + LW
+        # =====================================================
+
+        code_df = code_df.merge(
+            lw_code_df,
+            on=code_col,
+            how="left"
+        ).fillna(0)
+
+        # =====================================================
+        # LW DIS %
+        # =====================================================
+
+        code_df["LW Dis %"] = np.where(
+            code_df["LW Net Rev"] > 0,
+            (
+                code_df["LW Discount"]
+                /
+                code_df["LW Net Rev"]
+            ) * 100,
+            0
+        ).round(1)
+
+        # =====================================================
+        # LW AOV
+        # =====================================================
+
+        code_df["LW AOV"] = np.where(
+            code_df["LW Orders"] > 0,
+            code_df["LW Net Rev"]
+            /
+            code_df["LW Orders"],
+            0
+        ).round(1)
+
+        # =====================================================
+        # SORT
+        # =====================================================
 
         code_df = (
             code_df
@@ -2579,9 +2728,29 @@ def create_discount_dashboard(
             .head(15)
         )
 
-        dashboard[
-            brand
-        ] = code_df
+        # =====================================================
+        # FINAL COLUMN ORDER
+        # =====================================================
+
+        code_df = code_df[
+            [
+                code_col,
+                "Orders",
+                "Qty Sold",
+                "Net Rev",
+                "Discount Given",
+                "Dis %",
+                "AOV",
+                "LW Orders",
+                "LW Qty",
+                "LW Net Rev",
+                "LW Discount",
+                "LW Dis %",
+                "LW AOV"
+            ]
+        ]
+
+        dashboard[brand] = code_df
 
     return dashboard
 
@@ -2593,6 +2762,7 @@ def create_discount_dashboard(
 swiggy_discount_dashboard = (
     create_discount_dashboard(
         current_sales,
+        lw_sales,
         "Swiggy Code",
         "Swiggy"
     )
@@ -2609,6 +2779,7 @@ print(
 zomato_discount_dashboard = (
     create_discount_dashboard(
         current_sales,
+        lw_sales,
         "Zomato Code",
         "Zomato"
     )
@@ -2702,8 +2873,8 @@ def update_sheet(
     if df.empty:
 
         ws.update(
-            start_cell,
-            [["No Data"]]
+            values=data,
+            range_name=start_cell
         )
 
         return
@@ -2977,6 +3148,19 @@ print(
     f"{start_hour} - {end_hour}"
 )
 
+# =========================================================
+# FORMAT DATE
+# =========================================================
+
+formatted_date = (
+    business_date
+    .strftime("%d-%m-%Y")
+)
+
+print(
+    f"📅 Formatted Date: "
+    f"{formatted_date}"
+)
 # =========================================================
 # CREATE HTML SUMMARY
 # =========================================================
