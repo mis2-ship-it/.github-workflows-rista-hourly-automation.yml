@@ -3202,13 +3202,14 @@ def create_discount_html(
 ):
 
     html = f"""
-    <h2>{title}</h2>
+    <hr>
+    <h3>{title}</h3>
     """
 
     for brand, df in dashboard.items():
 
         html += f"""
-        <h3>{brand}</h3>
+        <h4>{brand}</h4>
         """
 
         if df.empty:
@@ -3218,34 +3219,15 @@ def create_discount_html(
             """
             continue
 
-        html += """
-        <table>
-        <tr>
-        """
+        html += (
+            df.to_html(
+                index=False,
+                border=0,
+                justify="center"
+            )
+        )
 
-        # headers
-        for col in df.columns:
-
-            html += f"""
-            <th>{col}</th>
-            """
-
-        html += "</tr>"
-
-        # rows
-        for _, row in df.iterrows():
-
-            html += "<tr>"
-
-            for val in row:
-
-                html += f"""
-                <td>{val}</td>
-                """
-
-            html += "</tr>"
-
-        html += "</table><br>"
+        html += "<br>"
 
     return html
 
@@ -3400,8 +3382,8 @@ for brand, df in product_mix_dashboard.items():
     else:
 
         summary_html += (
-            df.head(10)
-            df.to_html(
+            df.head(15)
+            .to_html(
                 index=False,
                 border=0,
                 justify="center"
@@ -3432,8 +3414,8 @@ for brand, df in category_dashboard.items():
     else:
 
         summary_html += (
-            df.head(10)
-            df.to_html(
+            df.head(15)
+            .to_html(
                 index=False,
                 border=0,
                 justify="center"
@@ -3465,7 +3447,7 @@ for brand, df in item_dashboard.items():
 
         summary_html += (
             df.head(15)
-            df.to_html(
+            .to_html(
                 index=False,
                 border=0,
                 justify="center"
