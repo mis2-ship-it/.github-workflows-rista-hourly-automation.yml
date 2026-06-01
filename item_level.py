@@ -3191,6 +3191,64 @@ print(
     f"📅 Formatted Date: "
     f"{formatted_date}"
 )
+
+# =========================================================
+# DISCOUNT HTML TABLE
+# =========================================================
+
+def create_discount_html(
+    dashboard,
+    title
+):
+
+    html = f"""
+    <h2>{title}</h2>
+    """
+
+    for brand, df in dashboard.items():
+
+        html += f"""
+        <h3>{brand}</h3>
+        """
+
+        if df.empty:
+
+            html += """
+            <p>No Data Available</p>
+            """
+            continue
+
+        html += """
+        <table>
+        <tr>
+        """
+
+        # headers
+        for col in df.columns:
+
+            html += f"""
+            <th>{col}</th>
+            """
+
+        html += "</tr>"
+
+        # rows
+        for _, row in df.iterrows():
+
+            html += "<tr>"
+
+            for val in row:
+
+                html += f"""
+                <td>{val}</td>
+                """
+
+            html += "</tr>"
+
+        html += "</table><br>"
+
+    return html
+
 # =========================================================
 # CREATE HTML SUMMARY
 # =========================================================
