@@ -42,6 +42,7 @@ jobs:
           pip install pandas
           pip install requests
           pip install PyJWT
+          pip install pytz
           pip install gspread
           pip install google-auth
           pip install google-auth-oauthlib
