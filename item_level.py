@@ -414,9 +414,8 @@ sales_url = (
 # =========================================================
 
 def fetch_sales_window(
-    start_datetime,
-    end_datetime,
-    dataset_name
+    business_date,
+    tag
 ):
 
     all_sales = []
@@ -426,8 +425,8 @@ def fetch_sales_window(
     )
 
     print(
-    "Business Day:",
-    business_day
+        "Business Day:",
+        business_date
     )
 
     # =====================================================
