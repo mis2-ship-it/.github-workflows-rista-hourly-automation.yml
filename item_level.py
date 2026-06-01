@@ -414,8 +414,9 @@ sales_url = (
 # =========================================================
 
 def fetch_sales_window(
-    business_day,
-    tag="CURRENT"
+    start_datetime,
+    end_datetime,
+    dataset_name
 ):
 
     all_sales = []
@@ -655,12 +656,14 @@ print(
 # =========================================================
 
 current_df = fetch_sales_window(
-    business_date,
+    current_window_start,
+    current_window_end,
     "CURRENT"
 )
 
 lw_df = fetch_sales_window(
-    business_date - timedelta(days=7),
+    lw_window_start,
+    lw_window_end,
     "LW"
 )
 
