@@ -2798,7 +2798,7 @@ swiggy_discount_dashboard = (
     create_discount_dashboard(
         current_sales,
         lw_sales,
-        "Swiggy Code",
+        "Swiggy Discount Code",
         "Swiggy"
     )
 )
@@ -2815,7 +2815,7 @@ zomato_discount_dashboard = (
     create_discount_dashboard(
         current_sales,
         lw_sales,
-        "Zomato Code",
+        "Zomato Discount Code",
         "Zomato"
     )
 )
