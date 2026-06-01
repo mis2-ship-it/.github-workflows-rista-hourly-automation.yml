@@ -1663,15 +1663,6 @@ def create_product_mix_dashboard(
             0
         ).round(1)
         
-        curr_item["Dis %"] = np.where(
-            curr_item["Net Rev"] > 0,
-            (
-                curr_item["Discount"]
-                /
-                curr_item["Net Rev"]
-            ) * 100,
-            0
-        ).round(1)
         
         
         # =============================================
@@ -1926,6 +1917,50 @@ def create_category_dashboard(
             ==
             brand_filter.upper()
         ].copy()
+
+        # =============================================
+        # CURRENT MIX
+        # =============================================
+        
+        curr_cat = (
+            curr.groupby("Category Group")
+            .agg(
+                **{
+                    "Orders": (
+                        "invoiceNumber",
+                        "nunique"
+                    ),
+        
+                    "Qty Sold": (
+                        "item_quantity",
+                        "sum"
+                    ),
+        
+                    "Net Rev": (
+                        "item_baseNetAmount",
+                        "sum"
+                    ),
+        
+                    "Discount": (
+                        "item_baseNetDiscountAmount",
+                        lambda x: abs(x.sum())
+                    )
+                }
+            )
+            .reset_index()
+        )
+        
+        curr_cat["Dis %"] = np.where(
+            curr_cat["Net Rev"] > 0,
+            (
+                curr_cat["Discount"]
+                /
+                curr_cat["Net Rev"]
+            ) * 100,
+            0
+        ).round(1)
+        
+        
 
         # =============================================
         # LAST WEEK CATEGORY
