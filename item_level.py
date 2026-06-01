@@ -446,7 +446,7 @@ def fetch_sales_window(
         params = {
             "branch": branch,
         
-            "day": business_day.strftime(
+            "day": start_datetime.strftime(
                 "%Y-%m-%d"
             ),
         
