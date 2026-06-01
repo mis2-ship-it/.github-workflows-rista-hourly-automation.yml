@@ -414,7 +414,8 @@ sales_url = (
 # =========================================================
 
 def fetch_sales_window(
-    business_date,
+    start_datetime,
+    end_datetime,
     tag
 ):
 
@@ -425,8 +426,10 @@ def fetch_sales_window(
     )
 
     print(
-        "Business Day:",
-        business_date
+        "Window:",
+        start_datetime,
+        "to",
+        end_datetime
     )
 
     # =====================================================
@@ -607,25 +610,19 @@ current_window_start = datetime.combine(
     tzinfo=ZoneInfo("Asia/Kolkata")
 )
 
-# previous completed hour
-end_hour = ist_now.hour - 1
-
-if end_hour < 0:
-    end_hour = 23
-
 current_window_end = datetime.combine(
-    ist_now.date(),
+    business_date,
     datetime.min.time()
 ).replace(
-    hour=end_hour,
+    hour=ist_now.hour,
     minute=59,
     second=59,
     tzinfo=ZoneInfo("Asia/Kolkata")
 )
 
-# =========================================================
+# ==========================================
 # LAST WEEK SAME WINDOW
-# =========================================================
+# ==========================================
 
 lw_window_start = (
     current_window_start
@@ -665,7 +662,6 @@ lw_df = fetch_sales_window(
     lw_window_end,
     "LW"
 )
-
 # =========================================================
 # FLATTEN ITEM LEVEL DATA
 # =========================================================
