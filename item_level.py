@@ -1622,108 +1622,121 @@ def create_product_mix_dashboard(
         print(curr.columns.tolist())
         
         # =============================================
-        # CURRENT
+        # CURRENT MIX
         # =============================================
-
+        
         curr_mix = (
-            curr.groupby(
-                curr["Product Mix"]
-                .fillna("Others")
-            )
+            curr.groupby("Product Mix")
             .agg(
                 **{
-                    "Net Rev": (
-                        "item_baseNetAmount",
-                        "sum"
-                    ),
-
-                    "Qty Sold": (
-                        "item_quantity",
-                        "sum"
-                    ),
-
                     "Orders": (
                         "invoiceNumber",
                         "nunique"
                     ),
-
+        
+                    "Qty Sold": (
+                        "item_quantity",
+                        "sum"
+                    ),
+        
+                    "Net Rev": (
+                        "item_baseNetAmount",
+                        "sum"
+                    ),
+        
                     "Discount": (
                         "item_baseNetDiscountAmount",
-                        lambda x:
-                        abs(x.sum())
+                        lambda x: abs(x.sum())
                     )
                 }
             )
             .reset_index()
         )
-
-        curr_mix["Dis %"] = (
-            curr_mix["Discount"]
-            /
-            curr_mix["Net Rev"]
-            * 100
+        
+        curr_mix["Dis %"] = np.where(
+            curr_mix["Net Rev"] > 0,
+            (
+                curr_mix["Discount"]
+                /
+                curr_mix["Net Rev"]
+            ) * 100,
+            0
         ).round(1)
-
-        curr_mix = curr_mix.drop(
-            columns="Discount"
-        )
-
+        
+        curr_item["Dis %"] = np.where(
+            curr_item["Net Rev"] > 0,
+            (
+                curr_item["Discount"]
+                /
+                curr_item["Net Rev"]
+            ) * 100,
+            0
+        ).round(1)
+        
+        
         # =============================================
-        # LAST WEEK
+        # LW MIX
         # =============================================
-
+        
         lw_mix = (
-            lw.groupby(
-                lw["Product Mix"]
-                .fillna("Others")
-            )
+            lw.groupby("Product Mix")
             .agg(
                 **{
+                    "LW Orders": (
+                        "invoiceNumber",
+                        "nunique"
+                    ),
+        
+                    "LW Qty Sold": (
+                        "item_quantity",
+                        "sum"
+                    ),
+        
                     "LW Net Rev": (
                         "item_baseNetAmount",
                         "sum"
                     ),
-
-                    "LW Qty": (
-                        "item_quantity",
-                        "sum"
-                    ),
-
-                    "LW Orders": (
-                        "invoiceNumber",
-                        "nunique"
+        
+                    "LW Discount": (
+                        "item_baseNetDiscountAmount",
+                        lambda x: abs(x.sum())
                     )
                 }
             )
             .reset_index()
         )
-
-        lw_summary["LW Dis %"] = np.where(
-            lw_summary["item_baseNetAmount"] > 0,
+        
+        lw_mix["LW Dis %"] = np.where(
+            lw_mix["LW Net Rev"] > 0,
             (
-                lw_summary[
-                    "item_baseNetDiscountAmount"
-                ]
+                lw_mix["LW Discount"]
                 /
-                lw_summary[
-                    "item_baseNetAmount"
-                ]
+                lw_mix["LW Net Rev"]
             ) * 100,
             0
-        )
-
+        ).round(1)
+        
+        lw_mix["LW AOV"] = np.where(
+            lw_mix["LW Orders"] > 0,
+            lw_mix["LW Net Rev"]
+            /
+            lw_mix["LW Orders"],
+            0
+        ).round(1)
+        
+        
         # =============================================
         # MERGE
         # =============================================
-
+        
         final_mix = curr_mix.merge(
             lw_mix,
             on="Product Mix",
             how="left"
         )
-
+        
         final_mix = final_mix.fillna(0)
-
+        
         final_mix = (
             final_mix
             .sort_values(
@@ -1731,7 +1744,7 @@ def create_product_mix_dashboard(
                 ascending=False
             )
         )
-
+        
         product_mix_dashboard[
             brand
         ] = final_mix
@@ -1915,55 +1928,9 @@ def create_category_dashboard(
         ].copy()
 
         # =============================================
-        # CURRENT CATEGORY
-        # =============================================
-
-        curr_cat = (
-            curr.groupby(
-                "Category Group"
-            )
-            .agg(
-                **{
-                    "Net Rev": (
-                        "item_baseNetAmount",
-                        "sum"
-                    ),
-
-                    "Qty Sold": (
-                        "item_quantity",
-                        "sum"
-                    ),
-
-                    "Orders": (
-                        "invoiceNumber",
-                        "nunique"
-                    ),
-
-                    "Discount": (
-                        "item_baseNetDiscountAmount",
-                        lambda x:
-                        abs(x.sum())
-                    )
-                }
-            )
-            .reset_index()
-        )
-
-        curr_cat["Dis %"] = (
-            curr_cat["Discount"]
-            /
-            curr_cat["Net Rev"]
-            * 100
-        ).round(1)
-
-        curr_cat = curr_cat.drop(
-            columns="Discount"
-        )
-
-        # =============================================
         # LAST WEEK CATEGORY
         # =============================================
-
+        
         lw_cat = (
             lw.groupby(
                 "Category Group"
@@ -1974,19 +1941,39 @@ def create_category_dashboard(
                         "item_baseNetAmount",
                         "sum"
                     ),
-
+        
                     "LW Qty": (
                         "item_quantity",
                         "sum"
                     ),
-
+        
                     "LW Orders": (
                         "invoiceNumber",
                         "nunique"
+                    ),
+        
+                    "LW Discount": (
+                        "item_baseNetDiscountAmount",
+                        lambda x:
+                        abs(x.sum())
                     )
                 }
             )
             .reset_index()
+        )
+        
+        lw_cat["LW Dis %"] = np.where(
+            lw_cat["LW Net Rev"] > 0,
+            (
+                lw_cat["LW Discount"]
+                /
+                lw_cat["LW Net Rev"]
+            ) * 100,
+            0
+        ).round(1)
+        
+        lw_cat = lw_cat.drop(
+            columns="LW Discount"
         )
 
         # =============================================
@@ -2177,11 +2164,14 @@ def create_item_dashboard(
             .reset_index()
         )
 
-        curr_item["Dis %"] = (
-            curr_item["Discount"]
-            /
-            curr_item["Net Rev"]
-            * 100
+        curr_item["Dis %"] = np.where(
+            curr_item["Net Rev"] > 0,
+            (
+                curr_item["Discount"]
+                /
+                curr_item["Net Rev"]
+            ) * 100,
+            0
         ).round(1)
 
         curr_item = curr_item.drop(
@@ -2191,7 +2181,7 @@ def create_item_dashboard(
         # =============================================
         # LAST WEEK ITEM LEVEL
         # =============================================
-
+        
         lw_item = (
             lw.groupby(
                 "Item Group Name"
@@ -2202,44 +2192,54 @@ def create_item_dashboard(
                         "item_baseNetAmount",
                         "sum"
                     ),
-
+        
                     "LW Qty": (
                         "item_quantity",
                         "sum"
                     ),
-
+        
                     "LW Orders": (
                         "invoiceNumber",
                         "nunique"
+                    ),
+        
+                    "LW Discount": (
+                        "item_baseNetDiscountAmount",
+                        lambda x:
+                        abs(x.sum())
                     )
                 }
             )
             .reset_index()
         )
-
+        
+        lw_item["LW Dis %"] = np.where(
+            lw_item["LW Net Rev"] > 0,
+            (
+                lw_item["LW Discount"]
+                /
+                lw_item["LW Net Rev"]
+            ) * 100,
+            0
+        ).round(1)
+        
+        lw_item = lw_item.drop(
+            columns="LW Discount"
+        )
+        
         # =============================================
         # MERGE
         # =============================================
-
+        
         final_item = curr_item.merge(
             lw_item,
             on="Item Group Name",
             how="left"
         )
-
+        
         final_item = (
             final_item
             .fillna(0)
-        )
-
-        merged["LW Dis %"] = np.where(
-            merged["LW Net Rev"] > 0,
-            (
-                merged["LW Discount"]
-                /
-                merged["LW Net Rev"]
-            ) * 100,
-            0
         )
         # =============================================
         # SORT BY NET REV
