@@ -3160,27 +3160,22 @@ print(
 # =========================================================
 
 from datetime import datetime
-from zoneinfo import ZoneInfo
+import pytz
 
-ist_now = datetime.now(
-    ZoneInfo("Asia/Kolkata")
-)
+ist = pytz.timezone("Asia/Kolkata")
 
-current_hour = ist_now.hour
+current_time = datetime.now(ist)
 
 start_hour = "09:00 AM"
+end_hour = current_time.strftime("%I:%M %p")
 
-end_hour = (
-    datetime.strptime(
-        f"{current_hour}:59",
-        "%H:%M"
-    )
-    .strftime("%I:%M %p")
+hourly_window = (
+    f"{start_hour} - {end_hour}"
 )
 
 print(
-    f"⏰ Hourly Window: "
-    f"{start_hour} - {end_hour}"
+    "⏰ Hourly Window:",
+    hourly_window
 )
 
 # =========================================================
@@ -3201,6 +3196,64 @@ print(
 # =========================================================
 
 print("📄 Creating Summary HTML...")
+
+# =========================================================
+# TABLE STYLE
+# =========================================================
+
+table_style = """
+<style>
+
+body{
+    font-family: Arial, sans-serif;
+    background:#f4f6f9;
+}
+
+table{
+    border-collapse: collapse;
+    width:100%;
+    margin-bottom:25px;
+    background:white;
+    border-radius:10px;
+    overflow:hidden;
+    box-shadow:0 2px 8px rgba(0,0,0,0.08);
+}
+
+th{
+    background:#1F4E78;
+    color:white;
+    padding:10px;
+    font-size:13px;
+    border:1px solid #d9d9d9;
+    text-align:center;
+}
+
+td{
+    padding:8px;
+    border:1px solid #e5e5e5;
+    font-size:12px;
+    text-align:center;
+}
+
+tr:nth-child(even){
+    background:#f8fbff;
+}
+
+h2{
+    color:#1F4E78;
+}
+
+h3{
+    background:#EAF3FF;
+    padding:8px;
+    border-radius:8px;
+}
+
+</style>
+"""
+# =========================================================
+# HTML BODY
+# =========================================================
 
 summary_html = f"""
 <html>
@@ -3307,6 +3360,16 @@ for brand, df in item_dashboard.items():
             .to_html(index=False)
         )
 
+        summary_html += create_discount_html(
+            swiggy_discount_dashboard,
+            "Swiggy Discount Dashboard"
+        )
+        
+        summary_html += create_discount_html(
+            zomato_discount_dashboard,
+            "Zomato Discount Dashboard"
+        )
+
 summary_html += """
 </body>
 </html>
@@ -3315,29 +3378,42 @@ summary_html += """
 print("✅ Summary HTML Created")
 
 
+
+
 # =========================================================
 # TIME WINDOW
 # =========================================================
 
 from datetime import datetime
-from zoneinfo import ZoneInfo
+import pytz
 
-ist_now = datetime.now(
-    ZoneInfo("Asia/Kolkata")
+ist = pytz.timezone(
+    "Asia/Kolkata"
 )
 
-current_hour = ist_now.hour
+current_time = datetime.now(ist)
 
+# START TIME
 start_hour = "09:00 AM"
 
+# END TIME → CURRENT HOUR :00
 end_hour = (
-    ist_now
-    .strftime("%I:59 %p")
+    current_time
+    .replace(
+        minute=0,
+        second=0,
+        microsecond=0
+    )
+    .strftime("%I:%M %p")
+)
+
+hourly_window = (
+    f"{start_hour} - {end_hour}"
 )
 
 print(
-    f"⏰ Hourly Window: "
-    f"{start_hour} - {end_hour}"
+    "⏰ Hourly Window:",
+    hourly_window
 )
 
 # =========================================================
