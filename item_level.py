@@ -1117,7 +1117,7 @@ print(
 # =========================================================
 
 closed_df["Order Time"] = pd.to_datetime(
-    closed_df["invoiceDate"],
+    closed_df["createdDate"],
     utc=True,
     errors="coerce"
 ).dt.tz_convert("Asia/Kolkata")
@@ -1175,6 +1175,20 @@ print(current_sales.columns.tolist())
 
 print("LW Columns:")
 print(lw_sales.columns.tolist())
+
+print(
+    "Current Time Range:",
+    current_sales["Order Time"].min(),
+    "to",
+    current_sales["Order Time"].max()
+)
+
+print(
+    "LW Time Range:",
+    lw_sales["Order Time"].min(),
+    "to",
+    lw_sales["Order Time"].max()
+)
 
 # =========================================================
 # FIX PRODUCT MIX COLUMN
