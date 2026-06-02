@@ -997,6 +997,10 @@ try:
 
     msg = MIMEMultipart()
 
+    # ADD EXTRA MAIL ID
+    cc_mails.append(
+        "ops.all@frozenbottle.in"
+    )
     msg["From"] = EMAIL_USER
     msg["To"] = ", ".join(cc_mails)
 
