@@ -3241,11 +3241,9 @@ print("📄 Creating Summary HTML...")
 # =========================================================
 
 from datetime import datetime
-import pytz
+from zoneinfo import ZoneInfo
 
-ist = pytz.timezone(
-    "Asia/Kolkata"
-)
+ist = ZoneInfo("Asia/Kolkata")
 
 current_time = datetime.now(ist)
 
@@ -3343,7 +3341,7 @@ summary_html = f"""
 
 <p>
 <b>Hourly Window:</b>
-{start_hour} - {end_hour}
+{hourly_window}
 </p>
 
 <hr>
