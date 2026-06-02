@@ -1169,12 +1169,67 @@ print(
     len(lw_sales)
 )
 
-print("Before Product Mix Function")
+# =========================================================
+# DEBUG CHECK - CURRENT VS LW SALES
+# =========================================================
+
+print("CURRENT SALES")
+print(current_sales.shape)
+
+print(
+    current_sales[
+        [
+            "brandName",
+            "Order Time"
+        ]
+    ]
+    .head(20)
+)
+
+print("LW SALES")
+print(lw_sales.shape)
+
+print(
+    lw_sales[
+        [
+            "brandName",
+            "Order Time"
+        ]
+    ]
+    .head(20)
+)
+
+print(
+    "✅ Current Rows:",
+    len(current_sales)
+)
+
+print(
+    "✅ LW Rows:",
+    len(lw_sales)
+)
+
+print("Current Brands:")
+print(
+    current_sales["brandName"]
+    .value_counts(dropna=False)
+)
+
+print("LW Brands:")
+print(
+    lw_sales["brandName"]
+    .value_counts(dropna=False)
+)
+
 print("Current Columns:")
-print(current_sales.columns.tolist())
+print(
+    current_sales.columns.tolist()
+)
 
 print("LW Columns:")
-print(lw_sales.columns.tolist())
+print(
+    lw_sales.columns.tolist()
+)
 
 print(
     "Current Time Range:",
@@ -1189,7 +1244,6 @@ print(
     "to",
     lw_sales["Order Time"].max()
 )
-
 # =========================================================
 # FIX PRODUCT MIX COLUMN
 # =========================================================
@@ -1284,6 +1338,8 @@ for df in [current_df, lw_df]:
     )
 
 print("✅ Product Mix Safe")
+
+
 # =========================================================
 # HOURLY COMPARISON DASHBOARD
 # CURRENT VS LAST WEEK
@@ -1314,17 +1370,23 @@ def create_hourly_dashboard(
         curr = current_sales[
             current_sales["brandName"]
             .astype(str)
+            .str.strip()
             .str.upper()
-            ==
-            brand_filter.upper()
+            .str.contains(
+                brand_filter.upper(),
+                na=False
+            )
         ].copy()
 
         lw = lw_sales[
             lw_sales["brandName"]
             .astype(str)
+            .str.strip()
             .str.upper()
-            ==
-            brand_filter.upper()
+            .str.contains(
+                brand_filter.upper(),
+                na=False
+            )
         ].copy()
 
         # =============================================
@@ -1645,6 +1707,11 @@ def create_product_mix_dashboard(
                         "invoiceNumber",
                         "nunique"
                     ),
+
+                    "Gross Rev": (
+                        "item_baseGrossAmount",
+                        "sum"
+                    ),
         
                     "Qty Sold": (
                         "item_quantity",
@@ -1670,7 +1737,7 @@ def create_product_mix_dashboard(
             (
                 curr_mix["Discount"]
                 /
-                curr_mix["Net Rev"]
+                curr_mix["Gross Rev"]
             ) * 100,
             0
         ).round(1)
@@ -1950,6 +2017,11 @@ def create_category_dashboard(
         
                     "Net Rev": (
                         "item_baseNetAmount",
+                        "sum"
+                    ),
+
+                    "Gross Rev": (
+                        "item_baseGrossAmount",
                         "sum"
                     ),
         
