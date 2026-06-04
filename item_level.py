@@ -3663,6 +3663,18 @@ msg["CC"] = ", ".join(cc_mails)
 
 msg["Subject"] = mail_subject
 
+# =========================================================
+# SAME MAIL THREADING
+# =========================================================
+
+thread_id = (
+    f"<product_dashboard_{business_date}.frozenbottle>"
+)
+
+msg["Message-ID"] = thread_id
+msg["In-Reply-To"] = thread_id
+msg["References"] = thread_id
+
 msg.attach(
     MIMEText(
         summary_html,
@@ -3673,6 +3685,9 @@ msg.attach(
 # =========================================================
 # SEND MAIL
 # =========================================================
+import os
+import json
+from email.utils import make_msgid
 
 try:
 
@@ -3687,6 +3702,50 @@ try:
         EMAIL_USER,
         EMAIL_PASSWORD
     )
+
+    thread_file = "mail_thread.json"
+
+    today_key = str(business_date)
+    
+    thread_data = {}
+    
+    if os.path.exists(thread_file):
+    
+        with open(
+            thread_file,
+            "r"
+        ) as f:
+    
+            thread_data = json.load(f)
+    
+    # first mail of the day
+    if today_key not in thread_data:
+    
+        message_id = make_msgid()
+    
+        thread_data[
+            today_key
+        ] = message_id
+    
+        with open(
+            thread_file,
+            "w"
+        ) as f:
+    
+            json.dump(
+                thread_data,
+                f
+            )
+    
+    else:
+    
+        message_id = thread_data[
+            today_key
+        ]
+    
+    msg["Message-ID"] = message_id
+    msg["In-Reply-To"] = message_id
+    msg["References"] = message_id
 
     server.sendmail(
         EMAIL_USER,
