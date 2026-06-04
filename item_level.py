@@ -1741,7 +1741,7 @@ def create_product_mix_dashboard(
         )
         
         curr_mix["Dis %"] = np.where(
-            curr_mix["Net Rev"] > 0,
+            curr_mix["Gross Rev"] > 0,
             (
                 curr_mix["Discount"]
                 /
@@ -1774,6 +1774,11 @@ def create_product_mix_dashboard(
                         "item_baseNetAmount",
                         "sum"
                     ),
+
+                    "LW Gross Rev": (
+                        "item_baseGrossAmount",
+                        "sum"
+                    ),
         
                     "LW Discount": (
                         "item_baseNetDiscountAmount",
@@ -1785,11 +1790,11 @@ def create_product_mix_dashboard(
         )
         
         lw_mix["LW Dis %"] = np.where(
-            lw_mix["LW Net Rev"] > 0,
+            lw_mix["LW Gross Rev"] > 0,
             (
                 lw_mix["LW Discount"]
                 /
-                lw_mix["LW Net Rev"]
+                lw_mix["LW Gross Rev"]
             ) * 100,
             0
         ).round(1)
@@ -1837,6 +1842,7 @@ def create_product_mix_dashboard(
 metric_cols = [
     "item_quantity",
     "item_baseNetAmount",
+    "item_baseGrossAmount",
     "item_baseNetDiscountAmount"
 ]
 
@@ -2043,11 +2049,11 @@ def create_category_dashboard(
         )
         
         curr_cat["Dis %"] = np.where(
-            curr_cat["Net Rev"] > 0,
+            curr_cat["Gross Rev"] > 0,
             (
                 curr_cat["Discount"]
                 /
-                curr_cat["Net Rev"]
+                curr_cat["Gross Rev"]
             ) * 100,
             0
         ).round(1)
@@ -2066,6 +2072,11 @@ def create_category_dashboard(
                 **{
                     "LW Net Rev": (
                         "item_baseNetAmount",
+                        "sum"
+                    ),
+
+                    "LW Gross Rev": (
+                        "item_baseGrossAmount",
                         "sum"
                     ),
         
@@ -2090,11 +2101,11 @@ def create_category_dashboard(
         )
         
         lw_cat["LW Dis %"] = np.where(
-            lw_cat["LW Net Rev"] > 0,
+            lw_cat["LW Gross Rev"] > 0,
             (
                 lw_cat["LW Discount"]
                 /
-                lw_cat["LW Net Rev"]
+                lw_cat["LW Gross Rev"]
             ) * 100,
             0
         ).round(1)
@@ -2271,6 +2282,11 @@ def create_item_dashboard(
                         "sum"
                     ),
 
+                    "Gross Rev": (
+                        "item_baseGrossAmount",
+                        "sum"
+                    ),
+
                     "Qty Sold": (
                         "item_quantity",
                         "sum"
@@ -2292,11 +2308,11 @@ def create_item_dashboard(
         )
 
         curr_item["Dis %"] = np.where(
-            curr_item["Net Rev"] > 0,
+            curr_item["Gross Rev"] > 0,
             (
                 curr_item["Discount"]
                 /
-                curr_item["Net Rev"]
+                curr_item["Gross Rev"]
             ) * 100,
             0
         ).round(1)
@@ -2317,6 +2333,11 @@ def create_item_dashboard(
                 **{
                     "LW Net Rev": (
                         "item_baseNetAmount",
+                        "sum"
+                    ),
+
+                    "LW Gross Rev": (
+                        "item_baseGrossAmount",
                         "sum"
                     ),
         
@@ -2341,11 +2362,11 @@ def create_item_dashboard(
         )
         
         lw_item["LW Dis %"] = np.where(
-            lw_item["LW Net Rev"] > 0,
+            lw_item["LW Gross Rev"] > 0,
             (
                 lw_item["LW Discount"]
                 /
-                lw_item["LW Net Rev"]
+                lw_item["LW Gross Rev"]
             ) * 100,
             0
         ).round(1)
@@ -2732,6 +2753,11 @@ def create_discount_dashboard(
                         "sum"
                     ),
 
+                    "Gross Rev": (
+                        "item_baseGrossAmount",
+                        "sum"
+                    ),
+
                     "Net Rev": (
                         "item_baseNetAmount",
                         "sum"
@@ -2752,11 +2778,11 @@ def create_discount_dashboard(
         # =====================================================
 
         code_df["Dis %"] = np.where(
-            code_df["Net Rev"] > 0,
+            code_df["Gross Rev"] > 0,
             (
                 code_df["Discount Given"]
                 /
-                code_df["Net Rev"]
+                code_df["Gross Rev"]
             ) * 100,
             0
         ).round(1)
@@ -2788,6 +2814,11 @@ def create_discount_dashboard(
 
                     "LW Qty": (
                         "item_quantity",
+                        "sum"
+                    ),
+
+                    "LW Gross Rev": (
+                        "item_baseGrossAmount",
                         "sum"
                     ),
 
