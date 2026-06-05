@@ -799,7 +799,7 @@ def format_html_table(df):
 
     table{
         border-collapse: collapse;
-        width: 100%;
+        width: 60%;
         font-size: 13px;
     }
 
