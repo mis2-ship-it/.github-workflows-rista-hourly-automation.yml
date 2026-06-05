@@ -3406,28 +3406,9 @@ def create_discount_html(
 
     for brand, df in dashboard.items():
 
-        if (
-            "Growth %" in str(row.index[i])
-        ):
-        
-            css_class = (
-                "growth-positive"
-                if val >= 0
-                else
-                "growth-negative"
-            )
-        
-            html += f"""
-            <td class="{css_class}">
-            {val}%
-            </td>
-            """
-        
-        else:
-        
-            html += f"""
-            <td>{val}</td>
-            """
+        html += f"""
+        <h4>{brand}</h4>
+        """
 
         if df.empty:
 
@@ -3436,17 +3417,70 @@ def create_discount_html(
             """
             continue
 
-        html += (
-            df.to_html(
-                index=False,
-                border=0,
-                justify="center"
-            )
-        )
+        html += apply_growth_style(df)
 
         html += "<br>"
 
     return html
+
+
+# =========================================================
+# APPLY GROWTH STYLE
+# =========================================================
+
+def apply_growth_style(df):
+
+    def highlight_growth(val):
+
+        try:
+
+            num = float(
+                str(val)
+                .replace("%", "")
+                .replace(",", "")
+            )
+
+            if num >= 0:
+
+                return (
+                    "background-color: #d9ead3;"
+                    "font-weight: bold;"
+                )
+
+            return (
+                "background-color: #f4cccc;"
+                "font-weight: bold;"
+            )
+
+        except:
+
+            return ""
+
+    growth_cols = [
+
+        col for col in df.columns
+
+        if "Growth %" in str(col)
+    ]
+
+    if growth_cols:
+
+        return (
+            df.style
+            .applymap(
+                highlight_growth,
+                subset=growth_cols
+            )
+            .hide(axis="index")
+            .to_html()
+        )
+
+    return df.to_html(
+        index=False,
+        border=0,
+        justify="center"
+    )
+
 
 # =========================================================
 # CREATE HTML SUMMARY
@@ -3466,10 +3500,8 @@ ist = ZoneInfo("Asia/Kolkata")
 
 current_time = datetime.now(ist)
 
-# START TIME
 start_hour = "09:00 AM"
 
-# END TIME → CURRENT HOUR :00
 end_hour = (
     current_time
     .replace(
@@ -3524,6 +3556,8 @@ td {
 
 </style>
 """
+
+
 # =========================================================
 # HTML BODY
 # =========================================================
@@ -3552,16 +3586,13 @@ summary_html = f"""
 
 <h3>📈 Hourly Summary</h3>
 
-{hourly_dashboard.to_html(
-    index=False,
-    border=0,
-    justify="center"
-)}
+{apply_growth_style(hourly_dashboard)}
 
 <hr>
 
 <h3>🍨 Product Mix Dashboard</h3>
 """
+
 
 # =========================================================
 # PRODUCT MIX
@@ -3569,29 +3600,9 @@ summary_html = f"""
 
 for brand, df in product_mix_dashboard.items():
 
-    
-    if (
-        "Growth %" in str(row.index[i])
-    ):
-    
-        css_class = (
-            "growth-positive"
-            if val >= 0
-            else
-            "growth-negative"
-        )
-    
-        html += f"""
-        <td class="{css_class}">
-        {val}%
-        </td>
-        """
-    
-    else:
-    
-        html += f"""
-        <td>{brand}</td>
-        """
+    summary_html += f"""
+    <h4>{brand}</h4>
+    """
 
     if df.empty:
 
@@ -3602,13 +3613,11 @@ for brand, df in product_mix_dashboard.items():
     else:
 
         summary_html += (
-            df.head(15)
-            .to_html(
-                index=False,
-                border=0,
-                justify="center"
+            apply_growth_style(
+                df.head(15)
             )
         )
+
 
 # =========================================================
 # CATEGORY DASHBOARD
@@ -3621,28 +3630,9 @@ summary_html += """
 
 for brand, df in category_dashboard.items():
 
-    if (
-        "Growth %" in str(row.index[i])
-    ):
-    
-        css_class = (
-            "growth-positive"
-            if val >= 0
-            else
-            "growth-negative"
-        )
-    
-        html += f"""
-        <td class="{css_class}">
-        {val}%
-        </td>
-        """
-    
-    else:
-    
-        html += f"""
-        <td>{brand}</td>
-        """
+    summary_html += f"""
+    <h4>{brand}</h4>
+    """
 
     if df.empty:
 
@@ -3653,13 +3643,11 @@ for brand, df in category_dashboard.items():
     else:
 
         summary_html += (
-            df.head(15)
-            .to_html(
-                index=False,
-                border=0,
-                justify="center"
+            apply_growth_style(
+                df.head(15)
             )
         )
+
 
 # =========================================================
 # TOP ITEMS
@@ -3672,28 +3660,9 @@ summary_html += """
 
 for brand, df in item_dashboard.items():
 
-    if (
-        "Growth %" in str(row.index[i])
-    ):
-    
-        css_class = (
-            "growth-positive"
-            if val >= 0
-            else
-            "growth-negative"
-        )
-    
-        html += f"""
-        <td class="{css_class}">
-        {val}%
-        </td>
-        """
-    
-    else:
-    
-        html += f"""
-        <td>{brand}</td>
-        """
+    summary_html += f"""
+    <h4>{brand}</h4>
+    """
 
     if df.empty:
 
@@ -3704,13 +3673,11 @@ for brand, df in item_dashboard.items():
     else:
 
         summary_html += (
-            df.head(15)
-            .to_html(
-                index=False,
-                border=0,
-                justify="center"
+            apply_growth_style(
+                df.head(15)
             )
         )
+
 
 # =========================================================
 # SWIGGY DISCOUNT DASHBOARD
@@ -3721,6 +3688,7 @@ summary_html += create_discount_html(
     "🟠 Swiggy Discount Dashboard"
 )
 
+
 # =========================================================
 # ZOMATO DISCOUNT DASHBOARD
 # =========================================================
@@ -3730,35 +3698,17 @@ summary_html += create_discount_html(
     "🔴 Zomato Discount Dashboard"
 )
 
+
 # =========================================================
 # HTML CLOSE
 # =========================================================
 
-    if (
-        "Growth %" in str(row.index[i])
-    ):
-    
-        css_class = (
-            "growth-positive"
-            if val >= 0
-            else
-            "growth-negative"
-        )
-    
-        html += f"""
-        <td class="{css_class}">
-        {val}%
-        </td>
-        """
-    
-    else:
-    
-        html += f"""
-        <td>{brand}</td>
-        """
+summary_html += """
+</body>
+</html>
+"""
 
 print("✅ Summary HTML Created")
-
 
 
 #=========================================================
@@ -3766,18 +3716,17 @@ print("✅ Summary HTML Created")
 #=========================================================
 
 import smtplib
+import os
+import json
 
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.utils import make_msgid
 
 print("📧 Preparing Hourly Mail...")
 
 EMAIL_USER = os.environ["EMAIL_USER"]
 EMAIL_PASSWORD = os.environ["EMAIL_PASSWORD"]
-
-# =========================================================
-# RECEIVERS
-# =========================================================
 
 to_mails = [
     "mis2@frozenbottle.in"
@@ -3792,43 +3741,17 @@ all_recipients = (
     cc_mails
 )
 
-# =========================================================
-# TIME WINDOW
-# =========================================================
-
 mail_subject = (
     f"Hourly Product Level Sales Dashboard _ "
     f"{formatted_date}"
 )
-
-# Example:
-# 📊 Hourly Product Level Dashboard
-# (09:00 AM - 01:59 PM)
-# | 2026-05-27
-
-# =========================================================
-# CREATE MAIL
-# =========================================================
 
 msg = MIMEMultipart()
 
 msg["From"] = EMAIL_USER
 msg["To"] = ", ".join(to_mails)
 msg["CC"] = ", ".join(cc_mails)
-
 msg["Subject"] = mail_subject
-
-# =========================================================
-# SAME MAIL THREADING
-# =========================================================
-
-thread_id = (
-    f"<product_dashboard_{business_date}.frozenbottle>"
-)
-
-msg["Message-ID"] = thread_id
-msg["In-Reply-To"] = thread_id
-msg["References"] = thread_id
 
 msg.attach(
     MIMEText(
@@ -3836,13 +3759,6 @@ msg.attach(
         "html"
     )
 )
-
-# =========================================================
-# SEND MAIL
-# =========================================================
-import os
-import json
-from email.utils import make_msgid
 
 try:
 
@@ -3861,43 +3777,42 @@ try:
     thread_file = "mail_thread.json"
 
     today_key = str(business_date)
-    
+
     thread_data = {}
-    
+
     if os.path.exists(thread_file):
-    
+
         with open(
             thread_file,
             "r"
         ) as f:
-    
+
             thread_data = json.load(f)
-    
-    # first mail of the day
+
     if today_key not in thread_data:
-    
+
         message_id = make_msgid()
-    
+
         thread_data[
             today_key
         ] = message_id
-    
+
         with open(
             thread_file,
             "w"
         ) as f:
-    
+
             json.dump(
                 thread_data,
                 f
             )
-    
+
     else:
-    
+
         message_id = thread_data[
             today_key
         ]
-    
+
     msg["Message-ID"] = message_id
     msg["In-Reply-To"] = message_id
     msg["References"] = message_id
