@@ -1827,6 +1827,24 @@ def create_product_mix_dashboard(
                 ascending=False
             )
         )
+
+        # =============================================
+        # GROWTH %
+        # =============================================
+        
+        final_mix["Growth %"] = np.where(
+            final_mix["LW Net Rev"] > 0,
+            (
+                (
+                    final_mix["Net Rev"]
+                    -
+                    final_mix["LW Net Rev"]
+                )
+                /
+                final_mix["LW Net Rev"]
+            ) * 100,
+            0
+        ).round(1)
         
         product_mix_dashboard[
             brand
@@ -2130,6 +2148,24 @@ def create_category_dashboard(
         )
 
         # =============================================
+        # GROWTH %
+        # =============================================
+        
+        final_cat["Growth %"] = np.where(
+            final_cat["LW Net Rev"] > 0,
+            (
+                (
+                    final_cat["Net Rev"]
+                    -
+                    final_cat["LW Net Rev"]
+                )
+                /
+                final_cat["LW Net Rev"]
+            ) * 100,
+            0
+        ).round(1)
+
+        # =============================================
         # SORT
         # =============================================
 
@@ -2147,6 +2183,7 @@ def create_category_dashboard(
             "Qty Sold",
             "Orders",
             "Dis %",
+            "Growth %",
             "LW Net Rev",
             "LW Qty",
             "LW Orders",
@@ -2389,6 +2426,24 @@ def create_item_dashboard(
             final_item
             .fillna(0)
         )
+
+        # =============================================
+        # GROWTH %
+        # =============================================
+        
+        final_item["Growth %"] = np.where(
+            final_item["LW Net Rev"] > 0,
+            (
+                (
+                    final_item["Net Rev"]
+                    -
+                    final_item["LW Net Rev"]
+                )
+                /
+                final_item["LW Net Rev"]
+            ) * 100,
+            0
+        ).round(1)
         # =============================================
         # SORT BY NET REV
         # =============================================
@@ -2420,6 +2475,7 @@ def create_item_dashboard(
             "Qty Sold",
             "Orders",
             "Dis %",
+            "Growth %",
             "LW Net Rev",
             "LW Orders",
             "LW Dis %"
@@ -2848,6 +2904,24 @@ def create_discount_dashboard(
         ).fillna(0)
 
         # =====================================================
+        # GROWTH %
+        # =====================================================
+        
+        code_df["Growth %"] = np.where(
+            code_df["LW Net Rev"] > 0,
+            (
+                (
+                    code_df["Net Rev"]
+                    -
+                    code_df["LW Net Rev"]
+                )
+                /
+                code_df["LW Net Rev"]
+            ) * 100,
+            0
+        ).round(1)
+
+        # =====================================================
         # LW DIS %
         # =====================================================
 
@@ -2899,6 +2973,7 @@ def create_discount_dashboard(
                 "Discount Given",
                 "Dis %",
                 "AOV",
+                "Growth %",
                 "LW Orders",
                 "LW Qty",
                 "LW Net Rev",
@@ -3331,9 +3406,28 @@ def create_discount_html(
 
     for brand, df in dashboard.items():
 
-        html += f"""
-        <h4>{brand}</h4>
-        """
+        if (
+            "Growth %" in str(row.index[i])
+        ):
+        
+            css_class = (
+                "growth-positive"
+                if val >= 0
+                else
+                "growth-negative"
+            )
+        
+            html += f"""
+            <td class="{css_class}">
+            {val}%
+            </td>
+            """
+        
+        else:
+        
+            html += f"""
+            <td>{val}</td>
+            """
 
         if df.empty:
 
@@ -3398,49 +3492,34 @@ print(
 table_style = """
 <style>
 
-body{
-    font-family: Arial, sans-serif;
-    font-size: 13px;
-}
-
-table{
+table {
     border-collapse: collapse;
     width: 100%;
-    margin-bottom: 20px;
+    text-align: center;
     font-size: 12px;
 }
 
-th{
-    background-color: #1F4E78;
+th {
+    background: #1f4e78;
     color: white;
-    border: 1px solid #d9d9d9;
     padding: 8px;
-    text-align: center;
+    border: 1px solid #ddd;
 }
 
-td{
-    border: 1px solid #d9d9d9;
+td {
     padding: 6px;
+    border: 1px solid #ddd;
     text-align: center;
 }
 
-tr:nth-child(even){
-    background-color: #f7f7f7;
+.growth-positive {
+    background-color: #d9ead3;
+    font-weight: bold;
 }
 
-h2{
-    color: #1F4E78;
-}
-
-h3{
-    background-color: #EAF2F8;
-    padding: 8px;
-    border-left: 5px solid #1F4E78;
-}
-
-h4{
-    color: #C55A11;
-    margin-top: 15px;
+.growth-negative {
+    background-color: #f4cccc;
+    font-weight: bold;
 }
 
 </style>
@@ -3490,9 +3569,29 @@ summary_html = f"""
 
 for brand, df in product_mix_dashboard.items():
 
-    summary_html += f"""
-    <h4>{brand}</h4>
-    """
+    
+    if (
+        "Growth %" in str(row.index[i])
+    ):
+    
+        css_class = (
+            "growth-positive"
+            if val >= 0
+            else
+            "growth-negative"
+        )
+    
+        html += f"""
+        <td class="{css_class}">
+        {val}%
+        </td>
+        """
+    
+    else:
+    
+        html += f"""
+        <td>{brand}</td>
+        """
 
     if df.empty:
 
@@ -3522,9 +3621,28 @@ summary_html += """
 
 for brand, df in category_dashboard.items():
 
-    summary_html += f"""
-    <h4>{brand}</h4>
-    """
+    if (
+        "Growth %" in str(row.index[i])
+    ):
+    
+        css_class = (
+            "growth-positive"
+            if val >= 0
+            else
+            "growth-negative"
+        )
+    
+        html += f"""
+        <td class="{css_class}">
+        {val}%
+        </td>
+        """
+    
+    else:
+    
+        html += f"""
+        <td>{brand}</td>
+        """
 
     if df.empty:
 
@@ -3554,9 +3672,28 @@ summary_html += """
 
 for brand, df in item_dashboard.items():
 
-    summary_html += f"""
-    <h4>{brand}</h4>
-    """
+    if (
+        "Growth %" in str(row.index[i])
+    ):
+    
+        css_class = (
+            "growth-positive"
+            if val >= 0
+            else
+            "growth-negative"
+        )
+    
+        html += f"""
+        <td class="{css_class}">
+        {val}%
+        </td>
+        """
+    
+    else:
+    
+        html += f"""
+        <td>{brand}</td>
+        """
 
     if df.empty:
 
@@ -3597,18 +3734,36 @@ summary_html += create_discount_html(
 # HTML CLOSE
 # =========================================================
 
-summary_html += """
-</body>
-</html>
-"""
+    if (
+        "Growth %" in str(row.index[i])
+    ):
+    
+        css_class = (
+            "growth-positive"
+            if val >= 0
+            else
+            "growth-negative"
+        )
+    
+        html += f"""
+        <td class="{css_class}">
+        {val}%
+        </td>
+        """
+    
+    else:
+    
+        html += f"""
+        <td>{brand}</td>
+        """
 
 print("✅ Summary HTML Created")
 
 
 
-# =========================================================
+#=========================================================
 # HOURLY PRODUCT DASHBOARD MAIL
-# =========================================================
+#=========================================================
 
 import smtplib
 
