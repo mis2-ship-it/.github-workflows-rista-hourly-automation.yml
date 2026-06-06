@@ -3430,56 +3430,89 @@ def create_discount_html(
 
 def apply_growth_style(df):
 
-    def highlight_growth(val):
+    html = """
+    <table border="0"
+    style="
+    border-collapse:collapse;
+    width:100%;
+    text-align:center;
+    font-family:Arial;
+    font-size:12px;
+    ">
+    """
 
-        try:
+    # ==========================================
+    # HEADER
+    # ==========================================
 
-            num = float(
-                str(val)
-                .replace("%", "")
-                .replace(",", "")
-            )
+    html += "<tr>"
 
-            if num >= 0:
+    for col in df.columns:
 
-                return (
-                    "background-color: #d9ead3;"
-                    "font-weight: bold;"
+        html += f"""
+        <th style="
+        background:#1f4e78;
+        color:white;
+        padding:8px;
+        border:1px solid #ddd;
+        text-align:center;
+        ">
+        {col}
+        </th>
+        """
+
+    html += "</tr>"
+
+    # ==========================================
+    # ROWS
+    # ==========================================
+
+    for _, row in df.iterrows():
+
+        html += "<tr>"
+
+        for col in df.columns:
+
+            val = row[col]
+
+            # Growth Highlight
+            if "Growth" in col:
+
+                color = (
+                    "#d9ead3"
+                    if val >= 0
+                    else "#f4cccc"
                 )
 
-            return (
-                "background-color: #f4cccc;"
-                "font-weight: bold;"
-            )
+                html += f"""
+                <td style="
+                background:{color};
+                padding:6px;
+                border:1px solid #ddd;
+                text-align:center;
+                font-weight:bold;
+                ">
+                {val}%
+                </td>
+                """
 
-        except:
+            else:
 
-            return ""
+                html += f"""
+                <td style="
+                padding:6px;
+                border:1px solid #ddd;
+                text-align:center;
+                ">
+                {val}
+                </td>
+                """
 
-    growth_cols = [
+        html += "</tr>"
 
-        col for col in df.columns
+    html += "</table><br>"
 
-        if "Growth %" in str(col)
-    ]
-
-    if growth_cols:
-
-        return (
-            df.style
-            .applymap(
-                highlight_growth,
-                subset=growth_cols
-            )
-            .hide(axis="index")
-            .to_html()
-        )
-
-    return df.to_html(
-        index=False,
-        border=0,
-        justify="center"
-    )
+    return html
 
 
 # =========================================================
@@ -3586,8 +3619,6 @@ summary_html = f"""
 
 <h3>📈 Hourly Summary</h3>
 
-{apply_growth_style(hourly_dashboard)}
-
 <hr>
 
 <h3>🍨 Product Mix Dashboard</h3>
@@ -3614,7 +3645,7 @@ for brand, df in product_mix_dashboard.items():
 
         summary_html += (
             apply_growth_style(
-                df.head(15)
+                df.head(10)
             )
         )
 
@@ -3644,7 +3675,7 @@ for brand, df in category_dashboard.items():
 
         summary_html += (
             apply_growth_style(
-                df.head(15)
+                df.head(10)
             )
         )
 
@@ -3674,7 +3705,7 @@ for brand, df in item_dashboard.items():
 
         summary_html += (
             apply_growth_style(
-                df.head(15)
+                df.head(10)
             )
         )
 
