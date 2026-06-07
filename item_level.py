@@ -3475,6 +3475,18 @@ def apply_growth_style(df):
 
             val = row[col]
 
+            # ==========================================
+            # REMOVE DECIMALS
+            # ==========================================
+            
+            try:
+            
+                if isinstance(val, (int, float)):
+            
+                    val = round(val)
+            
+            except:
+                pass
             # Growth Highlight
             if "Growth" in col:
 
