@@ -597,19 +597,39 @@ print(
 
 # =========================================================
 # CURRENT WINDOW
-# 09:00 AM → CURRENT HOUR
+# 9 AM → CURRENT HOUR
+# SUPPORTS AFTER MIDNIGHT
 # =========================================================
 
 from zoneinfo import ZoneInfo
 from datetime import datetime, timedelta
 
 ist = ZoneInfo("Asia/Kolkata")
+
 ist_now = datetime.now(ist)
 
-# Business Date (IST)
-business_date = ist_now.date()
+# =========================================================
+# BUSINESS DATE LOGIC
+# AFTER MIDNIGHT → STILL SAME BUSINESS DAY
+# =========================================================
 
-# Start → 09:00 AM IST
+if ist_now.hour < 9:
+
+    business_date = (
+        ist_now.date()
+        - timedelta(days=1)
+    )
+
+else:
+
+    business_date = (
+        ist_now.date()
+    )
+
+# =========================================================
+# WINDOW START
+# =========================================================
+
 current_window_start = datetime.combine(
     business_date,
     datetime.min.time()
@@ -617,11 +637,13 @@ current_window_start = datetime.combine(
     hour=9,
     minute=0,
     second=0,
-    microsecond=0,
     tzinfo=ist
 )
 
-# End → Current Hour :59:59
+# =========================================================
+# WINDOW END
+# =========================================================
+
 current_window_end = ist_now.replace(
     minute=59,
     second=59,
@@ -629,7 +651,7 @@ current_window_end = ist_now.replace(
 )
 
 # =========================================================
-# LAST WEEK SAME WINDOW
+# LAST WEEK WINDOW
 # =========================================================
 
 lw_window_start = (
@@ -1347,6 +1369,73 @@ for df in [current_df, lw_df]:
 
 print("✅ Product Mix Safe")
 
+# =============================================
+# OVERALL PRODUCT MIX
+# =============================================
+
+curr = current_sales.copy()
+lw = lw_sales.copy()
+
+curr_mix = (
+    curr.groupby("Product Mix")
+    .agg(
+        Orders=("invoiceNumber", "nunique"),
+        Qty_Sold=("item_quantity", "sum"),
+        Gross_Rev=("item_baseGrossAmount", "sum"),
+        Net_Rev=("item_baseNetAmount", "sum"),
+        Discount=("item_baseNetDiscountAmount", lambda x: abs(x.sum()))
+    )
+    .reset_index()
+)
+
+curr_mix["Dis %"] = np.where(
+    curr_mix["Gross_Rev"] > 0,
+    (
+        curr_mix["Discount"]
+        /
+        curr_mix["Gross_Rev"]
+    ) * 100,
+    0
+).round(1)
+
+lw_mix = (
+    lw.groupby("Product Mix")
+    .agg(
+        LW_Orders=("invoiceNumber", "nunique"),
+        LW_Qty_Sold=("item_quantity", "sum"),
+        LW_Gross_Rev=("item_baseGrossAmount", "sum"),
+        LW_Net_Rev=("item_baseNetAmount", "sum"),
+        LW_Discount=("item_baseNetDiscountAmount", lambda x: abs(x.sum()))
+    )
+    .reset_index()
+)
+
+overall_mix = curr_mix.merge(
+    lw_mix,
+    on="Product Mix",
+    how="left"
+).fillna(0)
+
+overall_mix["Growth %"] = np.where(
+    overall_mix["LW_Net_Rev"] > 0,
+    (
+        (
+            overall_mix["Net_Rev"]
+            -
+            overall_mix["LW_Net_Rev"]
+        )
+        /
+        overall_mix["LW_Net_Rev"]
+    ) * 100,
+    0
+).round(1)
+
+product_mix_dashboard[
+    "Overall"
+] = overall_mix.sort_values(
+    "Net_Rev",
+    ascending=False
+)
 
 # =========================================================
 # HOURLY COMPARISON DASHBOARD
@@ -2987,6 +3076,268 @@ def create_discount_dashboard(
 
     return dashboard
 
+# =========================================================
+# SOURCE + REGION PRODUCT MIX DASHBOARD
+# =========================================================
+
+def create_source_region_dashboard(
+    current_sales,
+    lw_sales
+):
+
+    dashboard = {}
+
+    # =====================================================
+    # SOURCE FILTERS
+    # =====================================================
+
+    source_filters = {
+        "In Store":
+            ~current_sales["channel"]
+            .astype(str)
+            .str.upper()
+            .str.contains(
+                "SWIGGY|ZOMATO",
+                na=False
+            ),
+
+        "Swiggy":
+            current_sales["channel"]
+            .astype(str)
+            .str.upper()
+            .str.contains(
+                "SWIGGY",
+                na=False
+            ),
+
+        "Zomato":
+            current_sales["channel"]
+            .astype(str)
+            .str.upper()
+            .str.contains(
+                "ZOMATO",
+                na=False
+            )
+    }
+
+    for source, curr_filter in source_filters.items():
+
+        # =================================================
+        # CURRENT SOURCE
+        # =================================================
+
+        curr = current_sales[
+            curr_filter
+        ].copy()
+
+        # =================================================
+        # LW SOURCE
+        # =================================================
+
+        if source == "In Store":
+
+            lw = lw_sales[
+                ~lw_sales["channel"]
+                .astype(str)
+                .str.upper()
+                .str.contains(
+                    "SWIGGY|ZOMATO",
+                    na=False
+                )
+            ].copy()
+
+        else:
+
+            lw = lw_sales[
+                lw_sales["channel"]
+                .astype(str)
+                .str.upper()
+                .str.contains(
+                    source.upper(),
+                    na=False
+                )
+            ].copy()
+
+        # =================================================
+        # CURRENT SUMMARY
+        # =================================================
+
+        curr_mix = (
+            curr.groupby(
+                ["Region", "Product Mix"]
+            )
+            .agg(
+                **{
+                    "Net Sales": (
+                        "item_baseNetAmount",
+                        "sum"
+                    ),
+
+                    "Qty": (
+                        "item_quantity",
+                        "sum"
+                    ),
+
+                    "Gross Sales": (
+                        "item_baseGrossAmount",
+                        "sum"
+                    ),
+
+                    "Discount": (
+                        "item_baseNetDiscountAmount",
+                        lambda x:
+                        abs(x.sum())
+                    )
+                }
+            )
+            .reset_index()
+        )
+
+        curr_mix["Dis %"] = np.where(
+            curr_mix["Gross Sales"] > 0,
+            (
+                curr_mix["Discount"]
+                /
+                curr_mix["Gross Sales"]
+            ) * 100,
+            0
+        )
+
+        curr_mix = curr_mix.drop(
+            columns=[
+                "Gross Sales",
+                "Discount"
+            ]
+        )
+
+        # =================================================
+        # LAST WEEK SUMMARY
+        # =================================================
+
+        lw_mix = (
+            lw.groupby(
+                ["Region", "Product Mix"]
+            )
+            .agg(
+                **{
+                    "LW Net Sales": (
+                        "item_baseNetAmount",
+                        "sum"
+                    ),
+
+                    "LW Qty": (
+                        "item_quantity",
+                        "sum"
+                    ),
+
+                    "LW Gross": (
+                        "item_baseGrossAmount",
+                        "sum"
+                    ),
+
+                    "LW Discount": (
+                        "item_baseNetDiscountAmount",
+                        lambda x:
+                        abs(x.sum())
+                    )
+                }
+            )
+            .reset_index()
+        )
+
+        lw_mix["LW Dis %"] = np.where(
+            lw_mix["LW Gross"] > 0,
+            (
+                lw_mix["LW Discount"]
+                /
+                lw_mix["LW Gross"]
+            ) * 100,
+            0
+        )
+
+        lw_mix = lw_mix.drop(
+            columns=[
+                "LW Gross",
+                "LW Discount"
+            ]
+        )
+
+        # =================================================
+        # MERGE
+        # =================================================
+
+        final_df = curr_mix.merge(
+            lw_mix,
+            on=[
+                "Region",
+                "Product Mix"
+            ],
+            how="left"
+        ).fillna(0)
+
+        # =================================================
+        # GROWTH %
+        # =================================================
+
+        final_df["Sales Growth %"] = np.where(
+            final_df["LW Net Sales"] > 0,
+            (
+                (
+                    final_df["Net Sales"]
+                    -
+                    final_df["LW Net Sales"]
+                )
+                /
+                final_df["LW Net Sales"]
+            ) * 100,
+            0
+        )
+
+        final_df["Qty Growth %"] = np.where(
+            final_df["LW Qty"] > 0,
+            (
+                (
+                    final_df["Qty"]
+                    -
+                    final_df["LW Qty"]
+                )
+                /
+                final_df["LW Qty"]
+            ) * 100,
+            0
+        )
+
+        # =================================================
+        # TOP 10 PRODUCT MIX
+        # =================================================
+
+        final_df = (
+            final_df
+            .sort_values(
+                "Net Sales",
+                ascending=False
+            )
+            .head(10)
+        )
+
+        # =================================================
+        # ROUND
+        # =================================================
+
+        numeric_cols = final_df.select_dtypes(
+            include=np.number
+        ).columns
+
+        final_df[numeric_cols] = (
+            final_df[numeric_cols]
+            .round(0)
+            .astype(int)
+        )
+
+        dashboard[source] = final_df
+
+    return dashboard
+
 
 # =========================================================
 # SWIGGY DASHBOARD
@@ -3043,6 +3394,30 @@ for k, v in (
         k,
         len(v)
     )
+
+# =========================================================
+# CREATE SOURCE REGION DASHBOARD
+# =========================================================
+
+source_region_dashboard = (
+    create_source_region_dashboard(
+        current_sales,
+        lw_sales
+    )
+)
+
+print(
+    "✅ Source Region Dashboard Created"
+)
+
+for k, v in (
+    source_region_dashboard.items()
+):
+    print(
+        k,
+        len(v)
+    )
+    
 
 # =========================================================
 # GOOGLE SHEET DASHBOARD UPDATE
@@ -3633,6 +4008,8 @@ summary_html = f"""
 
 <hr>
 
+
+
 <h3>🍨 Product Mix Dashboard</h3>
 """
 
@@ -3661,6 +4038,34 @@ for brand, df in product_mix_dashboard.items():
             )
         )
 
+# =========================================================
+# SOURCE REGION DASHBOARD
+# =========================================================
+
+summary_html += """
+<hr>
+<h3>🌍 Source Region Product Mix Dashboard</h3>
+"""
+
+for source, df in (
+    source_region_dashboard.items()
+):
+
+    summary_html += f"""
+    <h4>{source}</h4>
+    """
+
+    if df.empty:
+
+        summary_html += """
+        <p>No Data Available</p>
+        """
+
+    else:
+
+        summary_html += apply_growth_style(
+            df
+        )
 
 # =========================================================
 # CATEGORY DASHBOARD
