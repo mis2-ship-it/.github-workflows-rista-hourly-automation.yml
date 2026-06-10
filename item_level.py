@@ -2645,6 +2645,29 @@ for k, v in (
     )
 
 # =========================================================
+# CREATE SOURCE REGION DASHBOARD
+# =========================================================
+
+source_region_dashboard = (
+    create_source_region_dashboard(
+        current_sales,
+        lw_sales
+    )
+)
+
+print(
+    "✅ Source Region Dashboard Created"
+)
+
+for k, v in (
+    source_region_dashboard.items()
+):
+    print(
+        k,
+        len(v)
+    )
+    
+# =========================================================
 # DISCOUNT CODE EXTRACTION
 # =========================================================
 
@@ -3395,29 +3418,7 @@ for k, v in (
         len(v)
     )
 
-# =========================================================
-# CREATE SOURCE REGION DASHBOARD
-# =========================================================
 
-source_region_dashboard = (
-    create_source_region_dashboard(
-        current_sales,
-        lw_sales
-    )
-)
-
-print(
-    "✅ Source Region Dashboard Created"
-)
-
-for k, v in (
-    source_region_dashboard.items()
-):
-    print(
-        k,
-        len(v)
-    )
-    
 
 # =========================================================
 # GOOGLE SHEET DASHBOARD UPDATE
@@ -4006,11 +4007,42 @@ summary_html = f"""
 
 <h3>📈 Hourly Summary</h3>
 
+{apply_growth_style(hourly_dashboard)}
+
 <hr>
 
+<h3>🌍 Source + Region Product Mix Dashboard</h3>
+"""
 
+# =========================================================
+# SOURCE + REGION DASHBOARD
+# =========================================================
+
+for source, df in source_region_dashboard.items():
+
+    summary_html += f"""
+    <h4>{source}</h4>
+    """
+
+    if df.empty:
+
+        summary_html += """
+        <p>No Data Available</p>
+        """
+
+    else:
+
+        summary_html += (
+            apply_growth_style(
+                df.head(10)
+            )
+        )
+
+summary_html += """
+<hr>
 
 <h3>🍨 Product Mix Dashboard</h3>
+
 """
 
 
@@ -4038,34 +4070,6 @@ for brand, df in product_mix_dashboard.items():
             )
         )
 
-# =========================================================
-# SOURCE REGION DASHBOARD
-# =========================================================
-
-summary_html += """
-<hr>
-<h3>🌍 Source Region Product Mix Dashboard</h3>
-"""
-
-for source, df in (
-    source_region_dashboard.items()
-):
-
-    summary_html += f"""
-    <h4>{source}</h4>
-    """
-
-    if df.empty:
-
-        summary_html += """
-        <p>No Data Available</p>
-        """
-
-    else:
-
-        summary_html += apply_growth_style(
-            df
-        )
 
 # =========================================================
 # CATEGORY DASHBOARD
