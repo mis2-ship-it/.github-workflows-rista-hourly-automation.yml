@@ -1368,7 +1368,11 @@ for df in [current_df, lw_df]:
     )
 
 print("✅ Product Mix Safe")
+print("Current Columns:")
+print(curr.columns.tolist())
 
+print("LW Columns:")
+print(lw.columns.tolist())
 # =============================================
 # OVERALL PRODUCT MIX
 # =============================================
@@ -1718,6 +1722,46 @@ hourly_dashboard = (
 print("✅ Hourly Dashboard Created")
 print(hourly_dashboard.head())
 
+# =========================================================
+# FIX DASHBOARD COLUMNS
+# =========================================================
+
+dashboard_cols = [
+    "Product Mix",
+    "Category Group",
+    "Item Group Name"
+]
+
+for col in dashboard_cols:
+
+    x_col = f"{col}_x"
+    y_col = f"{col}_y"
+
+    if (
+        col not in current_sales.columns
+        and x_col in current_sales.columns
+    ):
+
+        current_sales[col] = (
+            current_sales[x_col]
+            .combine_first(
+                current_sales.get(y_col)
+            )
+        )
+
+    if (
+        col not in lw_sales.columns
+        and x_col in lw_sales.columns
+    ):
+
+        lw_sales[col] = (
+            lw_sales[x_col]
+            .combine_first(
+                lw_sales.get(y_col)
+            )
+        )
+
+print("✅ Dashboard Columns Fixed")
 
 # =========================================================
 # PRODUCT MIX DASHBOARD
@@ -1789,8 +1833,12 @@ def create_product_mix_dashboard(
 
                 lw[col] = 0
 
-        print("Curr Columns:")
+        print("Current Columns:")
         print(curr.columns.tolist())
+        
+        print("LW Columns:")
+        print(lw.columns.tolist())
+
         
         # =============================================
         # CURRENT MIX
@@ -1996,49 +2044,6 @@ for col in metric_cols:
     ).fillna(0)
 
 print("✅ Item Metric Columns Fixed")
-
-
-# =========================================================
-# FIX DASHBOARD COLUMNS
-# =========================================================
-
-dashboard_cols = [
-    "Product Mix",
-    "Category Group",
-    "Item Group Name"
-]
-
-for col in dashboard_cols:
-
-    x_col = f"{col}_x"
-    y_col = f"{col}_y"
-
-    if (
-        col not in current_sales.columns
-        and x_col in current_sales.columns
-    ):
-
-        current_sales[col] = (
-            current_sales[x_col]
-            .combine_first(
-                current_sales.get(y_col)
-            )
-        )
-
-    if (
-        col not in lw_sales.columns
-        and x_col in lw_sales.columns
-    ):
-
-        lw_sales[col] = (
-            lw_sales[x_col]
-            .combine_first(
-                lw_sales.get(y_col)
-            )
-        )
-
-print("✅ Dashboard Columns Fixed")
-
 
 # =========================================================
 # DEBUG CHECK
