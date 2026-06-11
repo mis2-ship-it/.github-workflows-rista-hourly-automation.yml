@@ -1278,29 +1278,45 @@ print(
 # FIX PRODUCT MIX COLUMN
 # =========================================================
 
-if "Product Mix_x" in current_sales.columns:
+for df_name, df in [
+    ("Current", current_sales),
+    ("LW", lw_sales)
+]:
 
-    current_sales["Product Mix"] = (
-        current_sales["Product Mix_x"]
-    )
+    # if Product Mix already exists → skip
+    if "Product Mix" in df.columns:
+        continue
 
-elif "Product Mix_y" in current_sales.columns:
+    # both x and y available
+    if (
+        "Product Mix_x" in df.columns
+        and
+        "Product Mix_y" in df.columns
+    ):
 
-    current_sales["Product Mix"] = (
-        current_sales["Product Mix_y"]
-    )
+        df["Product Mix"] = (
+            df["Product Mix_x"]
+            .combine_first(
+                df["Product Mix_y"]
+            )
+        )
 
+    # only x available
+    elif "Product Mix_x" in df.columns:
 
-if "Product Mix_x" in lw_sales.columns:
+        df["Product Mix"] = (
+            df["Product Mix_x"]
+        )
 
-    lw_sales["Product Mix"] = (
-        lw_sales["Product Mix_x"]
-    )
+    # only y available
+    elif "Product Mix_y" in df.columns:
 
-elif "Product Mix_y" in lw_sales.columns:
+        df["Product Mix"] = (
+            df["Product Mix_y"]
+        )
 
-    lw_sales["Product Mix"] = (
-        lw_sales["Product Mix_y"]
+    print(
+        f"✅ Product Mix Fixed - {df_name}"
     )
 
 print("✅ Product Mix Fixed")
@@ -1368,11 +1384,8 @@ for df in [current_df, lw_df]:
     )
 
 print("✅ Product Mix Safe")
-print("Current Columns:")
-print(curr.columns.tolist())
 
-print("LW Columns:")
-print(lw.columns.tolist())
+
 # =============================================
 # OVERALL PRODUCT MIX
 # =============================================
@@ -1494,11 +1507,16 @@ def create_hourly_dashboard(
         # DEBUG
         # =============================================
 
+        print(f"Brand: {brand}")
+
         print("Curr Columns:")
         print(curr.columns.tolist())
-
+        
         print("LW Columns:")
         print(lw.columns.tolist())
+        
+        print("Curr Rows:", len(curr))
+        print("LW Rows:", len(lw))
 
         # =============================================
         # FIX MISSING METRIC COLUMNS
