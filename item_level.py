@@ -1274,52 +1274,7 @@ print(
     "to",
     lw_sales["Order Time"].max()
 )
-# =========================================================
-# FIX PRODUCT MIX COLUMN
-# =========================================================
 
-for df_name, df in [
-    ("Current", current_sales),
-    ("LW", lw_sales)
-]:
-
-    # if Product Mix already exists → skip
-    if "Product Mix" in df.columns:
-        continue
-
-    # both x and y available
-    if (
-        "Product Mix_x" in df.columns
-        and
-        "Product Mix_y" in df.columns
-    ):
-
-        df["Product Mix"] = (
-            df["Product Mix_x"]
-            .combine_first(
-                df["Product Mix_y"]
-            )
-        )
-
-    # only x available
-    elif "Product Mix_x" in df.columns:
-
-        df["Product Mix"] = (
-            df["Product Mix_x"]
-        )
-
-    # only y available
-    elif "Product Mix_y" in df.columns:
-
-        df["Product Mix"] = (
-            df["Product Mix_y"]
-        )
-
-    print(
-        f"✅ Product Mix Fixed - {df_name}"
-    )
-
-print("✅ Product Mix Fixed")
 
 # =========================================================
 # ITEM GROUP FOR WINDOW DATA
@@ -1857,6 +1812,45 @@ def create_product_mix_dashboard(
         print("LW Columns:")
         print(lw.columns.tolist())
 
+
+        # =============================================
+        # FIX PRODUCT MIX INSIDE FUNCTION
+        # =============================================
+        
+        for df in [curr, lw]:
+        
+            if "Product Mix" not in df.columns:
+        
+                if (
+                    "Product Mix_x" in df.columns
+                    and
+                    "Product Mix_y" in df.columns
+                ):
+        
+                    df["Product Mix"] = (
+                        df["Product Mix_x"]
+                        .combine_first(
+                            df["Product Mix_y"]
+                        )
+                    )
+        
+                elif "Product Mix_x" in df.columns:
+        
+                    df["Product Mix"] = (
+                        df["Product Mix_x"]
+                    )
+        
+                elif "Product Mix_y" in df.columns:
+        
+                    df["Product Mix"] = (
+                        df["Product Mix_y"]
+                    )
+        
+        # DEBUG
+        print(
+            f"{brand} Product Mix Exists:",
+            "Product Mix" in curr.columns
+        )
         
         # =============================================
         # CURRENT MIX
@@ -2077,6 +2071,17 @@ print(
     ].head()
 )
 
+print("CURRENT SALES PRODUCT MIX CHECK")
+print(
+    [col for col in current_sales.columns
+     if "Product Mix" in col]
+)
+
+print("LW SALES PRODUCT MIX CHECK")
+print(
+    [col for col in lw_sales.columns
+     if "Product Mix" in col]
+)
 
 # =========================================================
 # CREATE PRODUCT MIX DASHBOARD
