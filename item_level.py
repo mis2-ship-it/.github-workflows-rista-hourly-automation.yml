@@ -1861,11 +1861,94 @@ def create_product_mix_dashboard(
 
                 lw[col] = 0
 
-        print("Current Columns:")
+        print("======== DEBUG PRODUCT MIX ========")
+        print("Brand:", brand)
+        
+        print("Curr Columns:")
         print(curr.columns.tolist())
         
         print("LW Columns:")
         print(lw.columns.tolist())
+        
+        print("Current Product Mix columns:")
+        print(
+            [c for c in curr.columns
+             if "Product" in str(c)]
+        )
+        
+        print("LW Product Mix columns:")
+        print(
+            [c for c in lw.columns
+             if "Product" in str(c)]
+        )
+        
+        print("===================================")
+        # =============================================
+        # FIX PRODUCT MIX INSIDE FUNCTION
+        # =============================================
+        
+        if "Product Mix" not in curr.columns:
+        
+            product_cols = [
+                c for c in curr.columns
+                if "Product Mix" in str(c)
+            ]
+        
+            print(
+                "Curr Product Mix Candidate Columns:",
+                product_cols
+            )
+        
+            if product_cols:
+        
+                curr["Product Mix"] = (
+                    curr[product_cols]
+                    .bfill(axis=1)
+                    .iloc[:, 0]
+                )
+        
+        if "Product Mix" not in lw.columns:
+        
+            product_cols = [
+                c for c in lw.columns
+                if "Product Mix" in str(c)
+            ]
+        
+            print(
+                "LW Product Mix Candidate Columns:",
+                product_cols
+            )
+        
+            if product_cols:
+        
+                lw["Product Mix"] = (
+                    lw[product_cols]
+                    .bfill(axis=1)
+                    .iloc[:, 0]
+                )
+        
+        print(
+            "Curr Product Mix Exists:",
+            "Product Mix" in curr.columns
+        )
+        
+        print(
+            "LW Product Mix Exists:",
+            "Product Mix" in lw.columns
+        )
+        
+        if "Product Mix" in curr.columns:
+            print(
+                curr["Product Mix"]
+                .head(10)
+            )
+        
+        if "Product Mix" in lw.columns:
+            print(
+                lw["Product Mix"]
+                .head(10)
+            )
+
         
         # =============================================
         # CURRENT MIX
