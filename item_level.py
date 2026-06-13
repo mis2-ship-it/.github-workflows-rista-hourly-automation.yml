@@ -1316,6 +1316,21 @@ lw_sales = lw_sales.merge(
 )
 
 print("✅ Product Mix Merged")
+print("CURRENT PRODUCT MIX RELATED COLUMNS")
+print(
+    [
+        c for c in current_sales.columns
+        if "Product Mix" in str(c)
+    ]
+)
+
+print("LW PRODUCT MIX RELATED COLUMNS")
+print(
+    [
+        c for c in lw_sales.columns
+        if "Product Mix" in str(c)
+    ]
+)
 
 # =========================================================
 # SAFE PRODUCT MIX
@@ -1745,30 +1760,36 @@ for df_name, df in [
     ("LW", lw_sales)
 ]:
 
-    if "Product Mix" not in df.columns:
+    product_mix_cols = [
+        c for c in df.columns
+        if "Product Mix" in str(c)
+    ]
 
-        if "Product Mix_x" in df.columns:
+    print(
+        f"{df_name} Product Mix Columns:",
+        product_mix_cols
+    )
+
+    if product_mix_cols:
+
+        df["Product Mix"] = None
+
+        for col in product_mix_cols:
 
             df["Product Mix"] = (
-                df["Product Mix_x"]
-                .combine_first(
-                    df.get("Product Mix_y")
-                )
+                df["Product Mix"]
+                .combine_first(df[col])
             )
 
-        elif "Product Mix_y" in df.columns:
+        print(
+            f"✅ {df_name} Product Mix Fixed"
+        )
 
-            df["Product Mix"] = (
-                df["Product Mix_y"]
-            )
-
-    print(f"📌 {df_name} Columns:")
-    print(df.columns.tolist())
-
-    if "Product Mix" in df.columns:
-        print(f"✅ {df_name} Product Mix Fixed")
     else:
-        print(f"❌ {df_name} Product Mix Missing")
+
+        print(
+            f"❌ {df_name} Product Mix Missing"
+        )
 
 # =========================================================
 # PRODUCT MIX DASHBOARD
