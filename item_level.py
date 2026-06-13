@@ -1356,6 +1356,52 @@ for df in [current_df, lw_df]:
 print("✅ Product Mix Safe")
 
 
+# =========================================================
+# FIX PRODUCT MIX FOR OVERALL DASHBOARD
+# =========================================================
+
+for df_name, df in [
+    ("Current", current_sales),
+    ("LW", lw_sales)
+]:
+
+    if "Product Mix" not in df.columns:
+
+        product_mix_cols = [
+            c for c in df.columns
+            if "Product Mix" in str(c)
+        ]
+
+        print(
+            f"{df_name} Product Mix Columns:",
+            product_mix_cols
+        )
+
+        if product_mix_cols:
+
+            df["Product Mix"] = None
+
+            for col in product_mix_cols:
+
+                df["Product Mix"] = (
+                    df["Product Mix"]
+                    .combine_first(df[col])
+                )
+
+        else:
+
+            df["Product Mix"] = "Others"
+
+    df["Product Mix"] = (
+        df["Product Mix"]
+        .fillna("Others")
+        .astype(str)
+        .str.strip()
+    )
+
+print("✅ Product Mix Fixed For Overall")
+
+
 # =============================================
 # OVERALL PRODUCT MIX
 # =============================================
@@ -1423,7 +1469,6 @@ product_mix_dashboard[
     "Net_Rev",
     ascending=False
 )
-
 # =========================================================
 # HOURLY COMPARISON DASHBOARD
 # CURRENT VS LAST WEEK
