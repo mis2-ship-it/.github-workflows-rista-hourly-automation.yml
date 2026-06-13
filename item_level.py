@@ -1887,7 +1887,7 @@ def create_product_mix_dashboard(
         
         print("===================================")
         # =============================================
-        # FIX PRODUCT MIX INSIDE FUNCTION
+        # FORCE PRODUCT MIX COLUMN
         # =============================================
         
         if "Product Mix" not in curr.columns:
@@ -1898,7 +1898,7 @@ def create_product_mix_dashboard(
             ]
         
             print(
-                "Curr Product Mix Candidate Columns:",
+                "Current Product Mix Columns:",
                 product_cols
             )
         
@@ -1918,7 +1918,7 @@ def create_product_mix_dashboard(
             ]
         
             print(
-                "LW Product Mix Candidate Columns:",
+                "LW Product Mix Columns:",
                 product_cols
             )
         
@@ -1931,27 +1931,21 @@ def create_product_mix_dashboard(
                 )
         
         print(
-            "Curr Product Mix Exists:",
+            "Curr Has Product Mix:",
             "Product Mix" in curr.columns
         )
         
         print(
-            "LW Product Mix Exists:",
+            "LW Has Product Mix:",
             "Product Mix" in lw.columns
         )
         
-        if "Product Mix" in curr.columns:
-            print(
-                curr["Product Mix"]
-                .head(10)
-            )
+        # fallback
+        if "Product Mix" not in curr.columns:
+            curr["Product Mix"] = "Others"
         
-        if "Product Mix" in lw.columns:
-            print(
-                lw["Product Mix"]
-                .head(10)
-            )
-
+        if "Product Mix" not in lw.columns:
+            lw["Product Mix"] = "Others"
         
         # =============================================
         # CURRENT MIX
