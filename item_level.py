@@ -1755,10 +1755,9 @@ print("✅ Dashboard Columns Fixed")
 # FIX PRODUCT MIX COLUMN
 # =========================================================
 
-for df_name, df in [
-    ("Current", current_sales),
-    ("LW", lw_sales)
-]:
+def fix_product_mix(df, df_name):
+
+    print(f"🔍 Checking Product Mix for {df_name}")
 
     product_mix_cols = [
         c for c in df.columns
@@ -1770,29 +1769,52 @@ for df_name, df in [
         product_mix_cols
     )
 
-    if product_mix_cols:
+    # create blank column first
+    df["Product Mix"] = None
 
-        # take first available column
+    # combine available columns
+    for col in product_mix_cols:
+
         df["Product Mix"] = (
-            df[product_mix_cols]
-            .bfill(axis=1)
-            .iloc[:, 0]
-        )
-
-        print(
-            f"✅ {df_name} Product Mix Fixed"
-        )
-
-        print(
             df["Product Mix"]
-            .head(5)
+            .combine_first(df[col])
         )
 
-    else:
+    # fallback
+    df["Product Mix"] = (
+        df["Product Mix"]
+        .fillna("Others")
+        .astype(str)
+        .str.strip()
+    )
 
-        print(
-            f"❌ {df_name} Product Mix Missing"
-        )
+    print(
+        f"✅ {df_name} Product Mix Fixed"
+    )
+
+    print(
+        df["Product Mix"]
+        .value_counts()
+        .head(10)
+    )
+
+    return df
+
+
+# =========================================================
+# APPLY PRODUCT MIX FIX
+# =========================================================
+
+current_sales = fix_product_mix(
+    current_sales,
+    "Current"
+)
+
+lw_sales = fix_product_mix(
+    lw_sales,
+    "LW"
+)
+
 
 # =========================================================
 # PRODUCT MIX DASHBOARD
@@ -1803,17 +1825,11 @@ def create_product_mix_dashboard(
     lw_sales
 ):
 
-    print("Function Current Columns")
-    print(current_sales.columns.tolist())
-
-    print("Function LW Columns")
-    print(lw_sales.columns.tolist())
-
     brands = {
-    "Frozen Bottle": "Frozen Bottle",
-    "Boba Bar": "Boba Bar",
-    "Madno": "Madno",
-    "Lubov": "Lubov- Patisserie"
+        "Frozen Bottle": "Frozen Bottle",
+        "Boba Bar": "Boba Bar",
+        "Madno": "Madno",
+        "Lubov": "Lubov- Patisserie"
     }
 
     product_mix_dashboard = {}
@@ -1836,154 +1852,90 @@ def create_product_mix_dashboard(
             brand_filter.upper()
         ].copy()
 
+        print("================================")
+        print("Brand:", brand)
+        print("Current Rows:", len(curr))
+        print("LW Rows:", len(lw))
+        print(
+            "Current Product Mix Exists:",
+            "Product Mix" in curr.columns
+        )
+        print(
+            "LW Product Mix Exists:",
+            "Product Mix" in lw.columns
+        )
+        print("================================")
+
         # =============================================
-        # FIX MISSING METRIC COLUMNS
+        # REQUIRED METRIC COLUMNS
         # =============================================
 
         required_cols = [
             "item_quantity",
             "item_baseNetAmount",
-            "item_baseNetDiscountAmount"
+            "item_baseNetDiscountAmount",
+            "item_baseGrossAmount"
         ]
 
         for col in required_cols:
 
             if col not in curr.columns:
-
-                print(
-                    f"⚠ Missing Column in Current: {col}"
-                )
-
                 curr[col] = 0
 
             if col not in lw.columns:
-
-                print(
-                    f"⚠ Missing Column in LW: {col}"
-                )
-
                 lw[col] = 0
 
-        print("======== DEBUG PRODUCT MIX ========")
-        print("Brand:", brand)
-        
-        print("Curr Columns:")
-        print(curr.columns.tolist())
-        
-        print("LW Columns:")
-        print(lw.columns.tolist())
-        
-        print("Current Product Mix columns:")
-        print(
-            [c for c in curr.columns
-             if "Product" in str(c)]
-        )
-        
-        print("LW Product Mix columns:")
-        print(
-            [c for c in lw.columns
-             if "Product" in str(c)]
-        )
-        
-        print("===================================")
-        # =============================================
-        # FORCE PRODUCT MIX COLUMN
-        # =============================================
-        
-        if "Product Mix" not in curr.columns:
-        
-            product_cols = [
-                c for c in curr.columns
-                if "Product Mix" in str(c)
-            ]
-        
-            print(
-                "Current Product Mix Columns:",
-                product_cols
-            )
-        
-            if product_cols:
-        
-                curr["Product Mix"] = (
-                    curr[product_cols]
-                    .bfill(axis=1)
-                    .iloc[:, 0]
-                )
-        
-        if "Product Mix" not in lw.columns:
-        
-            product_cols = [
-                c for c in lw.columns
-                if "Product Mix" in str(c)
-            ]
-        
-            print(
-                "LW Product Mix Columns:",
-                product_cols
-            )
-        
-            if product_cols:
-        
-                lw["Product Mix"] = (
-                    lw[product_cols]
-                    .bfill(axis=1)
-                    .iloc[:, 0]
-                )
-        
-        print(
-            "Curr Has Product Mix:",
-            "Product Mix" in curr.columns
-        )
-        
-        print(
-            "LW Has Product Mix:",
-            "Product Mix" in lw.columns
-        )
-        
-        # fallback
-        if "Product Mix" not in curr.columns:
-            curr["Product Mix"] = "Others"
-        
-        if "Product Mix" not in lw.columns:
-            lw["Product Mix"] = "Others"
-        
+        # numeric conversion
+        for col in required_cols:
+
+            curr[col] = pd.to_numeric(
+                curr[col],
+                errors="coerce"
+            ).fillna(0)
+
+            lw[col] = pd.to_numeric(
+                lw[col],
+                errors="coerce"
+            ).fillna(0)
+
         # =============================================
         # CURRENT MIX
         # =============================================
-        
+
         curr_mix = (
             curr.groupby("Product Mix")
             .agg(
-                **{
-                    "Orders": (
-                        "invoiceNumber",
-                        "nunique"
-                    ),
+                Orders=(
+                    "invoiceNumber",
+                    "nunique"
+                ),
 
+                **{
                     "Gross Rev": (
                         "item_baseGrossAmount",
                         "sum"
                     ),
-        
+
                     "Qty Sold": (
                         "item_quantity",
                         "sum"
                     ),
-        
+
                     "Net Rev": (
                         "item_baseNetAmount",
                         "sum"
                     ),
-        
+
                     "Discount": (
                         "item_baseNetDiscountAmount",
-                        lambda x: abs(x.sum())
+                        lambda x:
+                        abs(x.sum())
                     )
                 }
             )
             .reset_index()
         )
-        
+
         curr_mix["Dis %"] = np.where(
             curr_mix["Gross Rev"] > 0,
             (
@@ -1992,14 +1944,12 @@ def create_product_mix_dashboard(
                 curr_mix["Gross Rev"]
             ) * 100,
             0
-        ).round(1)
-        
-        
-        
+        )
+
         # =============================================
         # LW MIX
         # =============================================
-        
+
         lw_mix = (
             lw.groupby("Product Mix")
             .agg(
@@ -2008,31 +1958,32 @@ def create_product_mix_dashboard(
                         "invoiceNumber",
                         "nunique"
                     ),
-        
-                    "LW Qty Sold": (
-                        "item_quantity",
-                        "sum"
-                    ),
-        
-                    "LW Net Rev": (
-                        "item_baseNetAmount",
-                        "sum"
-                    ),
 
                     "LW Gross Rev": (
                         "item_baseGrossAmount",
                         "sum"
                     ),
-        
+
+                    "LW Qty Sold": (
+                        "item_quantity",
+                        "sum"
+                    ),
+
+                    "LW Net Rev": (
+                        "item_baseNetAmount",
+                        "sum"
+                    ),
+
                     "LW Discount": (
                         "item_baseNetDiscountAmount",
-                        lambda x: abs(x.sum())
+                        lambda x:
+                        abs(x.sum())
                     )
                 }
             )
             .reset_index()
         )
-        
+
         lw_mix["LW Dis %"] = np.where(
             lw_mix["LW Gross Rev"] > 0,
             (
@@ -2041,41 +1992,22 @@ def create_product_mix_dashboard(
                 lw_mix["LW Gross Rev"]
             ) * 100,
             0
-        ).round(1)
-        
-        lw_mix["LW AOV"] = np.where(
-            lw_mix["LW Orders"] > 0,
-            lw_mix["LW Net Rev"]
-            /
-            lw_mix["LW Orders"],
-            0
-        ).round(1)
-        
-        
+        )
+
         # =============================================
         # MERGE
         # =============================================
-        
+
         final_mix = curr_mix.merge(
             lw_mix,
             on="Product Mix",
             how="left"
-        )
-        
-        final_mix = final_mix.fillna(0)
-        
-        final_mix = (
-            final_mix
-            .sort_values(
-                "Net Rev",
-                ascending=False
-            )
-        )
+        ).fillna(0)
 
         # =============================================
         # GROWTH %
         # =============================================
-        
+
         final_mix["Growth %"] = np.where(
             final_mix["LW Net Rev"] > 0,
             (
@@ -2088,13 +2020,45 @@ def create_product_mix_dashboard(
                 final_mix["LW Net Rev"]
             ) * 100,
             0
-        ).round(1)
-        
+        )
+
+        final_mix = (
+            final_mix
+            .sort_values(
+                "Net Rev",
+                ascending=False
+            )
+            .round(0)
+        )
+
         product_mix_dashboard[
             brand
         ] = final_mix
 
     return product_mix_dashboard
+
+
+# =========================================================
+# CREATE PRODUCT MIX DASHBOARD
+# =========================================================
+
+product_mix_dashboard = (
+    create_product_mix_dashboard(
+        current_sales,
+        lw_sales
+    )
+)
+
+print(
+    "✅ Product Mix Dashboard Created"
+)
+
+for k, v in product_mix_dashboard.items():
+
+    print(
+        k,
+        len(v)
+    )
 
 
 # =========================================================
