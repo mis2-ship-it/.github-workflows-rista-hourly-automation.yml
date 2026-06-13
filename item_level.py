@@ -1402,73 +1402,7 @@ for df_name, df in [
 print("✅ Product Mix Fixed For Overall")
 
 
-# =============================================
-# OVERALL PRODUCT MIX
-# =============================================
 
-curr = current_sales.copy()
-lw = lw_sales.copy()
-
-curr_mix = (
-    curr.groupby("Product Mix")
-    .agg(
-        Orders=("invoiceNumber", "nunique"),
-        Qty_Sold=("item_quantity", "sum"),
-        Gross_Rev=("item_baseGrossAmount", "sum"),
-        Net_Rev=("item_baseNetAmount", "sum"),
-        Discount=("item_baseNetDiscountAmount", lambda x: abs(x.sum()))
-    )
-    .reset_index()
-)
-
-curr_mix["Dis %"] = np.where(
-    curr_mix["Gross_Rev"] > 0,
-    (
-        curr_mix["Discount"]
-        /
-        curr_mix["Gross_Rev"]
-    ) * 100,
-    0
-).round(1)
-
-lw_mix = (
-    lw.groupby("Product Mix")
-    .agg(
-        LW_Orders=("invoiceNumber", "nunique"),
-        LW_Qty_Sold=("item_quantity", "sum"),
-        LW_Gross_Rev=("item_baseGrossAmount", "sum"),
-        LW_Net_Rev=("item_baseNetAmount", "sum"),
-        LW_Discount=("item_baseNetDiscountAmount", lambda x: abs(x.sum()))
-    )
-    .reset_index()
-)
-
-overall_mix = curr_mix.merge(
-    lw_mix,
-    on="Product Mix",
-    how="left"
-).fillna(0)
-
-overall_mix["Growth %"] = np.where(
-    overall_mix["LW_Net_Rev"] > 0,
-    (
-        (
-            overall_mix["Net_Rev"]
-            -
-            overall_mix["LW_Net_Rev"]
-        )
-        /
-        overall_mix["LW_Net_Rev"]
-    ) * 100,
-    0
-).round(1)
-
-product_mix_dashboard[
-    "Overall"
-] = overall_mix.sort_values(
-    "Net_Rev",
-    ascending=False
-)
 # =========================================================
 # HOURLY COMPARISON DASHBOARD
 # CURRENT VS LAST WEEK
@@ -2083,10 +2017,6 @@ def create_product_mix_dashboard(
     return product_mix_dashboard
 
 
-# =========================================================
-# CREATE PRODUCT MIX DASHBOARD
-# =========================================================
-
 product_mix_dashboard = (
     create_product_mix_dashboard(
         current_sales,
@@ -2098,12 +2028,81 @@ print(
     "✅ Product Mix Dashboard Created"
 )
 
-for k, v in product_mix_dashboard.items():
+for k, v in (
+    product_mix_dashboard.items()
+):
+    print(k, len(v))
 
-    print(
-        k,
-        len(v)
+
+# =============================================
+# OVERALL PRODUCT MIX
+# =============================================
+
+curr = current_sales.copy()
+lw = lw_sales.copy()
+
+curr_mix = (
+    curr.groupby("Product Mix")
+    .agg(
+        Orders=("invoiceNumber", "nunique"),
+        Qty_Sold=("item_quantity", "sum"),
+        Gross_Rev=("item_baseGrossAmount", "sum"),
+        Net_Rev=("item_baseNetAmount", "sum"),
+        Discount=("item_baseNetDiscountAmount", lambda x: abs(x.sum()))
     )
+    .reset_index()
+)
+
+curr_mix["Dis %"] = np.where(
+    curr_mix["Gross_Rev"] > 0,
+    (
+        curr_mix["Discount"]
+        /
+        curr_mix["Gross_Rev"]
+    ) * 100,
+    0
+).round(1)
+
+lw_mix = (
+    lw.groupby("Product Mix")
+    .agg(
+        LW_Orders=("invoiceNumber", "nunique"),
+        LW_Qty_Sold=("item_quantity", "sum"),
+        LW_Gross_Rev=("item_baseGrossAmount", "sum"),
+        LW_Net_Rev=("item_baseNetAmount", "sum"),
+        LW_Discount=("item_baseNetDiscountAmount", lambda x: abs(x.sum()))
+    )
+    .reset_index()
+)
+
+overall_mix = curr_mix.merge(
+    lw_mix,
+    on="Product Mix",
+    how="left"
+).fillna(0)
+
+overall_mix["Growth %"] = np.where(
+    overall_mix["LW_Net_Rev"] > 0,
+    (
+        (
+            overall_mix["Net_Rev"]
+            -
+            overall_mix["LW_Net_Rev"]
+        )
+        /
+        overall_mix["LW_Net_Rev"]
+    ) * 100,
+    0
+).round(1)
+
+product_mix_dashboard[
+    "Overall"
+] = overall_mix.sort_values(
+    "Net_Rev",
+    ascending=False
+)
+
+print("✅ Overall Product Mix Added")
 
 
 # =========================================================
@@ -2187,26 +2186,6 @@ print(
      if "Product Mix" in col]
 )
 
-
-# =========================================================
-# CREATE PRODUCT MIX DASHBOARD
-# =========================================================
-
-product_mix_dashboard = (
-    create_product_mix_dashboard(
-        current_sales,
-        lw_sales
-    )
-)
-
-print(
-    "✅ Product Mix Dashboard Created"
-)
-
-for k, v in (
-    product_mix_dashboard.items()
-):
-    print(k, len(v))
 
 # =========================================================
 # CATEGORY DASHBOARD
