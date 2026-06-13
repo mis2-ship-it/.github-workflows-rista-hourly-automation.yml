@@ -1772,17 +1772,20 @@ for df_name, df in [
 
     if product_mix_cols:
 
-        df["Product Mix"] = None
-
-        for col in product_mix_cols:
-
-            df["Product Mix"] = (
-                df["Product Mix"]
-                .combine_first(df[col])
-            )
+        # take first available column
+        df["Product Mix"] = (
+            df[product_mix_cols]
+            .bfill(axis=1)
+            .iloc[:, 0]
+        )
 
         print(
             f"✅ {df_name} Product Mix Fixed"
+        )
+
+        print(
+            df["Product Mix"]
+            .head(5)
         )
 
     else:
