@@ -4421,7 +4421,7 @@ current_hour = ist_now.hour
 # SEND ONLY AT 10 AM
 # =========================================================
 
-if current_hour == 10:
+if current_hour in [7, 8, 10]:
 
     print("📧 Preparing FTD/MTD Mail...")
 
