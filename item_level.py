@@ -4319,6 +4319,81 @@ mail_subject = (
     f"{formatted_date}"
 )
 
+# =====================================================
+# SUBJECT
+# =====================================================
+
+mail_subject = (
+    f"📊 FTD & MTD "
+    f"Product Dashboard "
+    f"| {business_date}"
+)
+# =====================================================
+# CREATE HTML
+# =====================================================
+
+ftd_mtd_summary_html = f"""
+
+<html>
+
+<head>
+
+<style>
+
+body {{
+    font-family: Arial;
+}}
+
+table {{
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13px;
+}}
+
+th {{
+    background-color: #000000;
+    color: white;
+    border: 1px solid #dddddd;
+    padding: 8px;
+    text-align: center;
+}}
+
+td {{
+    border: 1px solid #dddddd;
+    padding: 6px;
+    text-align: center;
+}}
+
+h2 {{
+    color: #333333;
+}}
+
+</style>
+
+</head>
+
+<body>
+
+<h2>
+📊 FTD Product Dashboard
+</h2>
+
+{ftd_summary_html}
+
+<br><br>
+
+<h2>
+📊 MTD Product Dashboard
+</h2>
+
+{mtd_summary_html}
+
+</body>
+
+</html>
+
+"""
+
 # =========================================================
 # CREATE MAIL
 # =========================================================
@@ -4355,6 +4430,7 @@ msg.attach(
         "html"
     )
 )
+
 
 # =========================================================
 # SEND MAIL
@@ -4393,6 +4469,35 @@ except Exception as e:
         str(e)
     )
 
+# =========================================================
+# FTD HTML
+# =========================================================
+
+ftd_summary_html = f"""
+<h3>
+📊 FTD Product Dashboard
+</h3>
+
+{ftd_summary_df.to_html(
+    index=False,
+    escape=False
+)}
+"""
+
+# =========================================================
+# MTD HTML
+# =========================================================
+
+mtd_summary_html = f"""
+<h3>
+📊 MTD Product Dashboard
+</h3>
+
+{mtd_summary_df.to_html(
+    index=False,
+    escape=False
+)}
+"""
 
 
 # =========================================================
