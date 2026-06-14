@@ -4283,7 +4283,6 @@ print("✅ Summary HTML Created")
 
 import smtplib
 import os
-import json
 
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -4294,8 +4293,12 @@ print("📧 Preparing Hourly Mail...")
 EMAIL_USER = os.environ["EMAIL_USER"]
 EMAIL_PASSWORD = os.environ["EMAIL_PASSWORD"]
 
+# =========================================================
+# RECEIVERS
+# =========================================================
+
 to_mails = [
-    "faraz@frozenbottle.in,"
+    "faraz@frozenbottle.in"
 ]
 
 cc_mails = [
@@ -4307,10 +4310,18 @@ all_recipients = (
     cc_mails
 )
 
+# =========================================================
+# SUBJECT
+# =========================================================
+
 mail_subject = (
     f"Hourly Product Level Sales Dashboard _ "
     f"{formatted_date}"
 )
+
+# =========================================================
+# CREATE MAIL
+# =========================================================
 
 msg = MIMEMultipart()
 
@@ -4319,12 +4330,35 @@ msg["To"] = ", ".join(to_mails)
 msg["CC"] = ", ".join(cc_mails)
 msg["Subject"] = mail_subject
 
+# =========================================================
+# SAME MAIL THREAD FOR ENTIRE DAY
+# =========================================================
+
+thread_id = (
+    f"<hourly-dashboard-"
+    f"{business_date}"
+    f"@frozenbottle.in>"
+)
+
+msg["Message-ID"] = make_msgid()
+
+msg["In-Reply-To"] = thread_id
+msg["References"] = thread_id
+
+# =========================================================
+# ATTACH HTML
+# =========================================================
+
 msg.attach(
     MIMEText(
         summary_html,
         "html"
     )
 )
+
+# =========================================================
+# SEND MAIL
+# =========================================================
 
 try:
 
@@ -4339,49 +4373,6 @@ try:
         EMAIL_USER,
         EMAIL_PASSWORD
     )
-
-    thread_file = "mail_thread.json"
-
-    today_key = str(business_date)
-
-    thread_data = {}
-
-    if os.path.exists(thread_file):
-
-        with open(
-            thread_file,
-            "r"
-        ) as f:
-
-            thread_data = json.load(f)
-
-    if today_key not in thread_data:
-
-        message_id = make_msgid()
-
-        thread_data[
-            today_key
-        ] = message_id
-
-        with open(
-            thread_file,
-            "w"
-        ) as f:
-
-            json.dump(
-                thread_data,
-                f
-            )
-
-    else:
-
-        message_id = thread_data[
-            today_key
-        ]
-
-    msg["Message-ID"] = message_id
-    msg["In-Reply-To"] = message_id
-    msg["References"] = message_id
 
     server.sendmail(
         EMAIL_USER,
@@ -4401,6 +4392,8 @@ except Exception as e:
         "❌ Hourly Mail Error:",
         str(e)
     )
+
+
 
 # =========================================================
 # FTD / MTD MAIL
