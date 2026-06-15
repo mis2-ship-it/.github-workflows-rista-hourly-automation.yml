@@ -4574,32 +4574,12 @@ if "ftd_mtd_summary_html" not in locals():
 print(
     "✅ FTD/MTD HTML Variables Ready"
 )
-
-# =========================================================
-# FTD HTML
-# =========================================================
-
 ftd_mtd_summary_html = f"""
 <h3>
 📊 FTD Product Dashboard
 </h3>
 
 {ftd_summary_df.to_html(
-    index=False,
-    escape=False
-)}
-"""
-
-# =========================================================
-# MTD HTML
-# =========================================================
-
-mtd_summary_html = f"""
-<h3>
-📊 MTD Product Dashboard
-</h3>
-
-{mtd_summary_df.to_html(
     index=False,
     escape=False
 )}
