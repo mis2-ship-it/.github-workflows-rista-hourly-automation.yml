@@ -4669,14 +4669,33 @@ if current_hour in [7, 8, 10]:
     msg["Subject"] = (
         mail_subject
     )
-
+    
+    # =====================================================
+    # HTML CHECK
+    # =====================================================
+    
+    if "ftd_mtd_summary_html" not in locals():
+    
+        print(
+            "⚠ FTD/MTD HTML Missing"
+        )
+    
+        ftd_mtd_summary_html = summary_html
+    
+        print(
+            "✅ Using Summary HTML"
+        )
+    
+    # =====================================================
+    # ATTACH HTML
+    # =====================================================
+    
     msg.attach(
         MIMEText(
             ftd_mtd_summary_html,
             "html"
         )
     )
-
     # =====================================================
     # SEND MAIL
     # =====================================================
