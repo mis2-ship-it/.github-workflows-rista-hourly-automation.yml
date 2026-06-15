@@ -692,66 +692,96 @@ lw_df = fetch_sales_window(
     lw_window_end,
     "LW"
 )
+
 # =========================================================
-# FLATTEN ITEM LEVEL DATA
+# FLATTEN ITEMS
 # =========================================================
 
 def flatten_items(df):
 
     print("📦 Flattening Item Data...")
 
-    # explode items list
+    # ==========================================
+    # EMPTY CHECK
+    # ==========================================
+
+    if df is None or len(df) == 0:
+
+        print("⚠ Empty dataframe")
+
+        return pd.DataFrame()
+
+    # ==========================================
+    # COLUMN CHECK
+    # ==========================================
+
+    if "items" not in df.columns:
+
+        print("❌ 'items' column missing")
+
+        print("Available Columns:")
+        print(df.columns.tolist())
+
+        return pd.DataFrame()
+
+    # ==========================================
+    # NULL ITEMS CHECK
+    # ==========================================
+
+    df["items"] = df["items"].apply(
+        lambda x: x
+        if isinstance(x, list)
+        else []
+    )
+
+    # ==========================================
+    # EXPLODE ITEMS
+    # ==========================================
+
     df = df.explode("items")
 
-    # remove null items
+    # ==========================================
+    # REMOVE EMPTY ITEMS
+    # ==========================================
+
     df = df[
         df["items"].notna()
     ].copy()
 
-    # normalize item json
+    if df.empty:
+
+        print("⚠ No item rows found")
+
+        return pd.DataFrame()
+
+    # ==========================================
+    # NORMALIZE JSON
+    # ==========================================
+
     item_df = pd.json_normalize(
         df["items"]
     )
 
-    # rename item columns
-    item_df.columns = [
-        f"item_{col}"
-        for col in item_df.columns
-    ]
-
-    # merge invoice + item level
-    df = (
-        df
-        .drop(columns=["items"])
-        .reset_index(drop=True)
-    )
-
-    item_df = (
-        item_df
-        .reset_index(drop=True)
-    )
+    # ==========================================
+    # COMBINE
+    # ==========================================
 
     df = pd.concat(
-        [df, item_df],
+        [
+            df.drop(columns=["items"])
+            .reset_index(drop=True),
+
+            item_df.reset_index(drop=True)
+        ],
         axis=1
     )
 
     print(
-        "✅ Item Flatten Completed"
-    )
-
-    print(
-        "📋 Item Columns:"
-    )
-
-    print(
-        [
-            c for c in df.columns
-            if c.startswith("item_")
-        ]
+        f"✅ Flatten Completed | Rows: {len(df)}"
     )
 
     return df
+
 
 
 # =========================================================
