@@ -762,6 +762,12 @@ def flatten_items(df):
         df["items"]
     )
 
+    print("ITEM DF COLUMNS")
+    print(item_df.columns.tolist())
+    
+    print("ITEM SAMPLE")
+    print(item_df.head(3))
+
     # ==========================================
     # COMBINE
     # ==========================================
