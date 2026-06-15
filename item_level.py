@@ -1025,11 +1025,10 @@ for source_col, target_col in (
 column_mapping.items()
 ):
 
+
 # ---------------- CURRENT ---------------- #
 
-if (
-    source_col in current_sales.columns
-):
+if source_col in current_sales.columns:
 
     if (
         target_col
@@ -1047,6 +1046,7 @@ if (
         current_sales[
             target_col
         ] = np.where(
+
             (
                 current_sales[
                     target_col
@@ -1064,9 +1064,11 @@ if (
                     target_col
                 ] == ""
             ),
+
             current_sales[
                 source_col
             ],
+
             current_sales[
                 target_col
             ]
@@ -1074,9 +1076,7 @@ if (
 
 # ---------------- LW ---------------- #
 
-if (
-    source_col in lw_sales.columns
-):
+if source_col in lw_sales.columns:
 
     if (
         target_col
@@ -1094,6 +1094,7 @@ if (
         lw_sales[
             target_col
         ] = np.where(
+
             (
                 lw_sales[
                     target_col
@@ -1111,9 +1112,11 @@ if (
                     target_col
                 ] == ""
             ),
+
             lw_sales[
                 source_col
             ],
+
             lw_sales[
                 target_col
             ]
