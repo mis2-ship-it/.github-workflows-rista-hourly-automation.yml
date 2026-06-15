@@ -1025,7 +1025,6 @@ for source_col, target_col in (
 column_mapping.items()
 ):
 
-```
 # ---------------- CURRENT ---------------- #
 
 if (
@@ -1119,7 +1118,6 @@ if (
                 target_col
             ]
         )
-```
 
 print("✅ Item Metric Values Fixed")
 
