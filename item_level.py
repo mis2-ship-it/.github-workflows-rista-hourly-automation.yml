@@ -799,6 +799,85 @@ print(
 )
 
 # =========================================================
+# DEBUG FLATTEN OUTPUT
+# =========================================================
+
+print("CURRENT SAMPLE DATA")
+
+print("CURRENT ITEM COLUMNS")
+print(
+[c for c in current_df.columns
+if "item_" in str(c)]
+)
+
+print("LW ITEM COLUMNS")
+print(
+[c for c in lw_df.columns
+if "item_" in str(c)]
+)
+
+print("CURRENT DUPLICATE COLS")
+print(
+current_df.columns[
+current_df.columns.duplicated()
+]
+)
+
+print("LW DUPLICATE COLS")
+print(
+lw_df.columns[
+lw_df.columns.duplicated()
+]
+)
+
+print("CURRENT ITEM SAMPLE")
+print(
+current_df[
+[
+c for c in [
+"item_quantity",
+"item_baseGrossAmount",
+"item_baseNetAmount",
+"item_baseNetDiscountAmount"
+]
+if c in current_df.columns
+]
+].head(20)
+)
+
+
+sample_cols = [
+    "item_shortName",
+    "item_quantity",
+    "item_baseGrossAmount",
+    "item_baseNetAmount",
+    "item_baseNetDiscountAmount"
+]
+
+available_cols = [
+    c for c in sample_cols
+    if c in current_df.columns
+]
+
+print(
+    current_df[
+        available_cols
+    ].head(10)
+)
+
+print("LW SAMPLE DATA")
+
+available_cols_lw = [
+    c for c in sample_cols
+    if c in lw_df.columns
+]
+
+print(
+    lw_df[
+        available_cols_lw
+    ].head(10)
+)
+# =========================================================
 # REMOVE DUPLICATE COLUMNS
 # =========================================================
 
