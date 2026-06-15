@@ -4378,7 +4378,7 @@ h2 {{
 📊 FTD Product Dashboard
 </h2>
 
-{ftd_summary_html}
+{ftd_mtd_summary_html}
 
 <br><br>
 
@@ -4473,7 +4473,7 @@ except Exception as e:
 # FTD HTML
 # =========================================================
 
-ftd_summary_html = f"""
+ftd_mtd_summary_html = f"""
 <h3>
 📊 FTD Product Dashboard
 </h3>
