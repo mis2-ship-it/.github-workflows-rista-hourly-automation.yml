@@ -782,8 +782,6 @@ def flatten_items(df):
 
     return df
 
-
-
 # =========================================================
 # CREATE ITEM LEVEL DATA
 # =========================================================
@@ -801,35 +799,85 @@ print(
 )
 
 # =========================================================
+# REMOVE DUPLICATE COLUMNS
+# =========================================================
+
+current_df = current_df.loc[
+    :,
+    ~current_df.columns.duplicated()
+]
+
+lw_df = lw_df.loc[
+    :,
+    ~lw_df.columns.duplicated()
+]
+
+print(
+    "✅ Duplicate Columns Removed"
+)
+
+# =========================================================
 # CHECK IMPORTANT ITEM COLUMNS
 # =========================================================
 
-required_cols = [
-    "item_quantity",
-    "item_baseNetAmount",
-    "item_baseNetDiscountAmount",
-    "item_discounts",
-    "item_shortName",
-    "item_categoryName"
-]
+required_cols = {
+    "item_quantity": 0,
+    "item_baseNetAmount": 0,
+    "item_baseNetDiscountAmount": 0,
+    "item_discounts": "",
+    "item_shortName": "",
+    "item_categoryName": ""
+}
 
-for col in required_cols:
+for col, default_value in required_cols.items():
+
+    # ---------------- CURRENT ---------------- #
 
     if col in current_df.columns:
 
         print(
-            f"✅ Found: {col}"
+            f"✅ Current Found: {col}"
         )
 
     else:
 
         print(
-            f"❌ Missing: {col}"
+            f"❌ Current Missing: {col}"
         )
 
+        current_df[col] = (
+            default_value
+        )
+
+    # ---------------- LW ---------------- #
+
+    if col in lw_df.columns:
+
+        print(
+            f"✅ LW Found: {col}"
+        )
+
+    else:
+
+        print(
+            f"❌ LW Missing: {col}"
+        )
+
+        lw_df[col] = (
+            default_value
+        )
+
+# =========================================================
+# CONCAT SALES DATA
+# =========================================================
+
 sales_df = pd.concat(
-    [current_df, lw_df],
-    ignore_index=True
+    [
+        current_df,
+        lw_df
+    ],
+    ignore_index=True,
+    sort=False
 )
 
 print(
@@ -837,14 +885,24 @@ print(
     len(sales_df)
 )
 
+# =========================================================
+# DEBUG
+# =========================================================
+
 print("📋 API Columns:")
-print(sales_df.columns.tolist())
+print(
+    sales_df.columns.tolist()
+)
 
 print("CURRENT DF COLUMNS")
-print(current_df.columns.tolist())
+print(
+    current_df.columns.tolist()
+)
 
 print("LW DF COLUMNS")
-print(lw_df.columns.tolist())
+print(
+    lw_df.columns.tolist()
+)
 
 # =========================================================
 # STANDARD DATAFRAME NAMES
