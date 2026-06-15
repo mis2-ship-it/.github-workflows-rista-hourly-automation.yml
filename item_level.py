@@ -4612,16 +4612,12 @@ EMAIL_PASSWORD = os.environ["EMAIL_PASSWORD"]
 # =========================================================
 
 to_mails = [
-    "faraz@frozenbottle.in"
+    "mis2@frozenbottle.in"
 ]
 
-cc_mails = [
-    "vivek@frozenbottle.in"
-]
 
 all_recipients = (
-    to_mails +
-    cc_mails
+    to_mails
 )
 
 # =========================================================
@@ -4844,16 +4840,12 @@ if current_hour in [7, 8, 10]:
     # =====================================================
 
     to_mails = [
-        "faraz@frozenbottle.in"
+        "mis2@frozenbottle.in"
     ]
 
-    cc_mails = [
-        "vivek@frozenbottle.in"
-    ]
 
     all_recipients = (
-        to_mails +
-        cc_mails
+        to_mails
     )
 
     # =====================================================
@@ -4882,9 +4874,6 @@ if current_hour in [7, 8, 10]:
         to_mails
     )
 
-    msg["CC"] = ", ".join(
-        cc_mails
-    )
 
     msg["Subject"] = (
         mail_subject
