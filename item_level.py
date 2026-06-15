@@ -4473,7 +4473,6 @@ h2 {{
 📊 MTD Product Dashboard
 </h2>
 
-{mtd_summary_html}
 
 </body>
 
@@ -4555,6 +4554,26 @@ except Exception as e:
         "❌ Hourly Mail Error:",
         str(e)
     )
+
+# =====================================================
+# FALLBACK HTML VARIABLES
+# =====================================================
+
+if "ftd_summary_html" not in locals():
+
+    ftd_summary_html = summary_html
+
+if "mtd_summary_html" not in locals():
+
+    mtd_summary_html = summary_html
+
+if "ftd_mtd_summary_html" not in locals():
+
+    ftd_mtd_summary_html = summary_html
+
+print(
+    "✅ FTD/MTD HTML Variables Ready"
+)
 
 # =========================================================
 # FTD HTML
