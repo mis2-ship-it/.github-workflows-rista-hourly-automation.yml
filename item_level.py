@@ -4466,11 +4466,6 @@ h2 {{
 📊 FTD Product Dashboard
 </h2>
 
-{ftd_mtd_summary_html}
-
-<br><br>
-
-<h2>
 📊 MTD Product Dashboard
 </h2>
 
