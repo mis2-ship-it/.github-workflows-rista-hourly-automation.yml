@@ -4654,7 +4654,6 @@ msg = MIMEMultipart()
 
 msg["From"] = EMAIL_USER
 msg["To"] = ", ".join(to_mails)
-msg["CC"] = ", ".join(cc_mails)
 msg["Subject"] = mail_subject
 
 # =========================================================
