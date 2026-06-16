@@ -1430,29 +1430,51 @@ print("✅ Product Mix Merged")
 # SAFE PRODUCT MIX
 # =========================================================
 
-for df in [current_df, lw_df]:
+for df_name, df in [
+
+    ("Current", current_df),
+    ("LW", lw_df)
+
+]:
 
     if "Product Mix" not in df.columns:
 
-        print("⚠ Product Mix Missing")
+        print(
+            f"⚠ Product Mix Missing - {df_name}"
+        )
 
-        print(df.columns.tolist())
+        print(
+            df.columns.tolist()
+        )
 
-        df["Product Mix"] = "Others"
+        df["Product Mix"] = (
+            "Others"
+        )
 
     df["Product Mix"] = (
+
         df["Product Mix"]
         .fillna("Others")
         .astype(str)
         .str.strip()
+
     )
 
-print("✅ Product Mix Safe")
+print(
+    "✅ Product Mix Safe"
+)
+
 print("Current Columns:")
-print(curr.columns.tolist())
+
+print(
+    current_df.columns.tolist()
+)
 
 print("LW Columns:")
-print(lw.columns.tolist())
+
+print(
+    lw_df.columns.tolist()
+)
 
 # =============================================
 # OVERALL PRODUCT MIX
