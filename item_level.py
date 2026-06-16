@@ -1005,98 +1005,81 @@ print("✅ Sales DataFrames Created")
 
 # =========================================================
 
-column_mapping = {
-"quantity": "item_quantity",
-"baseGrossAmount": "item_baseGrossAmount",
-"baseNetAmount": "item_baseNetAmount",
-"baseNetDiscountAmount": "item_baseNetDiscountAmount",
-"shortName": "item_shortName",
-"categoryName": "item_categoryName",
-"createdTime": "item_createdTime"
-}
-
-for source_col, target_col in column_mapping.items():
-
-
-# ---------------- CURRENT ---------------- #
-
+    column_mapping = {
+    "quantity": "item_quantity",
+    "baseGrossAmount": "item_baseGrossAmount",
+    "baseNetAmount": "item_baseNetAmount",
+    "baseNetDiscountAmount": "item_baseNetDiscountAmount",
+    "shortName": "item_shortName",
+    "categoryName": "item_categoryName",
+    "createdTime": "item_createdTime"
+    }
+    
+    for source_col, target_col in column_mapping.items():
+    
+    # ---------------- CURRENT ---------------- #
+    
     if source_col in current_sales.columns:
+    
+        current_sales[target_col] = (
+            current_sales[source_col]
+        )
+    
+    else:
     
         if target_col not in current_sales.columns:
     
-            current_sales[target_col] = (
-                current_sales[source_col]
-            )
-    
-        else:
-    
-            current_sales[target_col] = np.where(
-    
-                (
-                    current_sales[target_col]
-                    .isna()
-                )
-                |
-                (
-                    current_sales[target_col]
-                    == 0
-                )
-                |
-                (
-                    current_sales[target_col]
-                    == ""
-                ),
-    
-                current_sales[source_col],
-    
-                current_sales[target_col]
-            )
+            current_sales[target_col] = 0
     
     # ---------------- LW ---------------- #
     
     if source_col in lw_sales.columns:
     
+        lw_sales[target_col] = (
+            lw_sales[source_col]
+        )
+    
+    else:
+    
         if target_col not in lw_sales.columns:
     
-            lw_sales[target_col] = (
-                lw_sales[source_col]
-            )
-    
-        else:
-    
-            lw_sales[target_col] = np.where(
-    
-                (
-                    lw_sales[target_col]
-                    .isna()
-                )
-                |
-                (
-                    lw_sales[target_col]
-                    == 0
-                )
-                |
-                (
-                    lw_sales[target_col]
-                    == ""
-                ),
-    
-                lw_sales[source_col],
-    
-                lw_sales[target_col]
-            )
-    
+            lw_sales[target_col] = 0
     
     print("✅ Item Metric Values Fixed")
     
-    print(
-    current_sales[
-    [
+    debug_cols = [
+    c for c in [
     "item_quantity",
     "item_baseGrossAmount",
     "item_baseNetAmount",
     "item_baseNetDiscountAmount"
     ]
+    if c in current_sales.columns
+    ]
+    
+    print("CURRENT SALES SAMPLE")
+    
+    print(
+    current_sales[
+    debug_cols
+    ].head(10)
+    )
+    
+    print("LW SALES SAMPLE")
+    
+    debug_cols_lw = [
+    c for c in [
+    "item_quantity",
+    "item_baseGrossAmount",
+    "item_baseNetAmount",
+    "item_baseNetDiscountAmount"
+    ]
+    if c in lw_sales.columns
+    ]
+    
+    print(
+    lw_sales[
+    debug_cols_lw
     ].head(10)
     )
 
