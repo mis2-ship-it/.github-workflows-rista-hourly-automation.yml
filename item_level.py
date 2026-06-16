@@ -445,16 +445,16 @@ def fetch_sales_window(
 
         params = {
             "branch": branch,
-        
+
             "day": start_datetime.strftime(
                 "%Y-%m-%d"
             ),
-        
+
             "page": 1,
             "limit": 5000
         }
         print("Params:", params)
-        
+
         try:
 
             response = requests.get(
@@ -501,7 +501,7 @@ def fetch_sales_window(
                 data
             )
 
-            
+
             # =========================================
             # SAFE BRANCH CODE
             # =========================================
@@ -692,101 +692,67 @@ lw_df = fetch_sales_window(
     lw_window_end,
     "LW"
 )
-
 # =========================================================
-# FLATTEN ITEMS
+# FLATTEN ITEM LEVEL DATA
 # =========================================================
 
 def flatten_items(df):
 
     print("📦 Flattening Item Data...")
 
-    # ==========================================
-    # EMPTY CHECK
-    # ==========================================
-
-    if df is None or len(df) == 0:
-
-        print("⚠ Empty dataframe")
-
-        return pd.DataFrame()
-
-    # ==========================================
-    # COLUMN CHECK
-    # ==========================================
-
-    if "items" not in df.columns:
-
-        print("❌ 'items' column missing")
-
-        print("Available Columns:")
-        print(df.columns.tolist())
-
-        return pd.DataFrame()
-
-    # ==========================================
-    # NULL ITEMS CHECK
-    # ==========================================
-
-    df["items"] = df["items"].apply(
-        lambda x: x
-        if isinstance(x, list)
-        else []
-    )
-
-    # ==========================================
-    # EXPLODE ITEMS
-    # ==========================================
-
+    # explode items list
     df = df.explode("items")
 
-    # ==========================================
-    # REMOVE EMPTY ITEMS
-    # ==========================================
-
+    # remove null items
     df = df[
         df["items"].notna()
     ].copy()
 
-    if df.empty:
-
-        print("⚠ No item rows found")
-
-        return pd.DataFrame()
-
-    # ==========================================
-    # NORMALIZE JSON
-    # ==========================================
-
+    # normalize item json
     item_df = pd.json_normalize(
         df["items"]
     )
 
-    print("ITEM DF COLUMNS")
-    print(item_df.columns.tolist())
-    
-    print("ITEM SAMPLE")
-    print(item_df.head(3))
+    # rename item columns
+    item_df.columns = [
+        f"item_{col}"
+        for col in item_df.columns
+    ]
 
-    # ==========================================
-    # COMBINE
-    # ==========================================
+    # merge invoice + item level
+    df = (
+        df
+        .drop(columns=["items"])
+        .reset_index(drop=True)
+    )
+
+    item_df = (
+        item_df
+        .reset_index(drop=True)
+    )
 
     df = pd.concat(
-        [
-            df.drop(columns=["items"])
-            .reset_index(drop=True),
-
-            item_df.reset_index(drop=True)
-        ],
+        [df, item_df],
         axis=1
     )
 
     print(
-        f"✅ Flatten Completed | Rows: {len(df)}"
+        "✅ Item Flatten Completed"
+    )
+
+    print(
+        "📋 Item Columns:"
+    )
+
+    print(
+        [
+            c for c in df.columns
+            if c.startswith("item_")
+        ]
     )
 
     return df
+
 
 # =========================================================
 # CREATE ITEM LEVEL DATA
@@ -805,164 +771,35 @@ print(
 )
 
 # =========================================================
-# DEBUG FLATTEN OUTPUT
-# =========================================================
-
-print("CURRENT SAMPLE DATA")
-
-print("CURRENT ITEM COLUMNS")
-print(
-[c for c in current_df.columns
-if "item_" in str(c)]
-)
-
-print("LW ITEM COLUMNS")
-print(
-[c for c in lw_df.columns
-if "item_" in str(c)]
-)
-
-print("CURRENT DUPLICATE COLS")
-print(
-current_df.columns[
-current_df.columns.duplicated()
-]
-)
-
-print("LW DUPLICATE COLS")
-print(
-lw_df.columns[
-lw_df.columns.duplicated()
-]
-)
-
-print("CURRENT ITEM SAMPLE")
-print(
-current_df[
-[
-c for c in [
-"item_quantity",
-"item_baseGrossAmount",
-"item_baseNetAmount",
-"item_baseNetDiscountAmount"
-]
-if c in current_df.columns
-]
-].head(20)
-)
-
-
-sample_cols = [
-    "item_shortName",
-    "item_quantity",
-    "item_baseGrossAmount",
-    "item_baseNetAmount",
-    "item_baseNetDiscountAmount"
-]
-
-available_cols = [
-    c for c in sample_cols
-    if c in current_df.columns
-]
-
-print(
-    current_df[
-        available_cols
-    ].head(10)
-)
-
-print("LW SAMPLE DATA")
-
-available_cols_lw = [
-    c for c in sample_cols
-    if c in lw_df.columns
-]
-
-print(
-    lw_df[
-        available_cols_lw
-    ].head(10)
-)
-# =========================================================
-# REMOVE DUPLICATE COLUMNS
-# =========================================================
-
-current_df = current_df.loc[
-    :,
-    ~current_df.columns.duplicated()
-]
-
-lw_df = lw_df.loc[
-    :,
-    ~lw_df.columns.duplicated()
-]
-
-print(
-    "✅ Duplicate Columns Removed"
-)
-
-# =========================================================
 # CHECK IMPORTANT ITEM COLUMNS
 # =========================================================
 
-required_cols = {
-    "item_quantity": 0,
-    "item_baseNetAmount": 0,
-    "item_baseNetDiscountAmount": 0,
-    "item_discounts": "",
-    "item_shortName": "",
-    "item_categoryName": ""
-}
+required_cols = [
+    "item_quantity",
+    "item_baseNetAmount",
+    "item_baseNetDiscountAmount",
+    "item_discounts",
+    "item_shortName",
+    "item_categoryName"
+]
 
-for col, default_value in required_cols.items():
-
-    # ---------------- CURRENT ---------------- #
+for col in required_cols:
 
     if col in current_df.columns:
 
         print(
-            f"✅ Current Found: {col}"
+            f"✅ Found: {col}"
         )
 
     else:
 
         print(
-            f"❌ Current Missing: {col}"
+            f"❌ Missing: {col}"
         )
-
-        current_df[col] = (
-            default_value
-        )
-
-    # ---------------- LW ---------------- #
-
-    if col in lw_df.columns:
-
-        print(
-            f"✅ LW Found: {col}"
-        )
-
-    else:
-
-        print(
-            f"❌ LW Missing: {col}"
-        )
-
-        lw_df[col] = (
-            default_value
-        )
-
-# =========================================================
-# CONCAT SALES DATA
-# =========================================================
 
 sales_df = pd.concat(
-    [
-        current_df,
-        lw_df
-    ],
-    ignore_index=True,
-    sort=False
+    [current_df, lw_df],
+    ignore_index=True
 )
 
 print(
@@ -970,24 +807,14 @@ print(
     len(sales_df)
 )
 
-# =========================================================
-# DEBUG
-# =========================================================
-
 print("📋 API Columns:")
-print(
-    sales_df.columns.tolist()
-)
+print(sales_df.columns.tolist())
 
 print("CURRENT DF COLUMNS")
-print(
-    current_df.columns.tolist()
-)
+print(current_df.columns.tolist())
 
 print("LW DF COLUMNS")
-print(
-    lw_df.columns.tolist()
-)
+print(lw_df.columns.tolist())
 
 # =========================================================
 # STANDARD DATAFRAME NAMES
@@ -998,91 +825,6 @@ current_sales = current_df.copy()
 lw_sales = lw_df.copy()
 
 print("✅ Sales DataFrames Created")
-
-# =========================================================
-
-# FIX ITEM METRIC VALUES
-
-# =========================================================
-
-column_mapping = {
-"quantity": "item_quantity",
-"baseGrossAmount": "item_baseGrossAmount",
-"baseNetAmount": "item_baseNetAmount",
-"baseNetDiscountAmount": "item_baseNetDiscountAmount",
-"shortName": "item_shortName",
-"categoryName": "item_categoryName",
-"createdTime": "item_createdTime"
-}
-
-for source_col, target_col in column_mapping.items():
-
-# ---------------- CURRENT ---------------- #
-
-    if source_col in current_sales.columns:
-    
-        current_sales[target_col] = (
-            current_sales[source_col]
-        )
-    
-    else:
-    
-        if target_col not in current_sales.columns:
-    
-            current_sales[target_col] = 0
-    
-    # ---------------- LW ---------------- #
-    
-    if source_col in lw_sales.columns:
-    
-        lw_sales[target_col] = (
-            lw_sales[source_col]
-        )
-    
-    else:
-    
-        if target_col not in lw_sales.columns:
-    
-            lw_sales[target_col] = 0
-    
-    print("✅ Item Metric Values Fixed")
-    
-    debug_cols = [
-    c for c in [
-    "item_quantity",
-    "item_baseGrossAmount",
-    "item_baseNetAmount",
-    "item_baseNetDiscountAmount"
-    ]
-    if c in current_sales.columns
-    ]
-    
-    print("CURRENT SALES SAMPLE")
-    
-    print(
-    current_sales[
-    debug_cols
-    ].head(10)
-    )
-    
-    print("LW SALES SAMPLE")
-    
-    debug_cols_lw = [
-    c for c in [
-    "item_quantity",
-    "item_baseGrossAmount",
-    "item_baseNetAmount",
-    "item_baseNetDiscountAmount"
-    ]
-    if c in lw_sales.columns
-    ]
-    
-    print(
-    lw_sales[
-    debug_cols_lw
-    ].head(10)
-    )
-
 
 # =========================================================
 # EMPTY CHECK
@@ -1532,7 +1274,67 @@ print(
     "to",
     lw_sales["Order Time"].max()
 )
+# =========================================================
+# FIX PRODUCT MIX COLUMN
+# =========================================================
 
+if "Product Mix_x" in current_sales.columns:
+for df_name, df in [
+    ("Current", current_sales),
+    ("LW", lw_sales)
+]:
+
+    current_sales["Product Mix"] = (
+        current_sales["Product Mix_x"]
+    )
+    # if Product Mix already exists → skip
+    if "Product Mix" in df.columns:
+        continue
+
+elif "Product Mix_y" in current_sales.columns:
+    # both x and y available
+    if (
+        "Product Mix_x" in df.columns
+        and
+        "Product Mix_y" in df.columns
+    ):
+
+    current_sales["Product Mix"] = (
+        current_sales["Product Mix_y"]
+    )
+        df["Product Mix"] = (
+            df["Product Mix_x"]
+            .combine_first(
+                df["Product Mix_y"]
+            )
+        )
+
+    # only x available
+    elif "Product Mix_x" in df.columns:
+
+if "Product Mix_x" in lw_sales.columns:
+        df["Product Mix"] = (
+            df["Product Mix_x"]
+        )
+
+    lw_sales["Product Mix"] = (
+        lw_sales["Product Mix_x"]
+    )
+    # only y available
+    elif "Product Mix_y" in df.columns:
+
+elif "Product Mix_y" in lw_sales.columns:
+        df["Product Mix"] = (
+            df["Product Mix_y"]
+        )
+
+    lw_sales["Product Mix"] = (
+        lw_sales["Product Mix_y"]
+    print(
+        f"✅ Product Mix Fixed - {df_name}"
+    )
+
+print("✅ Product Mix Fixed")
 
 # =========================================================
 # ITEM GROUP FOR WINDOW DATA
@@ -1574,21 +1376,6 @@ lw_sales = lw_sales.merge(
 )
 
 print("✅ Product Mix Merged")
-print("CURRENT PRODUCT MIX RELATED COLUMNS")
-print(
-    [
-        c for c in current_sales.columns
-        if "Product Mix" in str(c)
-    ]
-)
-
-print("LW PRODUCT MIX RELATED COLUMNS")
-print(
-    [
-        c for c in lw_sales.columns
-        if "Product Mix" in str(c)
-    ]
-)
 
 # =========================================================
 # SAFE PRODUCT MIX
@@ -1612,54 +1399,79 @@ for df in [current_df, lw_df]:
     )
 
 print("✅ Product Mix Safe")
+print("Current Columns:")
+print(curr.columns.tolist())
 
+print("LW Columns:")
+print(lw.columns.tolist())
 
-# =========================================================
-# FIX PRODUCT MIX FOR OVERALL DASHBOARD
-# =========================================================
+# =============================================
+# OVERALL PRODUCT MIX
+# =============================================
 
-for df_name, df in [
-    ("Current", current_sales),
-    ("LW", lw_sales)
-]:
+curr = current_sales.copy()
+lw = lw_sales.copy()
 
-    if "Product Mix" not in df.columns:
-
-        product_mix_cols = [
-            c for c in df.columns
-            if "Product Mix" in str(c)
-        ]
-
-        print(
-            f"{df_name} Product Mix Columns:",
-            product_mix_cols
-        )
-
-        if product_mix_cols:
-
-            df["Product Mix"] = None
-
-            for col in product_mix_cols:
-
-                df["Product Mix"] = (
-                    df["Product Mix"]
-                    .combine_first(df[col])
-                )
-
-        else:
-
-            df["Product Mix"] = "Others"
-
-    df["Product Mix"] = (
-        df["Product Mix"]
-        .fillna("Others")
-        .astype(str)
-        .str.strip()
+curr_mix = (
+    curr.groupby("Product Mix")
+    .agg(
+        Orders=("invoiceNumber", "nunique"),
+        Qty_Sold=("item_quantity", "sum"),
+        Gross_Rev=("item_baseGrossAmount", "sum"),
+        Net_Rev=("item_baseNetAmount", "sum"),
+        Discount=("item_baseNetDiscountAmount", lambda x: abs(x.sum()))
     )
+    .reset_index()
+)
 
-print("✅ Product Mix Fixed For Overall")
+curr_mix["Dis %"] = np.where(
+    curr_mix["Gross_Rev"] > 0,
+    (
+        curr_mix["Discount"]
+        /
+        curr_mix["Gross_Rev"]
+    ) * 100,
+    0
+).round(1)
 
+lw_mix = (
+    lw.groupby("Product Mix")
+    .agg(
+        LW_Orders=("invoiceNumber", "nunique"),
+        LW_Qty_Sold=("item_quantity", "sum"),
+        LW_Gross_Rev=("item_baseGrossAmount", "sum"),
+        LW_Net_Rev=("item_baseNetAmount", "sum"),
+        LW_Discount=("item_baseNetDiscountAmount", lambda x: abs(x.sum()))
+    )
+    .reset_index()
+)
 
+overall_mix = curr_mix.merge(
+    lw_mix,
+    on="Product Mix",
+    how="left"
+).fillna(0)
+
+overall_mix["Growth %"] = np.where(
+    overall_mix["LW_Net_Rev"] > 0,
+    (
+        (
+            overall_mix["Net_Rev"]
+            -
+            overall_mix["LW_Net_Rev"]
+        )
+        /
+        overall_mix["LW_Net_Rev"]
+    ) * 100,
+    0
+).round(1)
+
+product_mix_dashboard[
+    "Overall"
+] = overall_mix.sort_values(
+    "Net_Rev",
+    ascending=False
+)
 
 # =========================================================
 # HOURLY COMPARISON DASHBOARD
@@ -1718,6 +1530,7 @@ def create_hourly_dashboard(
 
         print("Curr Columns:")
         print(curr.columns.tolist())
+
         
         print("LW Columns:")
         print(lw.columns.tolist())
@@ -1752,7 +1565,7 @@ def create_hourly_dashboard(
                 )
 
                 lw[col] = 0
-    
+
 
         # =================================================
         # CURRENT METRICS
@@ -1989,71 +1802,6 @@ for col in dashboard_cols:
 print("✅ Dashboard Columns Fixed")
 
 # =========================================================
-# FIX PRODUCT MIX COLUMN
-# =========================================================
-
-def fix_product_mix(df, df_name):
-
-    print(f"🔍 Checking Product Mix for {df_name}")
-
-    product_mix_cols = [
-        c for c in df.columns
-        if "Product Mix" in str(c)
-    ]
-
-    print(
-        f"{df_name} Product Mix Columns:",
-        product_mix_cols
-    )
-
-    # create blank column first
-    df["Product Mix"] = None
-
-    # combine available columns
-    for col in product_mix_cols:
-
-        df["Product Mix"] = (
-            df["Product Mix"]
-            .combine_first(df[col])
-        )
-
-    # fallback
-    df["Product Mix"] = (
-        df["Product Mix"]
-        .fillna("Others")
-        .astype(str)
-        .str.strip()
-    )
-
-    print(
-        f"✅ {df_name} Product Mix Fixed"
-    )
-
-    print(
-        df["Product Mix"]
-        .value_counts()
-        .head(10)
-    )
-
-    return df
-
-
-# =========================================================
-# APPLY PRODUCT MIX FIX
-# =========================================================
-
-current_sales = fix_product_mix(
-    current_sales,
-    "Current"
-)
-
-lw_sales = fix_product_mix(
-    lw_sales,
-    "LW"
-)
-
-
-# =========================================================
 # PRODUCT MIX DASHBOARD
 # =========================================================
 
@@ -2062,11 +1810,17 @@ def create_product_mix_dashboard(
     lw_sales
 ):
 
+    print("Function Current Columns")
+    print(current_sales.columns.tolist())
+
+    print("Function LW Columns")
+    print(lw_sales.columns.tolist())
+
     brands = {
-        "Frozen Bottle": "Frozen Bottle",
-        "Boba Bar": "Boba Bar",
-        "Madno": "Madno",
-        "Lubov": "Lubov- Patisserie"
+    "Frozen Bottle": "Frozen Bottle",
+    "Boba Bar": "Boba Bar",
+    "Madno": "Madno",
+    "Lubov": "Lubov- Patisserie"
     }
 
     product_mix_dashboard = {}
@@ -2089,51 +1843,40 @@ def create_product_mix_dashboard(
             brand_filter.upper()
         ].copy()
 
-        print("================================")
-        print("Brand:", brand)
-        print("Current Rows:", len(curr))
-        print("LW Rows:", len(lw))
-        print(
-            "Current Product Mix Exists:",
-            "Product Mix" in curr.columns
-        )
-        print(
-            "LW Product Mix Exists:",
-            "Product Mix" in lw.columns
-        )
-        print("================================")
-
         # =============================================
-        # REQUIRED METRIC COLUMNS
+        # FIX MISSING METRIC COLUMNS
         # =============================================
 
         required_cols = [
             "item_quantity",
             "item_baseNetAmount",
-            "item_baseNetDiscountAmount",
-            "item_baseGrossAmount"
+            "item_baseNetDiscountAmount"
         ]
 
         for col in required_cols:
 
             if col not in curr.columns:
+
+                print(
+                    f"⚠ Missing Column in Current: {col}"
+                )
+
                 curr[col] = 0
 
             if col not in lw.columns:
+
+                print(
+                    f"⚠ Missing Column in LW: {col}"
+                )
+
                 lw[col] = 0
 
-        # numeric conversion
-        for col in required_cols:
+        print("Current Columns:")
+        print(curr.columns.tolist())
 
-            curr[col] = pd.to_numeric(
-                curr[col],
-                errors="coerce"
-            ).fillna(0)
+        print("LW Columns:")
+        print(lw.columns.tolist())
 
-            lw[col] = pd.to_numeric(
-                lw[col],
-                errors="coerce"
-            ).fillna(0)
 
         # =============================================
         # CURRENT MIX
@@ -2142,12 +1885,12 @@ def create_product_mix_dashboard(
         curr_mix = (
             curr.groupby("Product Mix")
             .agg(
-                Orders=(
-                    "invoiceNumber",
-                    "nunique"
-                ),
-
                 **{
+                    "Orders": (
+                        "invoiceNumber",
+                        "nunique"
+                    ),
+
                     "Gross Rev": (
                         "item_baseGrossAmount",
                         "sum"
@@ -2165,8 +1908,7 @@ def create_product_mix_dashboard(
 
                     "Discount": (
                         "item_baseNetDiscountAmount",
-                        lambda x:
-                        abs(x.sum())
+                        lambda x: abs(x.sum())
                     )
                 }
             )
@@ -2181,7 +1923,9 @@ def create_product_mix_dashboard(
                 curr_mix["Gross Rev"]
             ) * 100,
             0
-        )
+        ).round(1)
+
+
 
         # =============================================
         # LW MIX
@@ -2196,11 +1940,6 @@ def create_product_mix_dashboard(
                         "nunique"
                     ),
 
-                    "LW Gross Rev": (
-                        "item_baseGrossAmount",
-                        "sum"
-                    ),
-
                     "LW Qty Sold": (
                         "item_quantity",
                         "sum"
@@ -2211,10 +1950,14 @@ def create_product_mix_dashboard(
                         "sum"
                     ),
 
+                    "LW Gross Rev": (
+                        "item_baseGrossAmount",
+                        "sum"
+                    ),
+
                     "LW Discount": (
                         "item_baseNetDiscountAmount",
-                        lambda x:
-                        abs(x.sum())
+                        lambda x: abs(x.sum())
                     )
                 }
             )
@@ -2229,7 +1972,16 @@ def create_product_mix_dashboard(
                 lw_mix["LW Gross Rev"]
             ) * 100,
             0
-        )
+        ).round(1)
+
+        lw_mix["LW AOV"] = np.where(
+            lw_mix["LW Orders"] > 0,
+            lw_mix["LW Net Rev"]
+            /
+            lw_mix["LW Orders"],
+            0
+        ).round(1)
+
 
         # =============================================
         # MERGE
@@ -2239,7 +1991,17 @@ def create_product_mix_dashboard(
             lw_mix,
             on="Product Mix",
             how="left"
-        ).fillna(0)
+        )
+
+        final_mix = final_mix.fillna(0)
+
+        final_mix = (
+            final_mix
+            .sort_values(
+                "Net Rev",
+                ascending=False
+            )
+        )
 
         # =============================================
         # GROWTH %
@@ -2257,373 +2019,13 @@ def create_product_mix_dashboard(
                 final_mix["LW Net Rev"]
             ) * 100,
             0
-        )
-
-        final_mix = (
-            final_mix
-            .sort_values(
-                "Net Rev",
-                ascending=False
-            )
-            .round(0)
-        )
+        ).round(1)
 
         product_mix_dashboard[
             brand
         ] = final_mix
 
     return product_mix_dashboard
-
-# =========================================================
-# SOURCE + REGION PRODUCT MIX DASHBOARD
-# =========================================================
-
-def create_source_region_dashboard(
-    current_sales,
-    lw_sales
-):
-
-    dashboard = {}
-
-    # =====================================================
-    # SOURCE FILTERS
-    # =====================================================
-
-    source_filters = {
-        "In Store":
-            ~current_sales["channel"]
-            .astype(str)
-            .str.upper()
-            .str.contains(
-                "SWIGGY|ZOMATO",
-                na=False
-            ),
-
-        "Swiggy":
-            current_sales["channel"]
-            .astype(str)
-            .str.upper()
-            .str.contains(
-                "SWIGGY",
-                na=False
-            ),
-
-        "Zomato":
-            current_sales["channel"]
-            .astype(str)
-            .str.upper()
-            .str.contains(
-                "ZOMATO",
-                na=False
-            )
-    }
-
-    for source, curr_filter in source_filters.items():
-
-        # =================================================
-        # CURRENT SOURCE
-        # =================================================
-
-        curr = current_sales[
-            curr_filter
-        ].copy()
-
-        # =================================================
-        # LW SOURCE
-        # =================================================
-
-        if source == "In Store":
-
-            lw = lw_sales[
-                ~lw_sales["channel"]
-                .astype(str)
-                .str.upper()
-                .str.contains(
-                    "SWIGGY|ZOMATO",
-                    na=False
-                )
-            ].copy()
-
-        else:
-
-            lw = lw_sales[
-                lw_sales["channel"]
-                .astype(str)
-                .str.upper()
-                .str.contains(
-                    source.upper(),
-                    na=False
-                )
-            ].copy()
-
-        # =================================================
-        # CURRENT SUMMARY
-        # =================================================
-
-        curr_mix = (
-            curr.groupby(
-                ["Region", "Product Mix"]
-            )
-            .agg(
-                **{
-                    "Net Sales": (
-                        "item_baseNetAmount",
-                        "sum"
-                    ),
-
-                    "Qty": (
-                        "item_quantity",
-                        "sum"
-                    ),
-
-                    "Gross Sales": (
-                        "item_baseGrossAmount",
-                        "sum"
-                    ),
-
-                    "Discount": (
-                        "item_baseNetDiscountAmount",
-                        lambda x:
-                        abs(x.sum())
-                    )
-                }
-            )
-            .reset_index()
-        )
-
-        curr_mix["Dis %"] = np.where(
-            curr_mix["Gross Sales"] > 0,
-            (
-                curr_mix["Discount"]
-                /
-                curr_mix["Gross Sales"]
-            ) * 100,
-            0
-        )
-
-        curr_mix = curr_mix.drop(
-            columns=[
-                "Gross Sales",
-                "Discount"
-            ]
-        )
-
-        # =================================================
-        # LAST WEEK SUMMARY
-        # =================================================
-
-        lw_mix = (
-            lw.groupby(
-                ["Region", "Product Mix"]
-            )
-            .agg(
-                **{
-                    "LW Net Sales": (
-                        "item_baseNetAmount",
-                        "sum"
-                    ),
-
-                    "LW Qty": (
-                        "item_quantity",
-                        "sum"
-                    ),
-
-                    "LW Gross": (
-                        "item_baseGrossAmount",
-                        "sum"
-                    ),
-
-                    "LW Discount": (
-                        "item_baseNetDiscountAmount",
-                        lambda x:
-                        abs(x.sum())
-                    )
-                }
-            )
-            .reset_index()
-        )
-
-        lw_mix["LW Dis %"] = np.where(
-            lw_mix["LW Gross"] > 0,
-            (
-                lw_mix["LW Discount"]
-                /
-                lw_mix["LW Gross"]
-            ) * 100,
-            0
-        )
-
-        lw_mix = lw_mix.drop(
-            columns=[
-                "LW Gross",
-                "LW Discount"
-            ]
-        )
-
-        # =================================================
-        # MERGE
-        # =================================================
-
-        final_df = curr_mix.merge(
-            lw_mix,
-            on=[
-                "Region",
-                "Product Mix"
-            ],
-            how="left"
-        ).fillna(0)
-
-        # =================================================
-        # GROWTH %
-        # =================================================
-
-        final_df["Sales Growth %"] = np.where(
-            final_df["LW Net Sales"] > 0,
-            (
-                (
-                    final_df["Net Sales"]
-                    -
-                    final_df["LW Net Sales"]
-                )
-                /
-                final_df["LW Net Sales"]
-            ) * 100,
-            0
-        )
-
-        final_df["Qty Growth %"] = np.where(
-            final_df["LW Qty"] > 0,
-            (
-                (
-                    final_df["Qty"]
-                    -
-                    final_df["LW Qty"]
-                )
-                /
-                final_df["LW Qty"]
-            ) * 100,
-            0
-        )
-
-        # =================================================
-        # TOP 10 PRODUCT MIX
-        # =================================================
-
-        final_df = (
-            final_df
-            .sort_values(
-                "Net Sales",
-                ascending=False
-            )
-            .head(10)
-        )
-
-        # =================================================
-        # ROUND
-        # =================================================
-
-        numeric_cols = final_df.select_dtypes(
-            include=np.number
-        ).columns
-
-        final_df[numeric_cols] = (
-            final_df[numeric_cols]
-            .round(0)
-            .astype(int)
-        )
-
-        dashboard[source] = final_df
-
-    return dashboard
-    
-# Create Product Mix Dashboard #
-
-product_mix_dashboard = (
-    create_product_mix_dashboard(
-        current_sales,
-        lw_sales
-    )
-)
-
-print(
-    "✅ Product Mix Dashboard Created"
-)
-
-for k, v in (
-    product_mix_dashboard.items()
-):
-    print(k, len(v))
-
-
-# =============================================
-# OVERALL PRODUCT MIX
-# =============================================
-
-curr = current_sales.copy()
-lw = lw_sales.copy()
-
-curr_mix = (
-    curr.groupby("Product Mix")
-    .agg(
-        Orders=("invoiceNumber", "nunique"),
-        Qty_Sold=("item_quantity", "sum"),
-        Gross_Rev=("item_baseGrossAmount", "sum"),
-        Net_Rev=("item_baseNetAmount", "sum"),
-        Discount=("item_baseNetDiscountAmount", lambda x: abs(x.sum()))
-    )
-    .reset_index()
-)
-
-curr_mix["Dis %"] = np.where(
-    curr_mix["Gross_Rev"] > 0,
-    (
-        curr_mix["Discount"]
-        /
-        curr_mix["Gross_Rev"]
-    ) * 100,
-    0
-).round(1)
-
-lw_mix = (
-    lw.groupby("Product Mix")
-    .agg(
-        LW_Orders=("invoiceNumber", "nunique"),
-        LW_Qty_Sold=("item_quantity", "sum"),
-        LW_Gross_Rev=("item_baseGrossAmount", "sum"),
-        LW_Net_Rev=("item_baseNetAmount", "sum"),
-        LW_Discount=("item_baseNetDiscountAmount", lambda x: abs(x.sum()))
-    )
-    .reset_index()
-)
-
-overall_mix = curr_mix.merge(
-    lw_mix,
-    on="Product Mix",
-    how="left"
-).fillna(0)
-
-overall_mix["Growth %"] = np.where(
-    overall_mix["LW_Net_Rev"] > 0,
-    (
-        (
-            overall_mix["Net_Rev"]
-            -
-            overall_mix["LW_Net_Rev"]
-        )
-        /
-        overall_mix["LW_Net_Rev"]
-    ) * 100,
-    0
-).round(1)
-
-product_mix_dashboard[
-    "Overall"
-] = overall_mix.sort_values(
-    "Net_Rev",
-    ascending=False
-)
-
-print("✅ Overall Product Mix Added")
 
 
 # =========================================================
@@ -2695,18 +2097,26 @@ print(
     ].head()
 )
 
-print("CURRENT SALES PRODUCT MIX CHECK")
-print(
-    [col for col in current_sales.columns
-     if "Product Mix" in col]
+
+# =========================================================
+# CREATE PRODUCT MIX DASHBOARD
+# =========================================================
+
+product_mix_dashboard = (
+    create_product_mix_dashboard(
+        current_sales,
+        lw_sales
+    )
 )
 
-print("LW SALES PRODUCT MIX CHECK")
 print(
-    [col for col in lw_sales.columns
-     if "Product Mix" in col]
+    "✅ Product Mix Dashboard Created"
 )
 
+for k, v in (
+    product_mix_dashboard.items()
+):
+    print(k, len(v))
 
 # =========================================================
 # CATEGORY DASHBOARD
@@ -2740,8 +2150,8 @@ def create_category_dashboard(
             ==
             brand_filter.upper()
         ].copy()
-        
-        
+
+
         lw = lw_sales[
             lw_sales["brandName"]
             .astype(str)
@@ -2754,7 +2164,7 @@ def create_category_dashboard(
         # =============================================
         # CURRENT MIX
         # =============================================
-        
+
         curr_cat = (
             curr.groupby("Category Group")
             .agg(
@@ -2763,12 +2173,12 @@ def create_category_dashboard(
                         "invoiceNumber",
                         "nunique"
                     ),
-        
+
                     "Qty Sold": (
                         "item_quantity",
                         "sum"
                     ),
-        
+
                     "Net Rev": (
                         "item_baseNetAmount",
                         "sum"
@@ -2778,7 +2188,7 @@ def create_category_dashboard(
                         "item_baseGrossAmount",
                         "sum"
                     ),
-        
+
                     "Discount": (
                         "item_baseNetDiscountAmount",
                         lambda x: abs(x.sum())
@@ -2787,7 +2197,7 @@ def create_category_dashboard(
             )
             .reset_index()
         )
-        
+
         curr_cat["Dis %"] = np.where(
             curr_cat["Gross Rev"] > 0,
             (
@@ -2797,13 +2207,13 @@ def create_category_dashboard(
             ) * 100,
             0
         ).round(1)
-        
-        
+
+
 
         # =============================================
         # LAST WEEK CATEGORY
         # =============================================
-        
+
         lw_cat = (
             lw.groupby(
                 "Category Group"
@@ -2819,17 +2229,17 @@ def create_category_dashboard(
                         "item_baseGrossAmount",
                         "sum"
                     ),
-        
+
                     "LW Qty": (
                         "item_quantity",
                         "sum"
                     ),
-        
+
                     "LW Orders": (
                         "invoiceNumber",
                         "nunique"
                     ),
-        
+
                     "LW Discount": (
                         "item_baseNetDiscountAmount",
                         lambda x:
@@ -2839,7 +2249,7 @@ def create_category_dashboard(
             )
             .reset_index()
         )
-        
+
         lw_cat["LW Dis %"] = np.where(
             lw_cat["LW Gross Rev"] > 0,
             (
@@ -2849,7 +2259,7 @@ def create_category_dashboard(
             ) * 100,
             0
         ).round(1)
-        
+
         lw_cat = lw_cat.drop(
             columns="LW Discount"
         )
@@ -2872,7 +2282,7 @@ def create_category_dashboard(
         # =============================================
         # GROWTH %
         # =============================================
-        
+
         final_cat["Growth %"] = np.where(
             final_cat["LW Net Rev"] > 0,
             (
@@ -3083,7 +2493,7 @@ def create_item_dashboard(
         # =============================================
         # LAST WEEK ITEM LEVEL
         # =============================================
-        
+
         lw_item = (
             lw.groupby(
                 "Item Group Name"
@@ -3099,17 +2509,17 @@ def create_item_dashboard(
                         "item_baseGrossAmount",
                         "sum"
                     ),
-        
+
                     "LW Qty": (
                         "item_quantity",
                         "sum"
                     ),
-        
+
                     "LW Orders": (
                         "invoiceNumber",
                         "nunique"
                     ),
-        
+
                     "LW Discount": (
                         "item_baseNetDiscountAmount",
                         lambda x:
@@ -3119,7 +2529,7 @@ def create_item_dashboard(
             )
             .reset_index()
         )
-        
+
         lw_item["LW Dis %"] = np.where(
             lw_item["LW Gross Rev"] > 0,
             (
@@ -3129,21 +2539,21 @@ def create_item_dashboard(
             ) * 100,
             0
         ).round(1)
-        
+
         lw_item = lw_item.drop(
             columns="LW Discount"
         )
-        
+
         # =============================================
         # MERGE
         # =============================================
-        
+
         final_item = curr_item.merge(
             lw_item,
             on="Item Group Name",
             how="left"
         )
-        
+
         final_item = (
             final_item
             .fillna(0)
@@ -3152,7 +2562,7 @@ def create_item_dashboard(
         # =============================================
         # GROWTH %
         # =============================================
-        
+
         final_item["Growth %"] = np.where(
             final_item["LW Net Rev"] > 0,
             (
@@ -3187,7 +2597,7 @@ def create_item_dashboard(
             .head(15)
         )
 
- 
+
         # =============================================
         # ROUND VALUES
         # =============================================
@@ -3299,7 +2709,7 @@ for k, v in (
         k,
         len(v)
     )
-    
+
 # =========================================================
 # DISCOUNT CODE EXTRACTION
 # =========================================================
@@ -3651,7 +3061,7 @@ def create_discount_dashboard(
         # =====================================================
         # GROWTH %
         # =====================================================
-        
+
         code_df["Growth %"] = np.where(
             code_df["LW Net Rev"] > 0,
             (
@@ -3732,6 +3142,267 @@ def create_discount_dashboard(
 
     return dashboard
 
+# =========================================================
+# SOURCE + REGION PRODUCT MIX DASHBOARD
+# =========================================================
+
+def create_source_region_dashboard(
+    current_sales,
+    lw_sales
+):
+
+    dashboard = {}
+
+    # =====================================================
+    # SOURCE FILTERS
+    # =====================================================
+
+    source_filters = {
+        "In Store":
+            ~current_sales["channel"]
+            .astype(str)
+            .str.upper()
+            .str.contains(
+                "SWIGGY|ZOMATO",
+                na=False
+            ),
+
+        "Swiggy":
+            current_sales["channel"]
+            .astype(str)
+            .str.upper()
+            .str.contains(
+                "SWIGGY",
+                na=False
+            ),
+
+        "Zomato":
+            current_sales["channel"]
+            .astype(str)
+            .str.upper()
+            .str.contains(
+                "ZOMATO",
+                na=False
+            )
+    }
+
+    for source, curr_filter in source_filters.items():
+
+        # =================================================
+        # CURRENT SOURCE
+        # =================================================
+
+        curr = current_sales[
+            curr_filter
+        ].copy()
+
+        # =================================================
+        # LW SOURCE
+        # =================================================
+
+        if source == "In Store":
+
+            lw = lw_sales[
+                ~lw_sales["channel"]
+                .astype(str)
+                .str.upper()
+                .str.contains(
+                    "SWIGGY|ZOMATO",
+                    na=False
+                )
+            ].copy()
+
+        else:
+
+            lw = lw_sales[
+                lw_sales["channel"]
+                .astype(str)
+                .str.upper()
+                .str.contains(
+                    source.upper(),
+                    na=False
+                )
+            ].copy()
+
+        # =================================================
+        # CURRENT SUMMARY
+        # =================================================
+
+        curr_mix = (
+            curr.groupby(
+                ["Region", "Product Mix"]
+            )
+            .agg(
+                **{
+                    "Net Sales": (
+                        "item_baseNetAmount",
+                        "sum"
+                    ),
+
+                    "Qty": (
+                        "item_quantity",
+                        "sum"
+                    ),
+
+                    "Gross Sales": (
+                        "item_baseGrossAmount",
+                        "sum"
+                    ),
+
+                    "Discount": (
+                        "item_baseNetDiscountAmount",
+                        lambda x:
+                        abs(x.sum())
+                    )
+                }
+            )
+            .reset_index()
+        )
+
+        curr_mix["Dis %"] = np.where(
+            curr_mix["Gross Sales"] > 0,
+            (
+                curr_mix["Discount"]
+                /
+                curr_mix["Gross Sales"]
+            ) * 100,
+            0
+        )
+
+        curr_mix = curr_mix.drop(
+            columns=[
+                "Gross Sales",
+                "Discount"
+            ]
+        )
+
+        # =================================================
+        # LAST WEEK SUMMARY
+        # =================================================
+
+        lw_mix = (
+            lw.groupby(
+                ["Region", "Product Mix"]
+            )
+            .agg(
+                **{
+                    "LW Net Sales": (
+                        "item_baseNetAmount",
+                        "sum"
+                    ),
+
+                    "LW Qty": (
+                        "item_quantity",
+                        "sum"
+                    ),
+
+                    "LW Gross": (
+                        "item_baseGrossAmount",
+                        "sum"
+                    ),
+
+                    "LW Discount": (
+                        "item_baseNetDiscountAmount",
+                        lambda x:
+                        abs(x.sum())
+                    )
+                }
+            )
+            .reset_index()
+        )
+
+        lw_mix["LW Dis %"] = np.where(
+            lw_mix["LW Gross"] > 0,
+            (
+                lw_mix["LW Discount"]
+                /
+                lw_mix["LW Gross"]
+            ) * 100,
+            0
+        )
+
+        lw_mix = lw_mix.drop(
+            columns=[
+                "LW Gross",
+                "LW Discount"
+            ]
+        )
+
+        # =================================================
+        # MERGE
+        # =================================================
+
+        final_df = curr_mix.merge(
+            lw_mix,
+            on=[
+                "Region",
+                "Product Mix"
+            ],
+            how="left"
+        ).fillna(0)
+
+        # =================================================
+        # GROWTH %
+        # =================================================
+
+        final_df["Sales Growth %"] = np.where(
+            final_df["LW Net Sales"] > 0,
+            (
+                (
+                    final_df["Net Sales"]
+                    -
+                    final_df["LW Net Sales"]
+                )
+                /
+                final_df["LW Net Sales"]
+            ) * 100,
+            0
+        )
+
+        final_df["Qty Growth %"] = np.where(
+            final_df["LW Qty"] > 0,
+            (
+                (
+                    final_df["Qty"]
+                    -
+                    final_df["LW Qty"]
+                )
+                /
+                final_df["LW Qty"]
+            ) * 100,
+            0
+        )
+
+        # =================================================
+        # TOP 10 PRODUCT MIX
+        # =================================================
+
+        final_df = (
+            final_df
+            .sort_values(
+                "Net Sales",
+                ascending=False
+            )
+            .head(10)
+        )
+
+        # =================================================
+        # ROUND
+        # =================================================
+
+        numeric_cols = final_df.select_dtypes(
+            include=np.number
+        ).columns
+
+        final_df[numeric_cols] = (
+            final_df[numeric_cols]
+            .round(0)
+            .astype(int)
+        )
+
+        dashboard[source] = final_df
+
+    return dashboard
 
 
 # =========================================================
@@ -3929,7 +3600,6 @@ print(
     "✅ Product Mix Updated"
 )
 
-time.sleep(5)
 
 # =========================================================
 # 3. CATEGORY DASHBOARD
@@ -3972,7 +3642,6 @@ print(
     "✅ Category Dashboard Updated"
 )
 
-time.sleep(5)
 
 # =========================================================
 # 4. TOP ITEMS
@@ -4015,7 +3684,6 @@ print(
     "✅ Item Dashboard Updated"
 )
 
-time.sleep(5)
 
 # =========================================================
 # 5. SWIGGY DISCOUNT
@@ -4058,7 +3726,7 @@ print(
     "✅ Swiggy Dashboard Updated"
 )
 
-time.sleep(5)
+
 # =========================================================
 # 6. ZOMATO DISCOUNT
 # =========================================================
@@ -4104,7 +3772,6 @@ print(
     "✅ ALL DASHBOARDS REFRESHED"
 )
 
-time.sleep(5)
 # =========================================================
 # HOURLY WINDOW
 # =========================================================
@@ -4230,13 +3897,13 @@ def apply_growth_style(df):
             # ==========================================
             # REMOVE DECIMALS
             # ==========================================
-            
+
             try:
-            
+
                 if isinstance(val, (int, float)):
-            
+
                     val = round(val)
-            
+
             except:
                 pass
             # Growth Highlight
@@ -4545,6 +4212,7 @@ print("✅ Summary HTML Created")
 
 import smtplib
 import os
+import json
 
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -4555,125 +4223,30 @@ print("📧 Preparing Hourly Mail...")
 EMAIL_USER = os.environ["EMAIL_USER"]
 EMAIL_PASSWORD = os.environ["EMAIL_PASSWORD"]
 
-# =========================================================
-# RECEIVERS
-# =========================================================
-
 to_mails = [
     "mis2@frozenbottle.in"
 ]
 
+cc_mails = [
+    "mis2@frozenbottle.in"
+]
 
 all_recipients = (
-    to_mails
+    to_mails +
+    cc_mails
 )
-
-# =========================================================
-# SUBJECT
-# =========================================================
 
 mail_subject = (
     f"Hourly Product Level Sales Dashboard _ "
     f"{formatted_date}"
 )
 
-# =====================================================
-# SUBJECT
-# =====================================================
-
-mail_subject = (
-    f"📊 FTD & MTD "
-    f"Product Dashboard "
-    f"| {business_date}"
-)
-# =====================================================
-# CREATE HTML
-# =====================================================
-
-ftd_mtd_summary_html = f"""
-
-<html>
-
-<head>
-
-<style>
-
-body {{
-    font-family: Arial;
-}}
-
-table {{
-    border-collapse: collapse;
-    width: 100%;
-    font-size: 13px;
-}}
-
-th {{
-    background-color: #000000;
-    color: white;
-    border: 1px solid #dddddd;
-    padding: 8px;
-    text-align: center;
-}}
-
-td {{
-    border: 1px solid #dddddd;
-    padding: 6px;
-    text-align: center;
-}}
-
-h2 {{
-    color: #333333;
-}}
-
-</style>
-
-</head>
-
-<body>
-
-<h2>
-📊 FTD Product Dashboard
-</h2>
-
-📊 MTD Product Dashboard
-</h2>
-
-
-</body>
-
-</html>
-
-"""
-
-# =========================================================
-# CREATE MAIL
-# =========================================================
-
 msg = MIMEMultipart()
 
 msg["From"] = EMAIL_USER
 msg["To"] = ", ".join(to_mails)
+msg["CC"] = ", ".join(cc_mails)
 msg["Subject"] = mail_subject
-
-# =========================================================
-# SAME MAIL THREAD FOR ENTIRE DAY
-# =========================================================
-
-thread_id = (
-    f"<hourly-dashboard-"
-    f"{business_date}"
-    f"@frozenbottle.in>"
-)
-
-msg["Message-ID"] = make_msgid()
-
-msg["In-Reply-To"] = thread_id
-msg["References"] = thread_id
-
-# =========================================================
-# ATTACH HTML
-# =========================================================
 
 msg.attach(
     MIMEText(
@@ -4681,11 +4254,6 @@ msg.attach(
         "html"
     )
 )
-
-
-# =========================================================
-# SEND MAIL
-# =========================================================
 
 try:
 
@@ -4700,6 +4268,49 @@ try:
         EMAIL_USER,
         EMAIL_PASSWORD
     )
+
+    thread_file = "mail_thread.json"
+
+    today_key = str(business_date)
+
+    thread_data = {}
+
+    if os.path.exists(thread_file):
+
+        with open(
+            thread_file,
+            "r"
+        ) as f:
+
+            thread_data = json.load(f)
+
+    if today_key not in thread_data:
+
+        message_id = make_msgid()
+
+        thread_data[
+            today_key
+        ] = message_id
+
+        with open(
+            thread_file,
+            "w"
+        ) as f:
+
+            json.dump(
+                thread_data,
+                f
+            )
+
+    else:
+
+        message_id = thread_data[
+            today_key
+        ]
+
+    msg["Message-ID"] = message_id
+    msg["In-Reply-To"] = message_id
+    msg["References"] = message_id
 
     server.sendmail(
         EMAIL_USER,
@@ -4719,180 +4330,3 @@ except Exception as e:
         "❌ Hourly Mail Error:",
         str(e)
     )
-
-# =====================================================
-# FALLBACK HTML VARIABLES
-# =====================================================
-
-if "ftd_summary_html" not in locals():
-
-    ftd_summary_html = summary_html
-
-if "mtd_summary_html" not in locals():
-
-    mtd_summary_html = summary_html
-
-if "ftd_mtd_summary_html" not in locals():
-
-    ftd_mtd_summary_html = summary_html
-
-print(
-    "✅ FTD/MTD HTML Variables Ready"
-)
-ftd_mtd_summary_html = f"""
-<h3>
-📊 FTD Product Dashboard
-</h3>
-
-{ftd_summary_df.to_html(
-    index=False,
-    escape=False
-)}
-"""
-
-
-# =========================================================
-# FTD / MTD MAIL
-# RUN ONLY AT 10:00 AM
-# =========================================================
-
-import smtplib
-from datetime import datetime
-from zoneinfo import ZoneInfo
-
-ist_now = datetime.now(
-    ZoneInfo("Asia/Kolkata")
-)
-
-current_hour = ist_now.hour
-
-# =========================================================
-# SEND ONLY AT 10 AM
-# =========================================================
-
-if current_hour in [7, 8, 10]:
-
-    print("📧 Preparing FTD/MTD Mail...")
-
-    EMAIL_USER = os.environ[
-        "EMAIL_USER"
-    ]
-
-    EMAIL_PASSWORD = os.environ[
-        "EMAIL_PASSWORD"
-    ]
-
-    # =====================================================
-    # RECEIVERS
-    # =====================================================
-
-    to_mails = [
-        "mis2@frozenbottle.in"
-    ]
-
-
-    all_recipients = (
-        to_mails
-    )
-
-    # =====================================================
-    # SUBJECT
-    # =====================================================
-
-    mail_subject = (
-        f"📊 FTD & MTD "
-        f"Product Dashboard "
-        f"| {business_date}"
-    )
-
-    # Example:
-    # 📊 FTD & MTD Product Dashboard
-    # | 2026-05-27
-
-    # =====================================================
-    # CREATE MAIL
-    # =====================================================
-
-    msg = MIMEMultipart()
-
-    msg["From"] = EMAIL_USER
-
-    msg["To"] = ", ".join(
-        to_mails
-    )
-
-
-    msg["Subject"] = (
-        mail_subject
-    )
-    
-    # =====================================================
-    # HTML CHECK
-    # =====================================================
-    
-    if "ftd_mtd_summary_html" not in locals():
-    
-        print(
-            "⚠ FTD/MTD HTML Missing"
-        )
-    
-        ftd_mtd_summary_html = summary_html
-    
-        print(
-            "✅ Using Summary HTML"
-        )
-    
-    # =====================================================
-    # ATTACH HTML
-    # =====================================================
-    
-    msg.attach(
-        MIMEText(
-            ftd_mtd_summary_html,
-            "html"
-        )
-    )
-    # =====================================================
-    # SEND MAIL
-    # =====================================================
-
-    try:
-
-        server = smtplib.SMTP(
-            "smtp.gmail.com",
-            587
-        )
-
-        server.starttls()
-
-        server.login(
-            EMAIL_USER,
-            EMAIL_PASSWORD
-        )
-
-        server.sendmail(
-            EMAIL_USER,
-            all_recipients,
-            msg.as_string()
-        )
-
-        server.quit()
-
-        print(
-            "✅ FTD/MTD Mail Sent Successfully"
-        )
-
-    except Exception as e:
-
-        print(
-            "❌ FTD/MTD Mail Error:",
-            str(e)
-        )
-
-else:
-
-    print(
-        "⏭ Skipping FTD/MTD Mail "
-        "(Not 10 AM)"
-    )
-
