@@ -1278,30 +1278,35 @@ print(
 # FIX PRODUCT MIX COLUMN
 # =========================================================
 
-if "Product Mix_x" in current_sales.columns:
 for df_name, df in [
+
     ("Current", current_sales),
     ("LW", lw_sales)
+
 ]:
 
-    current_sales["Product Mix"] = (
-        current_sales["Product Mix_x"]
-    )
-    # if Product Mix already exists → skip
+    # =====================================================
+    # IF PRODUCT MIX ALREADY EXISTS
+    # =====================================================
+
     if "Product Mix" in df.columns:
+
+        print(
+            f"✅ Product Mix Already Exists - {df_name}"
+        )
+
         continue
 
-elif "Product Mix_y" in current_sales.columns:
-    # both x and y available
+    # =====================================================
+    # BOTH Product Mix_x AND Product Mix_y
+    # =====================================================
+
     if (
         "Product Mix_x" in df.columns
         and
         "Product Mix_y" in df.columns
     ):
 
-    current_sales["Product Mix"] = (
-        current_sales["Product Mix_y"]
-    )
         df["Product Mix"] = (
             df["Product Mix_x"]
             .combine_first(
@@ -1309,32 +1314,76 @@ elif "Product Mix_y" in current_sales.columns:
             )
         )
 
-    # only x available
+    # =====================================================
+    # ONLY Product Mix_x
+    # =====================================================
+
     elif "Product Mix_x" in df.columns:
 
-if "Product Mix_x" in lw_sales.columns:
         df["Product Mix"] = (
             df["Product Mix_x"]
         )
 
-    lw_sales["Product Mix"] = (
-        lw_sales["Product Mix_x"]
-    )
-    # only y available
+    # =====================================================
+    # ONLY Product Mix_y
+    # =====================================================
+
     elif "Product Mix_y" in df.columns:
 
-elif "Product Mix_y" in lw_sales.columns:
         df["Product Mix"] = (
             df["Product Mix_y"]
         )
 
-    lw_sales["Product Mix"] = (
-        lw_sales["Product Mix_y"]
+    # =====================================================
+    # PRODUCT MIX MISSING
+    # =====================================================
+
+    else:
+
+        print(
+            f"⚠ Product Mix Missing - {df_name}"
+        )
+
+        df["Product Mix"] = (
+            "Others"
+        )
+
     print(
         f"✅ Product Mix Fixed - {df_name}"
     )
 
-print("✅ Product Mix Fixed")
+
+# =========================================================
+# DEBUG CHECK
+# =========================================================
+
+print(
+    "CURRENT PRODUCT MIX CHECK"
+)
+
+print(
+    current_sales[
+        "Product Mix"
+    ]
+    .value_counts()
+    .head(10)
+)
+
+print(
+    "LW PRODUCT MIX CHECK"
+)
+
+print(
+    lw_sales[
+        "Product Mix"
+    ]
+    .value_counts()
+    .head(10)
+)
+
+print(
+    "✅ Product Mix Fixed"
+)
 
 # =========================================================
 # ITEM GROUP FOR WINDOW DATA
