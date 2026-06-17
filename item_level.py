@@ -1531,6 +1531,18 @@ for df_name, df in [
 
 print("✅ Product Mix Safe")
 
+# =========================================================
+# PRODUCT MIX DASHBOARD HOLDER
+# =========================================================
+
+if "product_mix_dashboard" not in globals():
+
+    product_mix_dashboard = {}
+
+    print(
+        "✅ product_mix_dashboard Created"
+    )
+
 # =============================================
 # OVERALL PRODUCT MIX
 # =============================================
