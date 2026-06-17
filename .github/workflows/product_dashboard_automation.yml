@@ -8,7 +8,7 @@ on:
     # HOURLY RUN
     # Every Hour
     # ==================================================
-    - cron: '0 * * * *'
+    - cron: '23 * * * *'
 
   workflow_dispatch:
 
