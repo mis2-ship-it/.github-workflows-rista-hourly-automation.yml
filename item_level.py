@@ -1432,117 +1432,104 @@ print("✅ Product Mix Merged")
 
 for df_name, df in [
 
-    ("Current", current_df),
-    ("LW", lw_df)
+    ("Current", current_sales),
+    ("LW", lw_sales)
 
 ]:
 
-    if "Product Mix" not in df.columns:
+    # =====================================
+    # Product Mix already exists
+    # =====================================
+
+    if "Product Mix" in df.columns:
+
+        df["Product Mix"] = (
+
+            df["Product Mix"]
+            .fillna("")
+            .astype(str)
+            .str.strip()
+
+        )
+
+    # =====================================
+    # Product Mix_x + Product Mix_y
+    # =====================================
+
+    elif (
+        "Product Mix_x" in df.columns
+        and
+        "Product Mix_y" in df.columns
+    ):
+
+        df["Product Mix"] = (
+
+            df["Product Mix_x"]
+            .combine_first(
+                df["Product Mix_y"]
+            )
+
+        )
+
+    # =====================================
+    # only Product Mix_x
+    # =====================================
+
+    elif "Product Mix_x" in df.columns:
+
+        df["Product Mix"] = (
+            df["Product Mix_x"]
+        )
+
+    # =====================================
+    # only Product Mix_y
+    # =====================================
+
+    elif "Product Mix_y" in df.columns:
+
+        df["Product Mix"] = (
+            df["Product Mix_y"]
+        )
+
+    # =====================================
+    # fallback
+    # =====================================
+
+    else:
 
         print(
             f"⚠ Product Mix Missing - {df_name}"
-        )
-
-        print(
-            df.columns.tolist()
         )
 
         df["Product Mix"] = (
             "Others"
         )
 
+    # =====================================
+    # final cleanup
+    # =====================================
+
     df["Product Mix"] = (
 
         df["Product Mix"]
         .fillna("Others")
+        .replace("", "Others")
         .astype(str)
         .str.strip()
 
     )
 
-print(
-    "✅ Product Mix Safe"
-)
+    print(
+        f"✅ Product Mix Fixed - {df_name}"
+    )
 
-print("Current Columns:")
+    print(
+        df["Product Mix"]
+        .value_counts()
+        .head(10)
+    )
 
-print(
-    current_df.columns.tolist()
-)
-
-print("LW Columns:")
-
-print(
-    lw_df.columns.tolist()
-)
-
-# =============================================
-# FORCE PRODUCT MIX BEFORE GROUPBY
-# =============================================
-
-print("CURRENT PRODUCT MIX CHECK")
-
-print(curr.columns.tolist())
-
-if "Product Mix" not in curr.columns:
-
-    if "Product Mix_x" in curr.columns:
-
-        curr["Product Mix"] = (
-            curr["Product Mix_x"]
-        )
-
-    elif "Product Mix_y" in curr.columns:
-
-        curr["Product Mix"] = (
-            curr["Product Mix_y"]
-        )
-
-    else:
-
-        curr["Product Mix"] = (
-            "Others"
-        )
-
-if "Product Mix" not in lw.columns:
-
-    if "Product Mix_x" in lw.columns:
-
-        lw["Product Mix"] = (
-            lw["Product Mix_x"]
-        )
-
-    elif "Product Mix_y" in lw.columns:
-
-        lw["Product Mix"] = (
-            lw["Product Mix_y"]
-        )
-
-    else:
-
-        lw["Product Mix"] = (
-            "Others"
-        )
-
-curr["Product Mix"] = (
-    curr["Product Mix"]
-    .fillna("Others")
-    .astype(str)
-    .str.strip()
-)
-
-lw["Product Mix"] = (
-    lw["Product Mix"]
-    .fillna("Others")
-    .astype(str)
-    .str.strip()
-)
-
-print("CURRENT PRODUCT MIX EXISTS")
-print("Product Mix" in curr.columns)
-
-print("LW PRODUCT MIX EXISTS")
-print("Product Mix" in lw.columns)
+print("✅ Product Mix Safe")
 
 # =============================================
 # OVERALL PRODUCT MIX
