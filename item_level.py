@@ -1477,6 +1477,74 @@ print(
 )
 
 # =============================================
+# FORCE PRODUCT MIX BEFORE GROUPBY
+# =============================================
+
+print("CURRENT PRODUCT MIX CHECK")
+
+print(curr.columns.tolist())
+
+if "Product Mix" not in curr.columns:
+
+    if "Product Mix_x" in curr.columns:
+
+        curr["Product Mix"] = (
+            curr["Product Mix_x"]
+        )
+
+    elif "Product Mix_y" in curr.columns:
+
+        curr["Product Mix"] = (
+            curr["Product Mix_y"]
+        )
+
+    else:
+
+        curr["Product Mix"] = (
+            "Others"
+        )
+
+if "Product Mix" not in lw.columns:
+
+    if "Product Mix_x" in lw.columns:
+
+        lw["Product Mix"] = (
+            lw["Product Mix_x"]
+        )
+
+    elif "Product Mix_y" in lw.columns:
+
+        lw["Product Mix"] = (
+            lw["Product Mix_y"]
+        )
+
+    else:
+
+        lw["Product Mix"] = (
+            "Others"
+        )
+
+curr["Product Mix"] = (
+    curr["Product Mix"]
+    .fillna("Others")
+    .astype(str)
+    .str.strip()
+)
+
+lw["Product Mix"] = (
+    lw["Product Mix"]
+    .fillna("Others")
+    .astype(str)
+    .str.strip()
+)
+
+print("CURRENT PRODUCT MIX EXISTS")
+print("Product Mix" in curr.columns)
+
+print("LW PRODUCT MIX EXISTS")
+print("Product Mix" in lw.columns)
+
+# =============================================
 # OVERALL PRODUCT MIX
 # =============================================
 
@@ -1950,93 +2018,6 @@ def create_product_mix_dashboard(
         print("LW Columns:")
         print(lw.columns.tolist())
 
-        # =============================================
-        # SAFE PRODUCT MIX FIX
-        # =============================================
-        
-        if "Product Mix" not in curr.columns:
-        
-            print(
-                "⚠ Product Mix Missing in Current"
-            )
-        
-            print(
-                curr.columns.tolist()
-            )
-        
-            if "Product Mix_x" in curr.columns:
-        
-                curr["Product Mix"] = (
-                    curr["Product Mix_x"]
-                )
-        
-            elif "Product Mix_y" in curr.columns:
-        
-                curr["Product Mix"] = (
-                    curr["Product Mix_y"]
-                )
-        
-            else:
-        
-                curr["Product Mix"] = (
-                    "Others"
-                )
-        
-        if "Product Mix" not in lw.columns:
-        
-            print(
-                "⚠ Product Mix Missing in LW"
-            )
-        
-            print(
-                lw.columns.tolist()
-            )
-        
-            if "Product Mix_x" in lw.columns:
-        
-                lw["Product Mix"] = (
-                    lw["Product Mix_x"]
-                )
-        
-            elif "Product Mix_y" in lw.columns:
-        
-                lw["Product Mix"] = (
-                    lw["Product Mix_y"]
-                )
-        
-            else:
-        
-                lw["Product Mix"] = (
-                    "Others"
-                )
-        
-        # =============================================
-        # CLEAN PRODUCT MIX
-        # =============================================
-        
-        curr["Product Mix"] = (
-            curr["Product Mix"]
-            .fillna("Others")
-            .astype(str)
-            .str.strip()
-        )
-        
-        lw["Product Mix"] = (
-            lw["Product Mix"]
-            .fillna("Others")
-            .astype(str)
-            .str.strip()
-        )
-        
-        print(
-            "Current Product Mix Exists:",
-            "Product Mix" in curr.columns
-        )
-        
-        print(
-            "LW Product Mix Exists:",
-            "Product Mix" in lw.columns
-        )
 
         # =============================================
         # CURRENT MIX
