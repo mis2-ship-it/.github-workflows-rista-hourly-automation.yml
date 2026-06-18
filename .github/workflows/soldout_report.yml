@@ -2,7 +2,7 @@ name: Item Soldout Report
 
 on:
   schedule:
-    - cron: '12 * * * *'
+    - cron: '*/30 * * * *'
 
   workflow_dispatch:
 
