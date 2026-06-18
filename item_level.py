@@ -4195,36 +4195,6 @@ summary_html = f"""
 
 <hr>
 
-<h3>🌍 Source + Region Product Mix Dashboard</h3>
-"""
-
-# =========================================================
-# SOURCE + REGION DASHBOARD
-# =========================================================
-
-for source, df in source_region_dashboard.items():
-
-    summary_html += f"""
-    <h4>{source}</h4>
-    """
-
-    if df.empty:
-
-        summary_html += """
-        <p>No Data Available</p>
-        """
-
-    else:
-
-        summary_html += (
-            apply_growth_style(
-                df.head(10)
-            )
-        )
-
-summary_html += """
-<hr>
-
 <h3>🍨 Product Mix Dashboard</h3>
 
 """
@@ -4283,7 +4253,6 @@ for brand, df in category_dashboard.items():
                 df.head(10)
             )
         )
-
 
 # =========================================================
 # TOP ITEMS
