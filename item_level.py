@@ -2478,6 +2478,112 @@ def create_category_dashboard(
     return category_dashboard
 
 # =========================================================
+# CATEGORY CHANNEL DASHBOARD
+# =========================================================
+
+def create_category_channel_dashboard(
+    current_sales,
+    lw_sales
+):
+
+    channel_groups = [
+        "In Store",
+        "Swiggy",
+        "Zomato"
+    ]
+
+    dashboard = {}
+
+    for channel in channel_groups:
+
+        curr = current_sales[
+            current_sales["Channel Group"] == channel
+        ].copy()
+
+        lw = lw_sales[
+            lw_sales["Channel Group"] == channel
+        ].copy()
+
+        curr_cat = (
+            curr.groupby("Category Group")
+            .agg(
+                Orders=("invoiceNumber", "nunique"),
+                Qty_Sold=("item_quantity", "sum"),
+                Net_Rev=("item_baseNetAmount", "sum"),
+                Gross_Rev=("item_baseGrossAmount", "sum"),
+                Discount=(
+                    "item_baseNetDiscountAmount",
+                    lambda x: abs(x.sum())
+                )
+            )
+            .reset_index()
+        )
+
+        curr_cat["Dis %"] = np.where(
+            curr_cat["Gross_Rev"] > 0,
+            (
+                curr_cat["Discount"]
+                / curr_cat["Gross_Rev"]
+            ) * 100,
+            0
+        ).round(1)
+
+        lw_cat = (
+            lw.groupby("Category Group")
+            .agg(
+                LW_Net_Rev=("item_baseNetAmount", "sum"),
+                LW_Gross_Rev=("item_baseGrossAmount", "sum"),
+                LW_Qty=("item_quantity", "sum"),
+                LW_Orders=("invoiceNumber", "nunique"),
+                LW_Discount=(
+                    "item_baseNetDiscountAmount",
+                    lambda x: abs(x.sum())
+                )
+            )
+            .reset_index()
+        )
+
+        lw_cat["LW Dis %"] = np.where(
+            lw_cat["LW_Gross_Rev"] > 0,
+            (
+                lw_cat["LW_Discount"]
+                / lw_cat["LW_Gross_Rev"]
+            ) * 100,
+            0
+        ).round(1)
+
+        final_cat = (
+            curr_cat.merge(
+                lw_cat,
+                on="Category Group",
+                how="left"
+            )
+            .fillna(0)
+        )
+
+        final_cat["Growth %"] = np.where(
+            final_cat["LW_Net_Rev"] > 0,
+            (
+                (
+                    final_cat["Net_Rev"]
+                    - final_cat["LW_Net_Rev"]
+                )
+                / final_cat["LW_Net_Rev"]
+            ) * 100,
+            0
+        ).round(1)
+
+        final_cat = final_cat.sort_values(
+            "Net_Rev",
+            ascending=False
+        )
+
+        dashboard[channel] = final_cat
+
+    return dashboard
+
+
+# =========================================================
 # FIX CATEGORY GROUP COLUMN
 # =========================================================
 
@@ -2537,6 +2643,29 @@ for k, v in (
     )
 
 # =========================================================
+# CATEGORY CHANNEL DASHBOARD
+# =========================================================
+
+category_channel_dashboard = (
+    create_category_channel_dashboard(
+        current_sales,
+        lw_sales
+    )
+)
+
+print(
+    "✅ Category Channel Dashboard Created"
+)
+
+for k, v in (
+    category_channel_dashboard.items()
+):
+    print(
+        k,
+        len(v)
+    )
+
+#=========================================================
 # TOP 15 ITEM LEVEL DASHBOARD
 # =========================================================
 
@@ -3783,6 +3912,23 @@ print(
     "✅ Category Dashboard Updated"
 )
 
+# =========================================================
+# CATEGORY CHANNEL HTML
+# =========================================================
+
+category_channel_html = ""
+
+for channel, df in (
+    category_channel_dashboard.items()
+):
+
+    category_channel_html += f"""
+    <h4>{channel}</h4>
+    {df.to_html(
+        index=False,
+        escape=False
+    )}
+    """
 
 # =========================================================
 # 4. TOP ITEMS
@@ -4255,6 +4401,36 @@ for brand, df in category_dashboard.items():
         )
 
 # =========================================================
+# CATEGORY CHANNEL DASHBOARD
+# =========================================================
+
+summary_html += """
+<h2>📦 Category Channel Dashboard</h2>
+"""
+
+for channel, df in (
+    category_channel_dashboard.items()
+):
+
+    summary_html += f"""
+    <h3>{channel}</h3>
+    """
+
+    if df.empty:
+
+        summary_html += """
+        <p>No Data Available</p>
+        """
+
+    else:
+
+        summary_html += (
+            apply_growth_style(
+                df
+            )
+        )
+
+# =========================================================
 # TOP ITEMS
 # =========================================================
 
@@ -4282,6 +4458,7 @@ for brand, df in item_dashboard.items():
                 df.head(10)
             )
         )
+
 
 
 # =========================================================
