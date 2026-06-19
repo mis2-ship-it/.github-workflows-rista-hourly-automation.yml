@@ -2496,13 +2496,35 @@ def create_category_channel_dashboard(
 
     for channel in channel_groups:
 
+        print(f"\n===== {channel} =====")
+    
         curr = current_sales[
-            current_sales["Channel Group"] == channel
+            current_sales["Channel Group"]
+            .astype(str)
+            .str.strip()
+            .str.upper()
+            ==
+            channel.upper()
         ].copy()
-
+    
         lw = lw_sales[
-            lw_sales["Channel Group"] == channel
+            lw_sales["Channel Group"]
+            .astype(str)
+            .str.strip()
+            .str.upper()
+            ==
+            channel.upper()
         ].copy()
+    
+        print(
+            "Current Rows:",
+            len(curr)
+        )
+    
+        print(
+            "LW Rows:",
+            len(lw)
+        )
 
         curr_cat = (
             curr.groupby("Category Group")
@@ -2641,6 +2663,30 @@ for k, v in (
         k,
         len(v)
     )
+
+print(
+    "CURRENT CHANNEL GROUP"
+)
+
+print(
+    current_sales[
+        "Channel Group"
+    ].value_counts(
+        dropna=False
+    )
+)
+
+print(
+    "LW CHANNEL GROUP"
+)
+
+print(
+    lw_sales[
+        "Channel Group"
+    ].value_counts(
+        dropna=False
+    )
+)
 
 # =========================================================
 # CATEGORY CHANNEL DASHBOARD
@@ -2956,291 +3002,7 @@ for k, v in (
         len(v)
     )
 
-# =========================================================
-# SOURCE + REGION PRODUCT MIX DASHBOARD
-# =========================================================
 
-def create_source_region_dashboard(
-    current_sales,
-    lw_sales
-):
-
-    dashboard = {}
-
-    # =====================================================
-    # SOURCE FILTERS
-    # =====================================================
-
-    source_filters = {
-        "In Store":
-            ~current_sales["channel"]
-            .astype(str)
-            .str.upper()
-            .str.contains(
-                "SWIGGY|ZOMATO",
-                na=False
-            ),
-
-        "Swiggy":
-            current_sales["channel"]
-            .astype(str)
-            .str.upper()
-            .str.contains(
-                "SWIGGY",
-                na=False
-            ),
-
-        "Zomato":
-            current_sales["channel"]
-            .astype(str)
-            .str.upper()
-            .str.contains(
-                "ZOMATO",
-                na=False
-            )
-    }
-
-    for source, curr_filter in source_filters.items():
-
-        # =================================================
-        # CURRENT SOURCE
-        # =================================================
-
-        curr = current_sales[
-            curr_filter
-        ].copy()
-
-        # =================================================
-        # LW SOURCE
-        # =================================================
-
-        if source == "In Store":
-
-            lw = lw_sales[
-                ~lw_sales["channel"]
-                .astype(str)
-                .str.upper()
-                .str.contains(
-                    "SWIGGY|ZOMATO",
-                    na=False
-                )
-            ].copy()
-
-        else:
-
-            lw = lw_sales[
-                lw_sales["channel"]
-                .astype(str)
-                .str.upper()
-                .str.contains(
-                    source.upper(),
-                    na=False
-                )
-            ].copy()
-
-        # =================================================
-        # CURRENT SUMMARY
-        # =================================================
-
-        curr_mix = (
-            curr.groupby(
-                ["Region", "Product Mix"]
-            )
-            .agg(
-                **{
-                    "Net Sales": (
-                        "item_baseNetAmount",
-                        "sum"
-                    ),
-
-                    "Qty": (
-                        "item_quantity",
-                        "sum"
-                    ),
-
-                    "Gross Sales": (
-                        "item_baseGrossAmount",
-                        "sum"
-                    ),
-
-                    "Discount": (
-                        "item_baseNetDiscountAmount",
-                        lambda x:
-                        abs(x.sum())
-                    )
-                }
-            )
-            .reset_index()
-        )
-
-        curr_mix["Dis %"] = np.where(
-            curr_mix["Gross Sales"] > 0,
-            (
-                curr_mix["Discount"]
-                /
-                curr_mix["Gross Sales"]
-            ) * 100,
-            0
-        )
-
-        curr_mix = curr_mix.drop(
-            columns=[
-                "Gross Sales",
-                "Discount"
-            ]
-        )
-
-        # =================================================
-        # LAST WEEK SUMMARY
-        # =================================================
-
-        lw_mix = (
-            lw.groupby(
-                ["Region", "Product Mix"]
-            )
-            .agg(
-                **{
-                    "LW Net Sales": (
-                        "item_baseNetAmount",
-                        "sum"
-                    ),
-
-                    "LW Qty": (
-                        "item_quantity",
-                        "sum"
-                    ),
-
-                    "LW Gross": (
-                        "item_baseGrossAmount",
-                        "sum"
-                    ),
-
-                    "LW Discount": (
-                        "item_baseNetDiscountAmount",
-                        lambda x:
-                        abs(x.sum())
-                    )
-                }
-            )
-            .reset_index()
-        )
-
-        lw_mix["LW Dis %"] = np.where(
-            lw_mix["LW Gross"] > 0,
-            (
-                lw_mix["LW Discount"]
-                /
-                lw_mix["LW Gross"]
-            ) * 100,
-            0
-        )
-
-        lw_mix = lw_mix.drop(
-            columns=[
-                "LW Gross",
-                "LW Discount"
-            ]
-        )
-
-        # =================================================
-        # MERGE
-        # =================================================
-
-        final_df = curr_mix.merge(
-            lw_mix,
-            on=[
-                "Region",
-                "Product Mix"
-            ],
-            how="left"
-        ).fillna(0)
-
-        # =================================================
-        # GROWTH %
-        # =================================================
-
-        final_df["Sales Growth %"] = np.where(
-            final_df["LW Net Sales"] > 0,
-            (
-                (
-                    final_df["Net Sales"]
-                    -
-                    final_df["LW Net Sales"]
-                )
-                /
-                final_df["LW Net Sales"]
-            ) * 100,
-            0
-        )
-
-        final_df["Qty Growth %"] = np.where(
-            final_df["LW Qty"] > 0,
-            (
-                (
-                    final_df["Qty"]
-                    -
-                    final_df["LW Qty"]
-                )
-                /
-                final_df["LW Qty"]
-            ) * 100,
-            0
-        )
-
-        # =================================================
-        # TOP 10 PRODUCT MIX
-        # =================================================
-
-        final_df = (
-            final_df
-            .sort_values(
-                "Net Sales",
-                ascending=False
-            )
-            .head(10)
-        )
-
-        # =================================================
-        # ROUND
-        # =================================================
-
-        numeric_cols = final_df.select_dtypes(
-            include=np.number
-        ).columns
-
-        final_df[numeric_cols] = (
-            final_df[numeric_cols]
-            .round(0)
-            .astype(int)
-        )
-
-        dashboard[source] = final_df
-
-    return dashboard
-
-
-# =========================================================
-# CREATE SOURCE REGION DASHBOARD
-# =========================================================
-
-source_region_dashboard = (
-    create_source_region_dashboard(
-        current_sales,
-        lw_sales
-    )
-)
-
-print(
-    "✅ Source Region Dashboard Created"
-)
-
-for k, v in (
-    source_region_dashboard.items()
-):
-    print(
-        k,
-        len(v)
-    )
 
 # =========================================================
 # DISCOUNT CODE EXTRACTION
@@ -4493,17 +4255,15 @@ summary_html += """
 print("✅ Summary HTML Created")
 
 
-#=========================================================
+# =========================================================
 # HOURLY PRODUCT DASHBOARD MAIL
-#=========================================================
+# =========================================================
 
 import smtplib
 import os
-import json
 
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from email.utils import make_msgid
 
 print("📧 Preparing Hourly Mail...")
 
@@ -4523,17 +4283,61 @@ all_recipients = (
     cc_mails
 )
 
+# =========================================================
+# SAME SUBJECT FOR SAME DAY
+# =========================================================
+
 mail_subject = (
-    f"Hourly Product Level Sales Dashboard _ "
-    f"{formatted_date}"
+    f"Hourly Product Level Sales Dashboard - "
+    f"{business_date}"
 )
 
 msg = MIMEMultipart()
 
 msg["From"] = EMAIL_USER
-msg["To"] = ", ".join(to_mails)
-msg["CC"] = ", ".join(cc_mails)
-msg["Subject"] = mail_subject
+
+msg["To"] = ", ".join(
+    to_mails
+)
+
+msg["CC"] = ", ".join(
+    cc_mails
+)
+
+msg["Subject"] = (
+    mail_subject
+)
+
+# =========================================================
+# FIXED THREAD ID
+# SAME FOR ENTIRE DAY
+# =========================================================
+
+message_id = (
+    f"<product-dashboard-{business_date}"
+    f"@frozenbottle.in>"
+)
+
+print(
+    "Thread Message ID:",
+    message_id
+)
+
+msg["Message-ID"] = (
+    message_id
+)
+
+msg["In-Reply-To"] = (
+    message_id
+)
+
+msg["References"] = (
+    message_id
+)
+
+# =========================================================
+# HTML BODY
+# =========================================================
 
 msg.attach(
     MIMEText(
@@ -4541,6 +4345,10 @@ msg.attach(
         "html"
     )
 )
+
+# =========================================================
+# SEND MAIL
+# =========================================================
 
 try:
 
@@ -4555,49 +4363,6 @@ try:
         EMAIL_USER,
         EMAIL_PASSWORD
     )
-
-    thread_file = "mail_thread.json"
-
-    today_key = str(business_date)
-
-    thread_data = {}
-
-    if os.path.exists(thread_file):
-
-        with open(
-            thread_file,
-            "r"
-        ) as f:
-
-            thread_data = json.load(f)
-
-    if today_key not in thread_data:
-
-        message_id = make_msgid()
-
-        thread_data[
-            today_key
-        ] = message_id
-
-        with open(
-            thread_file,
-            "w"
-        ) as f:
-
-            json.dump(
-                thread_data,
-                f
-            )
-
-    else:
-
-        message_id = thread_data[
-            today_key
-        ]
-
-    msg["Message-ID"] = message_id
-    msg["In-Reply-To"] = message_id
-    msg["References"] = message_id
 
     server.sendmail(
         EMAIL_USER,
