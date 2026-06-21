@@ -956,10 +956,28 @@ item_df["Item Name"] = (
     .str.upper()
 )
 
+print("Duplicate Item Names in Master")
+
+print(
+    item_df[
+        item_df["Item Name"].duplicated(
+            keep=False
+        )
+    ][
+        [
+            "Item Name",
+            "Product Mix",
+            "Category Group"
+        ]
+    ]
+    .sort_values("Item Name")
+)
 
 # =========================================================
 # ITEM GROUP MERGE
 # =========================================================
+
+rows_before_merge = len(sales_df)
 
 sales_df = sales_df.merge(
     item_df[
@@ -975,8 +993,18 @@ sales_df = sales_df.merge(
     how="left"
 )
 
+print("Rows Before Item Merge:", rows_before_merge)
+print("Rows After Item Merge :", len(sales_df))
+
 print("✅ Item Group Merged")
 
+print(
+    sales_df[
+        ["invoiceNumber", "item_shortName"]
+    ]
+    .duplicated()
+    .sum()
+)
 
 # =========================================================
 # REMOVE ADDONS
