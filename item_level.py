@@ -3788,30 +3788,54 @@ swiggy_ws.clear()
 
 row_num = 1
 
+import time
+
 for brand, df in (
     swiggy_discount_dashboard.items()
 ):
 
-    swiggy_ws.update(
-        f"A{row_num}",
-        [[brand]]
-    )
+    try:
 
-    row_num += 1
+        print(
+            f"Updating Swiggy Dashboard - {brand}"
+        )
 
-    data = (
-        [df.columns.tolist()]
-        +
-        df.fillna("")
-        .values.tolist()
-    )
+        swiggy_ws.update(
+            [[brand]],
+            f"A{row_num}"
+        )
 
-    swiggy_ws.update(
-        f"A{row_num}",
-        data
-    )
+        row_num += 1
 
-    row_num += len(df) + 4
+        data = (
+            [df.columns.tolist()]
+            +
+            df.fillna("")
+            .values.tolist()
+        )
+
+        print(
+            f"Rows: {len(data)}"
+        )
+
+        swiggy_ws.update(
+            data,
+            f"A{row_num}"
+        )
+
+        row_num += len(df) + 4
+
+        time.sleep(3)
+
+    except Exception as e:
+
+        print(
+            f"❌ Swiggy Dashboard Error - {brand}"
+        )
+
+        print(str(e))
+
+        raise
 
 print(
     "✅ Swiggy Dashboard Updated"
