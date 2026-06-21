@@ -776,8 +776,9 @@ print(
 
 required_cols = [
     "item_quantity",
-    "item_baseNetAmount",
-    "item_baseNetDiscountAmount",
+    "item_grossAmount",
+    "item_netAmount",
+    "item_netDiscountAmount",
     "item_discounts",
     "item_shortName",
     "item_categoryName"
@@ -826,6 +827,19 @@ lw_sales = lw_df.copy()
 
 print("✅ Sales DataFrames Created")
 
+print(
+    current_sales[
+        [
+            "invoiceNumber",
+            "item_shortName",
+            "item_quantity",
+            "item_grossAmount",
+            "item_netAmount",
+            "item_netDiscountAmount"
+        ]
+    ].head(20)
+)
+
 # =========================================================
 # EMPTY CHECK
 # =========================================================
@@ -853,9 +867,9 @@ required_cols = {
     "item_categoryName": "",
     "item_quantity": 0,
     "item_createdTime": "",
-    "item_baseGrossAmount": 0,
-    "item_baseNetDiscountAmount": 0,
-    "item_baseNetAmount": 0,
+    "item_grossAmount": 0,
+    "item_netDiscountAmount": 0,
+    "item_netAmount": 0,
     "item_discounts": "",
     "discounts": "",
     "totalMaterialCost": 0
@@ -910,9 +924,9 @@ print("✅ Help Sheet Merged")
 
 numeric_cols = [
     "item_quantity",
-    "item_baseGrossAmount",
-    "item_baseNetDiscountAmount",
-    "item_baseNetAmount",
+    "item_grossAmount",
+    "item_netDiscountAmount",
+    "item_netAmount",
     "totalMaterialCost"
 ]
 
@@ -929,10 +943,10 @@ for col in numeric_cols:
 # =========================================================
 
 sales_df[
-    "item_baseNetDiscountAmount"
+    "item_netDiscountAmount"
 ] = (
     sales_df[
-        "item_baseNetDiscountAmount"
+        "item_netDiscountAmount"
     ]
     .abs()
 )
@@ -1583,9 +1597,9 @@ curr_mix = (
     .agg(
         Orders=("invoiceNumber", "nunique"),
         Qty_Sold=("item_quantity", "sum"),
-        Gross_Rev=("item_baseGrossAmount", "sum"),
-        Net_Rev=("item_baseNetAmount", "sum"),
-        Discount=("item_baseNetDiscountAmount", lambda x: abs(x.sum()))
+        Gross_Rev=("item_grossAmount", "sum"),
+        Net_Rev=("item_netAmount", "sum"),
+        Discount=("item_netDiscountAmount", lambda x: abs(x.sum()))
     )
     .reset_index()
 )
@@ -1605,9 +1619,9 @@ lw_mix = (
     .agg(
         LW_Orders=("invoiceNumber", "nunique"),
         LW_Qty_Sold=("item_quantity", "sum"),
-        LW_Gross_Rev=("item_baseGrossAmount", "sum"),
-        LW_Net_Rev=("item_baseNetAmount", "sum"),
-        LW_Discount=("item_baseNetDiscountAmount", lambda x: abs(x.sum()))
+        LW_Gross_Rev=("item_grossAmount", "sum"),
+        LW_Net_Rev=("item_netAmount", "sum"),
+        LW_Discount=("item_netDiscountAmount", lambda x: abs(x.sum()))
     )
     .reset_index()
 )
@@ -1712,8 +1726,8 @@ def create_hourly_dashboard(
 
         required_cols = [
             "item_quantity",
-            "item_baseNetAmount",
-            "item_baseNetDiscountAmount"
+            "item_netAmount",
+            "item_netDiscountAmount"
         ]
 
         for col in required_cols:
@@ -1751,19 +1765,19 @@ def create_hourly_dashboard(
         )
 
         current_gross = (
-            curr["item_baseGrossAmount"]
+            curr["item_grossAmount"]
             .fillna(0)
             .sum()
         )
 
         current_discount = abs(
-            curr["item_baseNetDiscountAmount"]
+            curr["item_netDiscountAmount"]
             .fillna(0)
             .sum()
         )
 
         current_net = (
-            curr["item_baseNetAmount"]
+            curr["item_netAmount"]
             .fillna(0)
             .sum()
         )
@@ -1791,19 +1805,19 @@ def create_hourly_dashboard(
         )
 
         lw_gross = (
-            lw["item_baseGrossAmount"]
+            lw["item_grossAmount"]
             .fillna(0)
             .sum()
         )
 
         lw_discount = abs(
-            lw["item_baseNetDiscountAmount"]
+            lw["item_netDiscountAmount"]
             .fillna(0)
             .sum()
         )
 
         lw_net = (
-            lw["item_baseNetAmount"]
+            lw["item_netAmount"]
             .fillna(0)
             .sum()
         )
@@ -2017,8 +2031,8 @@ def create_product_mix_dashboard(
 
         required_cols = [
             "item_quantity",
-            "item_baseNetAmount",
-            "item_baseNetDiscountAmount"
+            "item_netAmount",
+            "item_netDiscountAmount"
         ]
 
         for col in required_cols:
@@ -2060,7 +2074,7 @@ def create_product_mix_dashboard(
                     ),
 
                     "Gross Rev": (
-                        "item_baseGrossAmount",
+                        "item_grossAmount",
                         "sum"
                     ),
 
@@ -2070,12 +2084,12 @@ def create_product_mix_dashboard(
                     ),
 
                     "Net Rev": (
-                        "item_baseNetAmount",
+                        "item_netAmount",
                         "sum"
                     ),
 
                     "Discount": (
-                        "item_baseNetDiscountAmount",
+                        "item_netDiscountAmount",
                         lambda x: abs(x.sum())
                     )
                 }
@@ -2114,17 +2128,17 @@ def create_product_mix_dashboard(
                     ),
 
                     "LW Net Rev": (
-                        "item_baseNetAmount",
+                        "item_netAmount",
                         "sum"
                     ),
 
                     "LW Gross Rev": (
-                        "item_baseGrossAmount",
+                        "item_grossAmount",
                         "sum"
                     ),
 
                     "LW Discount": (
-                        "item_baseNetDiscountAmount",
+                        "item_netDiscountAmount",
                         lambda x: abs(x.sum())
                     )
                 }
@@ -2202,9 +2216,9 @@ def create_product_mix_dashboard(
 
 metric_cols = [
     "item_quantity",
-    "item_baseNetAmount",
-    "item_baseGrossAmount",
-    "item_baseNetDiscountAmount"
+    "item_netAmount",
+    "item_grossAmount",
+    "item_netDiscountAmount"
 ]
 
 for col in metric_cols:
@@ -2259,8 +2273,8 @@ print(
     current_sales[
         [
             "item_quantity",
-            "item_baseNetAmount",
-            "item_baseNetDiscountAmount"
+            "item_netAmount",
+            "item_netDiscountAmount"
         ]
     ].head()
 )
@@ -2348,17 +2362,17 @@ def create_category_dashboard(
                     ),
 
                     "Net Rev": (
-                        "item_baseNetAmount",
+                        "item_netAmount",
                         "sum"
                     ),
 
                     "Gross Rev": (
-                        "item_baseGrossAmount",
+                        "item_grossAmount",
                         "sum"
                     ),
 
                     "Discount": (
-                        "item_baseNetDiscountAmount",
+                        "item_netDiscountAmount",
                         lambda x: abs(x.sum())
                     )
                 }
@@ -2389,12 +2403,12 @@ def create_category_dashboard(
             .agg(
                 **{
                     "LW Net Rev": (
-                        "item_baseNetAmount",
+                        "item_netAmount",
                         "sum"
                     ),
 
                     "LW Gross Rev": (
-                        "item_baseGrossAmount",
+                        "item_grossAmount",
                         "sum"
                     ),
 
@@ -2409,7 +2423,7 @@ def create_category_dashboard(
                     ),
 
                     "LW Discount": (
-                        "item_baseNetDiscountAmount",
+                        "item_netDiscountAmount",
                         lambda x:
                         abs(x.sum())
                     )
@@ -2559,10 +2573,10 @@ def create_category_channel_dashboard(
             .agg(
                 Orders=("invoiceNumber", "nunique"),
                 Qty_Sold=("item_quantity", "sum"),
-                Net_Rev=("item_baseNetAmount", "sum"),
-                Gross_Rev=("item_baseGrossAmount", "sum"),
+                Net_Rev=("item_netAmount", "sum"),
+                Gross_Rev=("item_grossAmount", "sum"),
                 Discount=(
-                    "item_baseNetDiscountAmount",
+                    "item_netDiscountAmount",
                     lambda x: abs(x.sum())
                 )
             )
@@ -2581,12 +2595,12 @@ def create_category_channel_dashboard(
         lw_cat = (
             lw.groupby("Category Group")
             .agg(
-                LW_Net_Rev=("item_baseNetAmount", "sum"),
-                LW_Gross_Rev=("item_baseGrossAmount", "sum"),
+                LW_Net_Rev=("item_netAmount", "sum"),
+                LW_Gross_Rev=("item_grossAmount", "sum"),
                 LW_Qty=("item_quantity", "sum"),
                 LW_Orders=("invoiceNumber", "nunique"),
                 LW_Discount=(
-                    "item_baseNetDiscountAmount",
+                    "item_netDiscountAmount",
                     lambda x: abs(x.sum())
                 )
             )
@@ -2790,12 +2804,12 @@ def create_item_dashboard(
             .agg(
                 **{
                     "Net Rev": (
-                        "item_baseNetAmount",
+                        "item_netAmount",
                         "sum"
                     ),
 
                     "Gross Rev": (
-                        "item_baseGrossAmount",
+                        "item_grossAmount",
                         "sum"
                     ),
 
@@ -2810,7 +2824,7 @@ def create_item_dashboard(
                     ),
 
                     "Discount": (
-                        "item_baseNetDiscountAmount",
+                        "item_netDiscountAmount",
                         lambda x:
                         abs(x.sum())
                     )
@@ -2844,12 +2858,12 @@ def create_item_dashboard(
             .agg(
                 **{
                     "LW Net Rev": (
-                        "item_baseNetAmount",
+                        "item_netAmount",
                         "sum"
                     ),
 
                     "LW Gross Rev": (
-                        "item_baseGrossAmount",
+                        "item_grossAmount",
                         "sum"
                     ),
 
@@ -2864,7 +2878,7 @@ def create_item_dashboard(
                     ),
 
                     "LW Discount": (
-                        "item_baseNetDiscountAmount",
+                        "item_netDiscountAmount",
                         lambda x:
                         abs(x.sum())
                     )
@@ -3120,8 +3134,8 @@ def extract_zomato_code(x):
 
 for col in [
     "item_quantity",
-    "item_baseNetAmount",
-    "item_baseNetDiscountAmount"
+    "item_netAmount",
+    "item_netDiscountAmount"
 ]:
 
     if (
@@ -3287,17 +3301,17 @@ def create_discount_dashboard(
                     ),
 
                     "Gross Rev": (
-                        "item_baseGrossAmount",
+                        "item_grossAmount",
                         "sum"
                     ),
 
                     "Net Rev": (
-                        "item_baseNetAmount",
+                        "item_netAmount",
                         "sum"
                     ),
 
                     "Discount Given": (
-                        "item_baseNetDiscountAmount",
+                        "item_netDiscountAmount",
                         lambda x:
                         abs(x.sum())
                     )
@@ -3351,17 +3365,17 @@ def create_discount_dashboard(
                     ),
 
                     "LW Gross Rev": (
-                        "item_baseGrossAmount",
+                        "item_grossAmount",
                         "sum"
                     ),
 
                     "LW Net Rev": (
-                        "item_baseNetAmount",
+                        "item_netAmount",
                         "sum"
                     ),
 
                     "LW Discount": (
-                        "item_baseNetDiscountAmount",
+                        "item_netDiscountAmount",
                         lambda x:
                         abs(x.sum())
                     )
