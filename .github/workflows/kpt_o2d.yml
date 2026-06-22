@@ -52,4 +52,4 @@ jobs:
 
         run: |
           echo "Running script..."
-          python sales_page_report.py
+          python kpt_o2d.py
