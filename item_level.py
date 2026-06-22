@@ -1585,6 +1585,18 @@ if "product_mix_dashboard" not in globals():
         "✅ product_mix_dashboard Created"
     )
 
+print(
+    curr[
+        [
+            "item_shortName",
+            "item_quantity",
+            "item_grossAmount",
+            "item_netAmount",
+            "item_netDiscountAmount"
+        ]
+    ].head(20)
+)
+
 # =============================================
 # OVERALL PRODUCT MIX
 # =============================================
