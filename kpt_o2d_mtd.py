@@ -830,11 +830,22 @@ def overall_dashboard(df):
 
 region_dashboards = {}
 
-for r in sales_df["Region"].unique():
+for r in sales_df["Region"].dropna().unique():
 
-    temp = sales_df[sales_df["Region"] == r]
+    ftd_temp = sales_df[
+        sales_df["Region"] == r
+    ].copy()
 
-    region_dashboards[r] = overall_dashboard(temp)
+    mtd_temp = mtd_df[
+        mtd_df["Region"] == r
+    ].copy()
+
+    region_dashboards[r] = (
+        overall_dashboard_mtd(
+            ftd_temp,
+            mtd_temp
+        )
+    )
 
 print("FTD Columns")
 print(sales_df.columns.tolist())
@@ -1216,6 +1227,10 @@ for region in sorted(
         sales_df["Region"] == region
     ].copy()
 
+    mtd_temp = mtd_df[
+    mtd_df["Region"] == region
+    ].copy()
+
     # SWIGGY
     swiggy = temp[
         temp["Channel"]
@@ -1225,96 +1240,203 @@ for region in sorted(
         )
     ]
 
+    # =====================================================
+    # SWIGGY FTD
+    # =====================================================
+
     swiggy_store = (
-        swiggy.groupby(
-            "Store Name"
-        )
+        swiggy.groupby("Store Name")
         .agg(
             **{
-                "Swiggy Orders": (
+                "FTD Orders": (
                     "KPT (Mins)",
                     "count"
                 ),
-                "KPT": (
+                "FTD KPT": (
                     "KPT (Mins)",
                     "mean"
                 ),
-                "KPT P80": (
+                "FTD KPT P80": (
                     "KPT (Mins)",
-                    lambda x:
-                    x.quantile(0.80)
+                    lambda x: x.quantile(0.80)
                 ),
-                "KPT Median": (
+                "FTD KPT Median": (
                     "KPT (Mins)",
                     "median"
                 ),
-                "O2D": (
+                "FTD O2D": (
                     "O2D (Mins)",
                     "mean"
                 ),
-                "O2D P80": (
+                "FTD O2D P80": (
                     "O2D (Mins)",
-                    lambda x:
-                    x.quantile(0.80)
+                    lambda x: x.quantile(0.80)
                 ),
-                "O2D Median": (
+                "FTD O2D Median": (
                     "O2D (Mins)",
                     "median"
                 )
             }
         )
         .reset_index()
+    )
+    
+    # =====================================================
+    # SWIGGY MTD
+    # =====================================================
+    
+    mtd_swiggy = mtd_temp[
+        mtd_temp["Channel"]
+        .str.contains(
+            "Swiggy",
+            na=False
+        )
+    ]
+    
+    mtd_swiggy_store = (
+        mtd_swiggy.groupby("Store Name")
+        .agg(
+            **{
+                "MTD Orders": (
+                    "KPT (Mins)",
+                    "count"
+                ),
+                "MTD KPT": (
+                    "KPT (Mins)",
+                    "mean"
+                ),
+                "MTD KPT P80": (
+                    "KPT (Mins)",
+                    lambda x: x.quantile(0.80)
+                ),
+                "MTD KPT Median": (
+                    "KPT (Mins)",
+                    "median"
+                ),
+                "MTD O2D": (
+                    "O2D (Mins)",
+                    "mean"
+                ),
+                "MTD O2D P80": (
+                    "O2D (Mins)",
+                    lambda x: x.quantile(0.80)
+                ),
+                "MTD O2D Median": (
+                    "O2D (Mins)",
+                    "median"
+                )
+            }
+        )
+        .reset_index()
+    )
+    
+    swiggy_store = (
+        swiggy_store.merge(
+            mtd_swiggy_store,
+            on="Store Name",
+            how="left"
+        )
+        .fillna(0)
         .round(2)
     )
 
-    # ZOMATO
-    zomato = temp[
-        temp["Channel"]
+    # =====================================================
+    # ZOMATO FTD
+    # =====================================================
+    
+    zomato_store = (
+        zomato.groupby("Store Name")
+        .agg(
+            **{
+                "FTD Orders": (
+                    "KPT (Mins)",
+                    "count"
+                ),
+                "FTD KPT": (
+                    "KPT (Mins)",
+                    "mean"
+                ),
+                "FTD KPT P80": (
+                    "KPT (Mins)",
+                    lambda x: x.quantile(0.80)
+                ),
+                "FTD KPT Median": (
+                    "KPT (Mins)",
+                    "median"
+                ),
+                "FTD O2D": (
+                    "O2D (Mins)",
+                    "mean"
+                ),
+                "FTD O2D P80": (
+                    "O2D (Mins)",
+                    lambda x: x.quantile(0.80)
+                ),
+                "FTD O2D Median": (
+                    "O2D (Mins)",
+                    "median"
+                )
+            }
+        )
+        .reset_index()
+    )
+    
+    # =====================================================
+    # ZOMATO MTD
+    # =====================================================
+    
+    mtd_zomato = mtd_temp[
+        mtd_temp["Channel"]
         .str.contains(
             "Zomato",
             na=False
         )
     ]
-
-    zomato_store = (
-        zomato.groupby(
-            "Store Name"
-        )
+    
+    mtd_zomato_store = (
+        mtd_zomato.groupby("Store Name")
         .agg(
             **{
-                "Zomato Orders": (
+                "MTD Orders": (
                     "KPT (Mins)",
                     "count"
                 ),
-                "KPT": (
+                "MTD KPT": (
                     "KPT (Mins)",
                     "mean"
                 ),
-                "KPT P80": (
+                "MTD KPT P80": (
                     "KPT (Mins)",
-                    lambda x:
-                    x.quantile(0.80)
+                    lambda x: x.quantile(0.80)
                 ),
-                "KPT Median": (
+                "MTD KPT Median": (
                     "KPT (Mins)",
                     "median"
                 ),
-                "O2D": (
+                "MTD O2D": (
                     "O2D (Mins)",
                     "mean"
                 ),
-                "O2D P80": (
+                "MTD O2D P80": (
                     "O2D (Mins)",
-                    lambda x:
-                    x.quantile(0.80)
+                    lambda x: x.quantile(0.80)
                 ),
-                "O2D Median": (
+                "MTD O2D Median": (
                     "O2D (Mins)",
                     "median"
                 )
             }
         )
         .reset_index()
+    )
+    
+    zomato_store = (
+        zomato_store.merge(
+            mtd_zomato_store,
+            on="Store Name",
+            how="left"
+        )
+        .fillna(0)
         .round(2)
     )
 
