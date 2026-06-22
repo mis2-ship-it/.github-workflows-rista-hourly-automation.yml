@@ -673,6 +673,78 @@ top_kpi = pd.DataFrame({
 
 print("✅ KPI Created")
 
+# =====================================================
+# MTD KPT / O2D CALCULATION
+# =====================================================
+
+if not mtd_df.empty:
+
+    # ORDER TIME
+    mtd_df["Order Time"] = pd.to_datetime(
+        mtd_df["invoiceDate"],
+        errors="coerce"
+    )
+
+    # READY TIME
+    mtd_df["Order Ready Time"] = pd.to_datetime(
+        mtd_df["orderReadyTimestamp"],
+        errors="coerce"
+    )
+
+    # DELIVERY TIME
+    mtd_df["Delivery Time"] = pd.to_datetime(
+        mtd_df["modifiedDate"],
+        errors="coerce"
+    )
+
+    # KPT
+    mtd_df["KPT (Mins)"] = (
+        (
+            mtd_df["Order Ready Time"]
+            -
+            mtd_df["Order Time"]
+        ).dt.total_seconds() / 60
+    )
+
+    mtd_df["KPT (Mins)"] = (
+        mtd_df["KPT (Mins)"]
+        .clip(lower=0)
+        .round(1)
+    )
+
+    # O2D
+    mtd_df["O2D (Mins)"] = (
+        (
+            mtd_df["Delivery Time"]
+            -
+            mtd_df["Order Time"]
+        ).dt.total_seconds() / 60
+    )
+
+    mtd_df["O2D (Mins)"] = (
+        mtd_df["O2D (Mins)"]
+        .clip(lower=0)
+        .round(1)
+    )
+
+    mtd_df = mtd_df[
+        mtd_df["KPT (Mins)"].notna()
+    ].copy()
+
+    print(
+        "✅ MTD KPT Rows:",
+        len(mtd_df)
+    )
+    print(
+    mtd_df[
+        [
+            "KPT (Mins)",
+            "O2D (Mins)"
+        ]
+    ].head()
+    )
+
+
 def sla_metrics(df, group_col, metric, sla_limit):
 
     g = df.groupby(group_col).agg(
@@ -763,6 +835,12 @@ for r in sales_df["Region"].unique():
     temp = sales_df[sales_df["Region"] == r]
 
     region_dashboards[r] = overall_dashboard(temp)
+
+print("FTD Columns")
+print(sales_df.columns.tolist())
+
+print("MTD Columns")
+print(mtd_df.columns.tolist())
 
 # MTD Dashboared 
 
