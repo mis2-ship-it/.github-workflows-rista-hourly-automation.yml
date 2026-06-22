@@ -1,0 +1,55 @@
+name: KPT and O2D MTD Automation
+
+on:
+  schedule:
+    # Everyday 10:00 AM IST
+    # GitHub Actions uses UTC
+    # IST = UTC +5:30
+    # 10:00 AM IST = 4:30 AM UTC
+    - cron: '30 3 * * *'
+
+  workflow_dispatch:
+
+jobs:
+  run-sales-dashboard:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # ===================================================
+      # CHECKOUT REPO
+      # ===================================================
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # ===================================================
+      # PYTHON SETUP
+      # ===================================================
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # ===================================================
+      # INSTALL DEPENDENCIES
+      # ===================================================
+      - name: Install Packages
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas requests PyJWT gspread google-auth
+
+      # ===================================================
+      # RUN SCRIPT
+      # ===================================================
+      - name: KPT and O2D Automation Script
+        env:
+          API_KEY: ${{ secrets.API_KEY }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+
+        run: |
+          echo "Running script..."
+          python kpt_o2d_mtd.py
