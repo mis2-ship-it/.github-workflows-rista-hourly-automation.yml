@@ -1,4 +1,4 @@
-name: Catalog Report
+name: Availability Report
 
 on:
   workflow_dispatch:
@@ -31,4 +31,4 @@ jobs:
 
         run: |
           echo "Running Catalog script..."
-          python catalog_report.py
+          python availability.py
