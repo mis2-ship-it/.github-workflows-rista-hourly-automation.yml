@@ -77,52 +77,7 @@ fetch_date = (
 
 print("📅 Fetching Yesterday Data:", fetch_date)
 
-# =========================================================
-# FETCH MTD DATA
-# =========================================================
 
-mtd_frames = []
-
-start_date = datetime.strptime(
-    fetch_date,
-    "%Y-%m-%d"
-).replace(day=1)
-
-end_date = datetime.strptime(
-    fetch_date,
-    "%Y-%m-%d"
-)
-
-current_day = start_date
-
-while current_day <= end_date:
-
-    day_str = current_day.strftime("%Y-%m-%d")
-
-    print(f"📅 Fetching MTD : {day_str}")
-
-    temp_df = fetch_sales_data(day_str)
-
-    if not temp_df.empty:
-        mtd_frames.append(temp_df)
-
-    current_day += timedelta(days=1)
-
-if len(mtd_frames) > 0:
-
-    raw_mtd_df = pd.concat(
-        mtd_frames,
-        ignore_index=True
-    )
-
-else:
-
-    raw_mtd_df = pd.DataFrame()
-
-print(
-    "✅ MTD Rows:",
-    len(raw_mtd_df)
-)
 
 # =========================================================
 # HELP SHEET
@@ -372,6 +327,53 @@ def fetch_sales_data(fetch_date):
 # =========================================================
 
 raw_df = fetch_sales_data(fetch_date)
+
+# =========================================================
+# FETCH MTD DATA
+# =========================================================
+
+mtd_frames = []
+
+start_date = datetime.strptime(
+    fetch_date,
+    "%Y-%m-%d"
+).replace(day=1)
+
+end_date = datetime.strptime(
+    fetch_date,
+    "%Y-%m-%d"
+)
+
+current_day = start_date
+
+while current_day <= end_date:
+
+    day_str = current_day.strftime("%Y-%m-%d")
+
+    print(f"📅 Fetching MTD : {day_str}")
+
+    temp_df = fetch_sales_data(day_str)
+
+    if not temp_df.empty:
+        mtd_frames.append(temp_df)
+
+    current_day += timedelta(days=1)
+
+if len(mtd_frames) > 0:
+
+    raw_mtd_df = pd.concat(
+        mtd_frames,
+        ignore_index=True
+    )
+
+else:
+
+    raw_mtd_df = pd.DataFrame()
+
+print(
+    "✅ MTD Rows:",
+    len(raw_mtd_df)
+)
 
 # =========================================================
 # PROCESS DATA
