@@ -446,7 +446,7 @@ mtd_df = process_sales_data(raw_mtd_df)
 
 if mtd_df.empty:
     print("❌ No Processed Data Available")
-    exit(
+    exit()
 
 # =========================================================
 # MERGE HELP SHEET
