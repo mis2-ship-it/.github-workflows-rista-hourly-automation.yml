@@ -1104,7 +1104,7 @@ def style_dashboard_table(df, metric="KPT"):
     html = """
     <table style="
         border-collapse:collapse;
-        width:50%;
+        width:70%;
         font-family:Arial;
         font-size:10px;
     ">
