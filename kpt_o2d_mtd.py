@@ -995,8 +995,6 @@ overall_df = overall_dashboard_mtd(
 region_dashboards = {}    
 
 
-    return dashboard
-
 # =========================================================
 # WRITE TO GOOGLE SHEET
 # =========================================================
