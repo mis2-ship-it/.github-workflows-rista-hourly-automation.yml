@@ -853,10 +853,16 @@ print(sales_df.columns.tolist())
 print("MTD Columns")
 print(mtd_df.columns.tolist())
 
+
+
 # MTD Dashboared 
 
-def overall_dashboard_mtd(ftd_df, mtd_df):
+def overall_dashboard_mtd(
+    ftd_df,
+    mtd_df
+):
 
+    
     ftd_swiggy = ftd_df[
         ftd_df["Channel"]
         .str.contains(
@@ -975,6 +981,18 @@ def overall_dashboard_mtd(ftd_df, mtd_df):
             (mtd_df["O2D (Mins)"] > 30).sum()
         ]
     })
+
+# =========================================================
+# REGION DASHBOARDS
+# =========================================================
+
+overall_df = overall_dashboard_mtd(
+    sales_df,
+    mtd_df
+)
+
+region_dashboards = {}    
+
 
     return dashboard
 
