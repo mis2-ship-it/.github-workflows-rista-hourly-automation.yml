@@ -768,14 +768,6 @@ def overall_dashboard(df):
     swiggy = df[df["Channel"].str.contains("Swiggy")]
     zomato = df[df["Channel"].str.contains("Zomato")]
 
-    def calc(metric):
-
-        return {
-            "Swiggy": round(swiggy[metric].mean(), 1),
-            "Zomato": round(zomato[metric].mean(), 1),
-            "Overall": round(df[metric].mean(), 1)
-        }
-
     out = pd.DataFrame({
         "Parameters": [
             "Orders",
@@ -828,68 +820,38 @@ def overall_dashboard(df):
 
     return out.round(1)
 
-region_dashboards = {}
-
-for r in sales_df["Region"].dropna().unique():
-
-    ftd_temp = sales_df[
-        sales_df["Region"] == r
-    ].copy()
-
-    mtd_temp = mtd_df[
-        mtd_df["Region"] == r
-    ].copy()
-
-    region_dashboards[r] = (
-        overall_dashboard_mtd(
-            ftd_temp,
-            mtd_temp
-        )
-    )
-
-print("FTD Columns")
-print(sales_df.columns.tolist())
-
-print("MTD Columns")
-print(mtd_df.columns.tolist())
-
-
-
-# MTD Dashboared 
+# =========================================================
+# MTD DASHBOARD
+# =========================================================
 
 def overall_dashboard_mtd(
     ftd_df,
     mtd_df
 ):
 
-    
     ftd_swiggy = ftd_df[
-        ftd_df["Channel"]
-        .str.contains(
+        ftd_df["Channel"].str.contains(
             "Swiggy",
             na=False
         )
     ]
 
     ftd_zomato = ftd_df[
-        ftd_df["Channel"]
-        .str.contains(
+        ftd_df["Channel"].str.contains(
             "Zomato",
             na=False
         )
     ]
 
     mtd_swiggy = mtd_df[
-        mtd_df["Channel"]
-        .str.contains(
+        mtd_df["Channel"].str.contains(
             "Swiggy",
             na=False
         )
     ]
 
     mtd_zomato = mtd_df[
-        mtd_df["Channel"]
-        .str.contains(
+        mtd_df["Channel"].str.contains(
             "Zomato",
             na=False
         )
@@ -983,8 +945,9 @@ def overall_dashboard_mtd(
     })
 
     return dashboard
+
 # =========================================================
-# REGION DASHBOARDS
+# OVERALL DASHBOARD
 # =========================================================
 
 overall_df = overall_dashboard_mtd(
@@ -992,7 +955,34 @@ overall_df = overall_dashboard_mtd(
     mtd_df
 )
 
-region_dashboards = {}    
+# =========================================================
+# REGION DASHBOARDS
+# =========================================================
+
+region_dashboards = {}
+
+for r in sales_df["Region"].dropna().unique():
+
+    ftd_temp = sales_df[
+        sales_df["Region"] == r
+    ].copy()
+
+    mtd_temp = mtd_df[
+        mtd_df["Region"] == r
+    ].copy()
+
+    region_dashboards[r] = (
+        overall_dashboard_mtd(
+            ftd_temp,
+            mtd_temp
+        )
+    )
+
+print("FTD Columns")
+print(sales_df.columns.tolist())
+
+print("MTD Columns")
+print(mtd_df.columns.tolist())
 
 
 # =========================================================
