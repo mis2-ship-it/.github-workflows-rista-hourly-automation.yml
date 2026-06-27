@@ -1245,7 +1245,7 @@ for region in sorted(
             "Swiggy",
             na=False
         )
-    ]
+    ].copy()
 
     # =====================================================
     # SWIGGY FTD
@@ -1347,6 +1347,14 @@ for region in sorted(
         .round(2)
     )
 
+    # ZOMATO
+    zomato = temp[
+        temp["Channel"]
+        .str.contains(
+            "Zomato",
+            na=False
+        )
+    ].copy()
     # =====================================================
     # ZOMATO FTD
     # =====================================================
