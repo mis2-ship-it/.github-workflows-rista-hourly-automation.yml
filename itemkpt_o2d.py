@@ -77,6 +77,8 @@ fetch_date = (
 
 print("📅 Fetching Yesterday Data:", fetch_date)
 
+
+
 # =========================================================
 # HELP SHEET
 # =========================================================
@@ -327,6 +329,53 @@ def fetch_sales_data(fetch_date):
 raw_df = fetch_sales_data(fetch_date)
 
 # =========================================================
+# FETCH MTD DATA
+# =========================================================
+
+mtd_frames = []
+
+start_date = datetime.strptime(
+    fetch_date,
+    "%Y-%m-%d"
+).replace(day=1)
+
+end_date = datetime.strptime(
+    fetch_date,
+    "%Y-%m-%d"
+)
+
+current_day = start_date
+
+while current_day <= end_date:
+
+    day_str = current_day.strftime("%Y-%m-%d")
+
+    print(f"📅 Fetching MTD : {day_str}")
+
+    temp_df = fetch_sales_data(day_str)
+
+    if not temp_df.empty:
+        mtd_frames.append(temp_df)
+
+    current_day += timedelta(days=1)
+
+if len(mtd_frames) > 0:
+
+    raw_mtd_df = pd.concat(
+        mtd_frames,
+        ignore_index=True
+    )
+
+else:
+
+    raw_mtd_df = pd.DataFrame()
+
+print(
+    "✅ MTD Rows:",
+    len(raw_mtd_df)
+)
+
+# =========================================================
 # PROCESS DATA
 # =========================================================
 
@@ -395,6 +444,12 @@ if sales_df.empty:
     print("❌ No Processed Data Available")
     exit()
 
+mtd_df = process_sales_data(raw_mtd_df)
+
+if mtd_df.empty:
+    print("❌ No Processed Data Available")
+    exit()
+
 # =========================================================
 # MERGE HELP SHEET
 # =========================================================
@@ -412,6 +467,12 @@ help_merge = help_df[
 ].copy()
 
 sales_df = sales_df.merge(
+    help_merge,
+    on="branchCode",
+    how="left"
+)
+
+mtd_df = mtd_df.merge(
     help_merge,
     on="branchCode",
     how="left"
@@ -559,58 +620,78 @@ print(
 )
 
 
-# =========================================================
-# KPI
-# =========================================================
 
-swiggy_avg = round(
-    sales_df[
-        sales_df["Channel"]
-        .str.contains("Swiggy", na=False)
-    ]["KPT (Mins)"].mean(),
-    1
-)
+# =====================================================
+# MTD KPT / O2D CALCULATION
+# =====================================================
 
-zomato_avg = round(
-    sales_df[
-        sales_df["Channel"]
-        .str.contains("Zomato", na=False)
-    ]["KPT (Mins)"].mean(),
-    1
-)
+if not mtd_df.empty:
 
-overall_avg = round(
-    sales_df["KPT (Mins)"].mean(),
-    1
-)
+    # ORDER TIME
+    mtd_df["Order Time"] = pd.to_datetime(
+        mtd_df["invoiceDate"],
+        errors="coerce"
+    )
 
-overall_o2d = round(
-    sales_df["O2D (Mins)"].mean(),
-    1
-)
+    # READY TIME
+    mtd_df["Order Ready Time"] = pd.to_datetime(
+        mtd_df["orderReadyTimestamp"],
+        errors="coerce"
+    )
 
-total_orders = len(sales_df)
+    # DELIVERY TIME
+    mtd_df["Delivery Time"] = pd.to_datetime(
+        mtd_df["modifiedDate"],
+        errors="coerce"
+    )
 
-top_kpi = pd.DataFrame({
+    # KPT
+    mtd_df["KPT (Mins)"] = (
+        (
+            mtd_df["Order Ready Time"]
+            -
+            mtd_df["Order Time"]
+        ).dt.total_seconds() / 60
+    )
 
-    "Metric": [
-        "Swiggy Avg KPT",
-        "Zomato Avg KPT",
-        "Overall Avg KPT",
-        "Overall Avg O2D",
-        "Total Orders"
-    ],
+    mtd_df["KPT (Mins)"] = (
+        mtd_df["KPT (Mins)"]
+        .clip(lower=0)
+        .round(1)
+    )
 
-    "Value": [
-        swiggy_avg,
-        zomato_avg,
-        overall_avg,
-        overall_o2d,
-        total_orders
-    ]
-})
+    # O2D
+    mtd_df["O2D (Mins)"] = (
+        (
+            mtd_df["Delivery Time"]
+            -
+            mtd_df["Order Time"]
+        ).dt.total_seconds() / 60
+    )
 
-print("✅ KPI Created")
+    mtd_df["O2D (Mins)"] = (
+        mtd_df["O2D (Mins)"]
+        .clip(lower=0)
+        .round(1)
+    )
+
+    mtd_df = mtd_df[
+        mtd_df["KPT (Mins)"].notna()
+    ].copy()
+
+    print(
+        "✅ MTD KPT Rows:",
+        len(mtd_df)
+    )
+    print(
+    mtd_df[
+        [
+            "KPT (Mins)",
+            "O2D (Mins)"
+        ]
+    ].head()
+    )
+
 
 def sla_metrics(df, group_col, metric, sla_limit):
 
@@ -630,78 +711,233 @@ def sla_metrics(df, group_col, metric, sla_limit):
 
     return g
 
-def overall_dashboard(df):
 
-    swiggy = df[df["Channel"].str.contains("Swiggy")]
-    zomato = df[df["Channel"].str.contains("Zomato")]
 
-    def calc(metric):
+# =========================================================
+# CATEGORY / ITEM DASHBOARD BUILDER
+# =========================================================
 
-        return {
-            "Swiggy": round(swiggy[metric].mean(), 1),
-            "Zomato": round(zomato[metric].mean(), 1),
-            "Overall": round(df[metric].mean(), 1)
-        }
+def build_item_dashboard(
+    ftd_df,
+    mtd_df,
+    group_col,
+    order_method="nunique"
+):
 
-    out = pd.DataFrame({
-        "Parameters": [
-            "Orders",
-            "KPT",
-            "O2D",
-            "KPT P80",
-            "O2D P80",
-            "KPT Median",
-            "O2D Median",
-            "Breached Orders KPT",
-            "Breached Orders O2D"
-        ],
+    def agg_data(df):
 
-        "Swiggy": [
-            len(swiggy),
-            swiggy["KPT (Mins)"].mean(),
-            swiggy["O2D (Mins)"].mean(),
-            swiggy["KPT (Mins)"].quantile(0.80),
-            swiggy["O2D (Mins)"].quantile(0.80),
-            swiggy["KPT (Mins)"].median(),
-            swiggy["O2D (Mins)"].median(),
-            (swiggy["KPT (Mins)"] > 12).sum(),
-            (swiggy["O2D (Mins)"] > 30).sum()
-        ],
+        if order_method == "count":
 
-        "Zomato": [
-            len(zomato),
-            zomato["KPT (Mins)"].mean(),
-            zomato["O2D (Mins)"].mean(),
-            zomato["KPT (Mins)"].quantile(0.80),
-            zomato["O2D (Mins)"].quantile(0.80),
-            zomato["KPT (Mins)"].median(),
-            zomato["O2D (Mins)"].median(),
-            (zomato["KPT (Mins)"] > 12).sum(),
-            (zomato["O2D (Mins)"] > 30).sum()
-        ],
+            orders = (
+                df.groupby(group_col)
+                .size()
+                .rename("Orders")
+            )
 
-        "Overall": [
-            len(df),
-            df["KPT (Mins)"].mean(),
-            df["O2D (Mins)"].mean(),
-            df["KPT (Mins)"].quantile(0.80),
-            df["O2D (Mins)"].quantile(0.80),
-            df["KPT (Mins)"].median(),
-            df["O2D (Mins)"].median(),
-            (df["KPT (Mins)"] > 12).sum(),
-            (df["O2D (Mins)"] > 30).sum()
-        ]
-    })
+        else:
 
-    return out.round(1)
+            orders = (
+                df.groupby(group_col)["invoiceNumber"]
+                .nunique()
+                .rename("Orders")
+            )
 
-region_dashboards = {}
+        metrics = (
+            df.groupby(group_col)
+            .agg(
+                KPT=("KPT (Mins)", "mean"),
+                KPT_P80=(
+                    "KPT (Mins)",
+                    lambda x: x.quantile(0.80)
+                ),
+                KPT_Median=(
+                    "KPT (Mins)",
+                    "median"
+                ),
+                O2D=("O2D (Mins)", "mean"),
+                O2D_P80=(
+                    "O2D (Mins)",
+                    lambda x: x.quantile(0.80)
+                ),
+                O2D_Median=(
+                    "O2D (Mins)",
+                    "median"
+                )
+            )
+        )
 
-for r in sales_df["Region"].unique():
+        final = (
+            pd.concat(
+                [orders, metrics],
+                axis=1
+            )
+            .reset_index()
+            .round(2)
+        )
 
-    temp = sales_df[sales_df["Region"] == r]
+        return final
 
-    region_dashboards[r] = overall_dashboard(temp)
+    ftd = agg_data(ftd_df)
+    mtd = agg_data(mtd_df)
+
+    dashboard = ftd.merge(
+        mtd,
+        on=group_col,
+        how="outer",
+        suffixes=("_FTD", "_MTD")
+    )
+
+    return dashboard.fillna(0)
+
+
+
+# =========================================================
+# CATEGORY DASHBOARD
+# =========================================================
+
+category_dashboard = build_item_dashboard(
+    sales_df,
+    mtd_df,
+    "item_categoryName",
+    order_method="nunique"
+)
+
+# =========================================================
+# CATEGORY BY SOURCE DASHBOARD
+# =========================================================
+
+category_source_dashboards = {}
+
+for source in ["Swiggy", "Zomato"]:
+
+    ftd_source = sales_df[
+        sales_df["Channel"]
+        .str.contains(source, na=False)
+    ].copy()
+
+    mtd_source = mtd_df[
+        mtd_df["Channel"]
+        .str.contains(source, na=False)
+    ].copy()
+
+    category_source_dashboards[source] = (
+        build_item_dashboard(
+            ftd_source,
+            mtd_source,
+            "item_categoryName",
+            order_method="nunique"
+        )
+    )
+
+# =========================================================
+# ITEM DASHBOARD
+# =========================================================
+
+item_dashboard = build_item_dashboard(
+    sales_df,
+    mtd_df,
+    "item_shortName",
+    order_method="count"
+)
+
+# =========================================================
+# ITEM BY SOURCE DASHBOARD
+# =========================================================
+
+item_source_dashboards = {}
+
+for source in ["Swiggy", "Zomato"]:
+
+    ftd_source = sales_df[
+        sales_df["Channel"]
+        .str.contains(source, na=False)
+    ].copy()
+
+    mtd_source = mtd_df[
+        mtd_df["Channel"]
+        .str.contains(source, na=False)
+    ].copy()
+
+    item_source_dashboards[source] = (
+        build_item_dashboard(
+            ftd_source,
+            mtd_source,
+            "item_shortName",
+            order_method="count"
+        )
+    )
+
+# =========================================================
+# REGION ITEM DASHBOARDS
+# =========================================================
+
+region_item_dashboards = {}
+
+for region in sorted(
+    sales_df["Region"]
+    .dropna()
+    .unique()
+):
+
+    ftd_region = sales_df[
+        sales_df["Region"] == region
+    ]
+
+    mtd_region = mtd_df[
+        mtd_df["Region"] == region
+    ]
+
+    region_item_dashboards[region] = (
+        build_item_dashboard(
+            ftd_region,
+            mtd_region,
+            "item_shortName",
+            order_method="count"
+        )
+    )
+
+# =========================================================
+# REGION + ITEM BY SOURCE DASHBOARD
+# =========================================================
+
+region_item_source_dashboards = {}
+
+for region in sorted(
+    sales_df["Region"]
+    .dropna()
+    .unique()
+):
+
+    region_item_source_dashboards[region] = {}
+
+    for source in ["Swiggy", "Zomato"]:
+
+        ftd_temp = sales_df[
+            (sales_df["Region"] == region)
+            &
+            (
+                sales_df["Channel"]
+                .str.contains(source, na=False)
+            )
+        ].copy()
+
+        mtd_temp = mtd_df[
+            (mtd_df["Region"] == region)
+            &
+            (
+                mtd_df["Channel"]
+                .str.contains(source, na=False)
+            )
+        ].copy()
+
+        region_item_source_dashboards[region][source] = (
+            build_item_dashboard(
+                ftd_temp,
+                mtd_temp,
+                "item_shortName",
+                order_method="count"
+            )
+        )
 
 # =========================================================
 # WRITE TO GOOGLE SHEET
@@ -829,7 +1065,7 @@ def style_dashboard_table(df, metric="KPT"):
     html = """
     <table style="
         border-collapse:collapse;
-        width:50%;
+        width:70%;
         font-family:Arial;
         font-size:10px;
     ">
@@ -921,152 +1157,65 @@ def style_dashboard_table(df, metric="KPT"):
 
     return html
 
-# =========================================================
-# REGION HTML
-# =========================================================
 
-region_html = ""
-
-for region, df in region_dashboards.items():
-
-    region_html += f"""
-    <h3>{region}</h3>
-    {style_dashboard_table(df)}
-    <br>
+    category_html = f"""
+    <h2>Category Dashboard</h2>
+    {style_dashboard_table(category_dashboard)}
     """
 
+    category_source_html = ""
 
-# =========================================================
-# REGION + STORE DASHBOARD
-# =========================================================
+    for source, df in category_source_dashboards.items():
 
-region_store_html = ""
-
-for region in sorted(
-    sales_df["Region"]
-    .dropna()
-    .unique()
-):
-
-    temp = sales_df[
-        sales_df["Region"] == region
-    ].copy()
-
-    # SWIGGY
-    swiggy = temp[
-        temp["Channel"]
-        .str.contains(
-            "Swiggy",
-            na=False
-        )
-    ]
-
-    swiggy_store = (
-        swiggy.groupby(
-            "Store Name"
-        )
-        .agg(
-            **{
-                "Swiggy Orders": (
-                    "KPT (Mins)",
-                    "count"
-                ),
-                "KPT": (
-                    "KPT (Mins)",
-                    "mean"
-                ),
-                "KPT P80": (
-                    "KPT (Mins)",
-                    lambda x:
-                    x.quantile(0.80)
-                ),
-                "KPT Median": (
-                    "KPT (Mins)",
-                    "median"
-                ),
-                "O2D": (
-                    "O2D (Mins)",
-                    "mean"
-                ),
-                "O2D P80": (
-                    "O2D (Mins)",
-                    lambda x:
-                    x.quantile(0.80)
-                ),
-                "O2D Median": (
-                    "O2D (Mins)",
-                    "median"
-                )
-            }
-        )
-        .reset_index()
-        .round(2)
-    )
-
-    # ZOMATO
-    zomato = temp[
-        temp["Channel"]
-        .str.contains(
-            "Zomato",
-            na=False
-        )
-    ]
-
-    zomato_store = (
-        zomato.groupby(
-            "Store Name"
-        )
-        .agg(
-            **{
-                "Zomato Orders": (
-                    "KPT (Mins)",
-                    "count"
-                ),
-                "KPT": (
-                    "KPT (Mins)",
-                    "mean"
-                ),
-                "KPT P80": (
-                    "KPT (Mins)",
-                    lambda x:
-                    x.quantile(0.80)
-                ),
-                "KPT Median": (
-                    "KPT (Mins)",
-                    "median"
-                ),
-                "O2D": (
-                    "O2D (Mins)",
-                    "mean"
-                ),
-                "O2D P80": (
-                    "O2D (Mins)",
-                    lambda x:
-                    x.quantile(0.80)
-                ),
-                "O2D Median": (
-                    "O2D (Mins)",
-                    "median"
-                )
-            }
-        )
-        .reset_index()
-        .round(2)
-    )
-
-    region_store_html += f"""
-    <h2>{region}</h2>
-
-    <h3>Swiggy</h3>
-    {style_dashboard_table(swiggy_store)}
-
-    <br>
-
-    <h3>Zomato</h3>
-    {style_dashboard_table(zomato_store)}
-
+    category_source_html += f"""
+    <h3>{source}</h3>
+    {style_dashboard_table(df)}
     <br><br>
     """
+    
+    item_html = f"""
+    <h2>Item Dashboard</h2>
+    {style_dashboard_table(item_dashboard)}
+    """
+
+    item_source_html = ""
+    
+    for source, df in item_source_dashboards.items():
+    
+        item_source_html += f"""
+        <h3>{source}</h3>
+        {style_dashboard_table(df)}
+        <br><br>
+        """
+    
+    region_item_html = ""
+    
+    for region, df in region_item_dashboards.items():
+    
+        region_item_html += f"""
+        <h2>{region}</h2>
+        {style_dashboard_table(df)}
+        <br><br>
+        """
+
+    region_item_source_html = ""
+
+    for region, source_data in region_item_source_dashboards.items():
+    
+        region_item_source_html += f"""
+        <h2>{region}</h2>
+        """
+
+    for source, df in source_data.items():
+
+        region_item_source_html += f"""
+        <h3>{source}</h3>
+        {style_dashboard_table(df)}
+        <br>
+        """
+
+    region_item_source_html += "<br><br>"
+
 
 # =========================================================
 # SUMMARY HTML
@@ -1078,27 +1227,39 @@ summary_html = f"""
 <body style="font-family:Arial;">
 
 <h2>
-📊 KPT and O2D Performance Dashboard
+📊 Item Level _ KPT and O2D Performance Dashboard
 ({fetch_date})
 </h2>
 
 <br>
 
-<h2>Overall Dashboard</h2>
-{style_dashboard_table(overall_dashboard(sales_df))}
+<h2>Category Dashboards</h2>
+{category_html}
 
 <br>
 
-<h2>Region Dashboards</h2>
-{region_html}
+<h2>Category by Source Dashboard</h2>
+{category_source_html}
 
 <br>
 
-<h2>
-🏪 Region + Store Dashboard
-</h2>
+<h2>Item Level Dashboards</h2>
+{item_html}
 
-{region_store_html}
+<br>
+
+<h2>Item by Source Dashboard</h2>
+{item_source_html}
+
+<br>
+
+<h2>Region + Item Dashboard</h2>
+{region_item_html}
+
+<br>
+
+<h2>Region + Item by Source Dashboard</h2>
+{region_item_source_html}
 
 <br><br>
 
@@ -1112,10 +1273,10 @@ MIS Team
 </html>
 """
 
-print("✅ Overall Dashboard Ready")
+print("✅ Category Dashboards Ready")
 
 print(
-    "✅ Region Dashboards:",
+    "✅ Item Level Dashboards:",
     len(region_dashboards)
 )
 
@@ -1130,11 +1291,11 @@ EMAIL_PASSWORD = os.environ["EMAIL_PASSWORD"]
 msg = MIMEMultipart()
 
 msg["From"] = EMAIL_USER
-msg["To"] = "ops.all@frozenbottle.in"
-msg["CC"] = "vivek@frozenbottle.in"
+msg["To"] = "mis2@frozenbottle.in"
+msg["CC"] = "mis2@frozenbottle.in"
 
 
-msg["Subject"] = f"📊 KPT & O2D Dashboard - {fetch_date}"
+msg["Subject"] = f"📊 Item Level KPT & O2D Dashboard - {fetch_date}"
 
 msg.attach(
     MIMEText(summary_html, "html")
@@ -1155,8 +1316,8 @@ try:
     )
 
     recipients = [
-        "ops.all@frozenbottle.in",
-        "vivek@frozenbottle.in"
+        "mis2@frozenbottle.in"
+        
     ]
     server.sendmail(
         EMAIL_USER,
