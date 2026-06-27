@@ -1259,38 +1259,38 @@ summary_html = f"""
 <body style="font-family:Arial;">
 
 <h2>
-📊 Item Level _ KPT and O2D Performance Dashboard
+📊 Item Level KPT & O2D Performance Dashboard
 ({fetch_date})
 </h2>
 
 <br>
 
-<h2>Category Dashboards</h2>
+<h2>1. Category Dashboard</h2>
 {category_html}
 
 <br>
 
-<h2>Category by Source Dashboard</h2>
+<h2>2. Category by Source Dashboard</h2>
 {category_source_html}
 
 <br>
 
-<h2>Item Level Dashboards</h2>
+<h2>3. Item Dashboard</h2>
 {item_html}
 
 <br>
 
-<h2>Item by Source Dashboard</h2>
+<h2>4. Item by Source Dashboard</h2>
 {item_source_html}
 
 <br>
 
-<h2>Region + Item Dashboard</h2>
+<h2>5. Region + Item Dashboard</h2>
 {region_item_html}
 
 <br>
 
-<h2>Region + Item by Source Dashboard</h2>
+<h2>6. Region + Item by Source Dashboard</h2>
 {region_item_source_html}
 
 <br><br>
@@ -1305,14 +1305,19 @@ MIS Team
 </html>
 """
 
-print("✅ Category Dashboards Ready")
+# =========================================================
+# LOGS
+# =========================================================
 
-print(
-    "✅ Item Level Dashboards:",
-    len(region_dashboards)
-)
+print("✅ Category Dashboard Ready")
+print("✅ Category by Source Dashboard Ready")
 
-print("✅ Region Store Dashboard Ready")
+print("✅ Item Dashboard Ready")
+print("✅ Item by Source Dashboard Ready")
+
+print("✅ Region + Item Dashboard Ready")
+print("✅ Region + Item by Source Dashboard Ready")
+
 # =========================================================
 # SEND EMAIL
 # =========================================================
