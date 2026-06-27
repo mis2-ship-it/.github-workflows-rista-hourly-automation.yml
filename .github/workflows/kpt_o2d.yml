@@ -1,4 +1,4 @@
-name: KPT and O2D Automation
+name: Item Level KPT and O2D Automation
 
 on:
   schedule:
@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  run-sales-dashboard:
+  run-itemlevel-dashboard:
 
     runs-on: ubuntu-latest
 
@@ -42,7 +42,7 @@ jobs:
       # ===================================================
       # RUN SCRIPT
       # ===================================================
-      - name: KPT and O2D Automation Script
+      - name: Item Level KPT and O2D Automation Script
         env:
           API_KEY: ${{ secrets.API_KEY }}
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
@@ -52,4 +52,4 @@ jobs:
 
         run: |
           echo "Running script..."
-          python kpt_o2d.py
+          python itemkpt_o2d.py
