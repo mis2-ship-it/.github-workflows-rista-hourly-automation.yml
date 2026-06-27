@@ -693,6 +693,7 @@ if not mtd_df.empty:
     )
 
 
+
 def sla_metrics(df, group_col, metric, sla_limit):
 
     g = df.groupby(group_col).agg(
@@ -1059,7 +1060,6 @@ def style_dashboard_table(df, metric="KPT"):
     if df.empty:
         return "<p>No Data</p>"
 
-    # replace nan with "-"
     df = df.fillna("-")
 
     html = """
@@ -1071,7 +1071,6 @@ def style_dashboard_table(df, metric="KPT"):
     ">
     """
 
- 
     # =====================================================
     # HEADER
     # =====================================================
@@ -1108,8 +1107,6 @@ def style_dashboard_table(df, metric="KPT"):
 
             style = ""
 
-    
-            # highlight only KPI columns
             highlight_cols = [
                 "KPT",
                 "O2D",
@@ -1117,26 +1114,25 @@ def style_dashboard_table(df, metric="KPT"):
                 "P80",
                 "Median"
             ]
-            
+
             if any(x in str(col) for x in highlight_cols):
-            
+
                 try:
+
                     float(val)
-            
-                    # O2D columns
+
                     if "O2D" in str(col):
                         style = get_cell_color(
                             val,
                             "O2D"
                         )
-            
-                    # KPT columns
+
                     else:
                         style = get_cell_color(
                             val,
                             "KPT"
                         )
-            
+
                 except:
                     pass
 
@@ -1158,53 +1154,77 @@ def style_dashboard_table(df, metric="KPT"):
     return html
 
 
-    category_html = f"""
-    <h2>Category Dashboard</h2>
-    {style_dashboard_table(category_dashboard)}
-    """
+# =========================================================
+# CATEGORY HTML
+# =========================================================
 
-    category_source_html = ""
+category_html = f"""
+<h2>Category Dashboard</h2>
+{style_dashboard_table(category_dashboard)}
+"""
 
-    for source, df in category_source_dashboards.items():
+# =========================================================
+# CATEGORY SOURCE HTML
+# =========================================================
+
+category_source_html = ""
+
+for source, df in category_source_dashboards.items():
 
     category_source_html += f"""
     <h3>{source}</h3>
     {style_dashboard_table(df)}
     <br><br>
     """
-    
-    item_html = f"""
-    <h2>Item Dashboard</h2>
-    {style_dashboard_table(item_dashboard)}
+
+# =========================================================
+# ITEM HTML
+# =========================================================
+
+item_html = f"""
+<h2>Item Dashboard</h2>
+{style_dashboard_table(item_dashboard)}
+"""
+
+# =========================================================
+# ITEM SOURCE HTML
+# =========================================================
+
+item_source_html = ""
+
+for source, df in item_source_dashboards.items():
+
+    item_source_html += f"""
+    <h3>{source}</h3>
+    {style_dashboard_table(df)}
+    <br><br>
     """
 
-    item_source_html = ""
-    
-    for source, df in item_source_dashboards.items():
-    
-        item_source_html += f"""
-        <h3>{source}</h3>
-        {style_dashboard_table(df)}
-        <br><br>
-        """
-    
-    region_item_html = ""
-    
-    for region, df in region_item_dashboards.items():
-    
-        region_item_html += f"""
-        <h2>{region}</h2>
-        {style_dashboard_table(df)}
-        <br><br>
-        """
+# =========================================================
+# REGION ITEM HTML
+# =========================================================
 
-    region_item_source_html = ""
+region_item_html = ""
 
-    for region, source_data in region_item_source_dashboards.items():
-    
-        region_item_source_html += f"""
-        <h2>{region}</h2>
-        """
+for region, df in region_item_dashboards.items():
+
+    region_item_html += f"""
+    <h2>{region}</h2>
+    {style_dashboard_table(df)}
+    <br><br>
+    """
+
+# =========================================================
+# REGION ITEM SOURCE HTML
+# =========================================================
+
+region_item_source_html = ""
+
+for region, source_data in region_item_source_dashboards.items():
+
+    region_item_source_html += f"""
+    <h2>{region}</h2>
+    """
 
     for source, df in source_data.items():
 
@@ -1216,6 +1236,18 @@ def style_dashboard_table(df, metric="KPT"):
 
     region_item_source_html += "<br><br>"
 
+
+# =========================================================
+# DEBUG
+# =========================================================
+
+print("FTD Rows:", len(sales_df))
+print("MTD Rows:", len(mtd_df))
+
+print("Category Dashboard Rows:", len(category_dashboard))
+print("Item Dashboard Rows:", len(item_dashboard))
+print("Region Item Dashboards:", len(region_item_dashboards))
+print("Region Item Source Dashboards:", len(region_item_source_dashboards))
 
 # =========================================================
 # SUMMARY HTML
