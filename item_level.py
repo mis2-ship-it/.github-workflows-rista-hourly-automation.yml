@@ -1586,7 +1586,7 @@ if "product_mix_dashboard" not in globals():
     )
 
 print(
-    curr[
+    current_sales[
         [
             "item_shortName",
             "item_quantity",
