@@ -2192,6 +2192,133 @@ def create_category_dashboard(
     return category_dashboard
 
 # =========================================================
+# CATEGORY CHANNEL DASHBOARD
+# =========================================================
+
+def create_category_channel_dashboard(
+    current_sales,
+    lw_sales
+):
+
+    channel_groups = [
+        "In Store",
+        "Swiggy",
+        "Zomato"
+    ]
+
+    dashboard = {}
+
+    for channel in channel_groups:
+
+        print(f"\n===== {channel} =====")
+    
+        curr = current_sales[
+            current_sales["Channel Group"]
+            .astype(str)
+            .str.strip()
+            .str.upper()
+            ==
+            channel.upper()
+        ].copy()
+    
+        lw = lw_sales[
+            lw_sales["Channel Group"]
+            .astype(str)
+            .str.strip()
+            .str.upper()
+            ==
+            channel.upper()
+        ].copy()
+    
+        print(
+            "Current Rows:",
+            len(curr)
+        )
+    
+        print(
+            "LW Rows:",
+            len(lw)
+        )
+
+        curr_cat = (
+            curr.groupby("Category Group")
+            .agg(
+                Orders=("invoiceNumber", "nunique"),
+                Qty_Sold=("item_quantity", "sum"),
+                Net_Rev=("item_netAmount", "sum"),
+                Gross_Rev=("item_grossAmount", "sum"),
+                Discount=(
+                    "item_netDiscountAmount",
+                    lambda x: abs(x.sum())
+                )
+            )
+            .reset_index()
+        )
+
+        curr_cat["Dis %"] = np.where(
+            curr_cat["Gross_Rev"] > 0,
+            (
+                curr_cat["Discount"]
+                / curr_cat["Gross_Rev"]
+            ) * 100,
+            0
+        ).round(1)
+
+        lw_cat = (
+            lw.groupby("Category Group")
+            .agg(
+                LW_Net_Rev=("item_netAmount", "nunique"),
+                LW_Gross_Rev=("item_grossAmount", "sum"),
+                LW_Qty=("item_quantity", "sum"),
+                LW_Orders=("invoiceNumber", "sum"),
+                LW_Discount=(
+                    "item_netDiscountAmount",
+                    lambda x: abs(x.sum())
+                )
+            )
+            .reset_index()
+        )
+
+        lw_cat["LW Dis %"] = np.where(
+            lw_cat["LW_Gross_Rev"] > 0,
+            (
+                lw_cat["LW_Discount"]
+                / lw_cat["LW_Gross_Rev"]
+            ) * 100,
+            0
+        ).round(1)
+
+        final_cat = (
+            curr_cat.merge(
+                lw_cat,
+                on="Category Group",
+                how="left"
+            )
+            .fillna(0)
+        )
+
+        final_cat["Growth %"] = np.where(
+            final_cat["LW_Net_Rev"] > 0,
+            (
+                (
+                    final_cat["Net_Rev"]
+                    - final_cat["LW_Net_Rev"]
+                )
+                / final_cat["LW_Net_Rev"]
+            ) * 100,
+            0
+        ).round(1)
+
+        final_cat = final_cat.sort_values(
+            "Net_Rev",
+            ascending=False
+        )
+
+        dashboard[channel] = final_cat
+
+    return dashboard
+
+# =========================================================
 # FIX CATEGORY GROUP COLUMN
 # =========================================================
 
