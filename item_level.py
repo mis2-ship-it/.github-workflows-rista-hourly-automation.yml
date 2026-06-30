@@ -2245,10 +2245,10 @@ def create_category_channel_dashboard(
             .agg(
                 Orders=("invoiceNumber", "nunique"),
                 Qty_Sold=("item_quantity", "sum"),
-                Net_Rev=("item_netAmount", "sum"),
+                Net_Rev=("item_baseNetAmount", "sum"),
                 Gross_Rev=("item_grossAmount", "sum"),
                 Discount=(
-                    "item_netDiscountAmount",
+                    "item_discountAmount",
                     lambda x: abs(x.sum())
                 )
             )
