@@ -1801,7 +1801,7 @@ def create_product_mix_dashboard(
             (
                 lw_mix["LW Discount"]
                 /
-                lw_mix["LW Net Rev"]
+                lw_mix["LW Gross Rev"]
             ) * 100,
             0
         ).round(1)
@@ -2106,7 +2106,7 @@ def create_category_dashboard(
             (
                 lw_cat["LW Discount"]
                 /
-                lw_cat["LW Net Rev"]
+                lw_cat["LW Gross Rev"]
             ) * 100,
             0
         ).round(1)
@@ -2357,7 +2357,7 @@ def create_item_dashboard(
             (
                 lw_item["LW Discount"]
                 /
-                lw_item["LW Net Rev"]
+                lw_item["LW Gross Rev"]
             ) * 100,
             0
         ).round(1)
@@ -2837,7 +2837,7 @@ def create_discount_dashboard(
             (
                 code_df["LW Discount"]
                 /
-                code_df["LW Net Rev"]
+                code_df["LW Gross Rev"]
             ) * 100,
             0
         ).round(1)
