@@ -1791,6 +1791,11 @@ def create_product_mix_dashboard(
                         "sum"
                     ),
 
+                    "LW Gross Rev": (
+                        "item_baseGrossAmount",
+                        "sum"
+                    ),
+                    
                     "LW Net Rev": (
                         "item_baseNetAmount",
                         "sum"
@@ -1804,6 +1809,9 @@ def create_product_mix_dashboard(
             )
             .reset_index()
         )
+
+        print("Function LW Columns")
+        print(lw_mix.columns.tolist())
 
         lw_mix["LW Dis %"] = np.where(
             lw_mix["LW Net Rev"] > 0,
@@ -2095,6 +2103,11 @@ def create_category_dashboard(
                         "sum"
                     ),
 
+                    "LW Gross Rev": (
+                        "item_baseGrossAmount",
+                        "sum"
+                    ),
+
                     "LW Orders": (
                         "invoiceNumber",
                         "nunique"
@@ -2302,6 +2315,11 @@ def create_item_dashboard(
                         "nunique"
                     ),
 
+                    "Gross Rev": (
+                        "item_baseGrossAmount",
+                        "sum"
+                    ),
+
                     "Discount": (
                         "item_baseNetDiscountAmount",
                         lambda x:
@@ -2317,7 +2335,7 @@ def create_item_dashboard(
             (
                 curr_item["Discount"]
                 /
-                curr_item["Net Rev"]
+                curr_item["Gross Rev"]
             ) * 100,
             0
         ).round(1)
@@ -2343,6 +2361,11 @@ def create_item_dashboard(
 
                     "LW Qty": (
                         "item_quantity",
+                        "sum"
+                    ),
+
+                    "LW Gross Rev": (
+                        "item_baseGrossAmount",
                         "sum"
                     ),
 
@@ -2753,6 +2776,11 @@ def create_discount_dashboard(
                         "sum"
                     ),
 
+                    "Gross Rev": (
+                        "item_baseGrossAmount",
+                        "sum"
+                    ),
+
                     "Net Rev": (
                         "item_baseNetAmount",
                         "sum"
@@ -2805,6 +2833,11 @@ def create_discount_dashboard(
                     "LW Orders": (
                         "invoiceNumber",
                         "nunique"
+                    ),
+
+                    "LW Gross Rev": (
+                        "item_baseGrossAmount",
+                        "sum"
                     ),
 
                     "LW Qty": (
