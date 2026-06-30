@@ -597,20 +597,39 @@ print(
 
 # =========================================================
 # CURRENT WINDOW
-# 9 AM → PREVIOUS COMPLETED HOUR
-# 09:00 AM → CURRENT HOUR
+# 9 AM → CURRENT HOUR
+# SUPPORTS AFTER MIDNIGHT
 # =========================================================
 
 from zoneinfo import ZoneInfo
 from datetime import datetime, timedelta
 
 ist = ZoneInfo("Asia/Kolkata")
+
 ist_now = datetime.now(ist)
 
-# Business Date (IST)
-business_date = ist_now.date()
+# =========================================================
+# BUSINESS DATE LOGIC
+# AFTER MIDNIGHT → STILL SAME BUSINESS DAY
+# =========================================================
 
-# Start → 09:00 AM IST
+if ist_now.hour < 9:
+
+    business_date = (
+        ist_now.date()
+        - timedelta(days=1)
+    )
+
+else:
+
+    business_date = (
+        ist_now.date()
+    )
+
+# =========================================================
+# WINDOW START
+# =========================================================
+
 current_window_start = datetime.combine(
     business_date,
     datetime.min.time()
@@ -618,28 +637,21 @@ current_window_start = datetime.combine(
     hour=9,
     minute=0,
     second=0,
-    tzinfo=ZoneInfo("Asia/Kolkata")
-    microsecond=0,
     tzinfo=ist
 )
 
-current_window_end = datetime.combine(
-    business_date,
-    datetime.min.time()
-).replace(
-    hour=ist_now.hour,
-# End → Current Hour :59:59
+# =========================================================
+# WINDOW END
+# =========================================================
+
 current_window_end = ist_now.replace(
     minute=59,
     second=59,
-    tzinfo=ZoneInfo("Asia/Kolkata")
     microsecond=0
 )
 
-# ==========================================
 # =========================================================
-# LAST WEEK SAME WINDOW
-# ==========================================
+# LAST WEEK WINDOW
 # =========================================================
 
 lw_window_start = (
