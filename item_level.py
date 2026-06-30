@@ -2378,6 +2378,30 @@ for k, v in (
     )
 
 # =========================================================
+# CATEGORY CHANNEL DASHBOARD
+# =========================================================
+
+category_channel_dashboard = (
+    create_category_channel_dashboard(
+        current_sales,
+        lw_sales
+    )
+)
+
+print(
+    "✅ Category Channel Dashboard Created"
+)
+
+for k, v in (
+    category_channel_dashboard.items()
+):
+    print(
+        k,
+        len(v)
+    )
+
+
+# =========================================================
 # TOP 15 ITEM LEVEL DASHBOARD
 # =========================================================
 
