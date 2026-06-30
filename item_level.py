@@ -1636,15 +1636,12 @@ def create_hourly_dashboard(
 
     return dashboard
 
-
 # =========================================================
 # CREATE DASHBOARD
 # =========================================================
 
 hourly_dashboard = (
     create_hourly_dashboard(
-        current_df,
-        lw_df
         current_sales,
         lw_sales
     )
