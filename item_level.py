@@ -1017,7 +1017,7 @@ print(
         ["invoiceNumber", "item_shortName"]
     ]
     .duplicated()
-    .sum()
+    .nunique()
 )
 
 # =========================================================
@@ -1608,10 +1608,10 @@ curr_mix = (
     curr.groupby("Product Mix")
     .agg(
         Orders=("invoiceNumber", "nunique"),
-        Qty_Sold=("item_quantity", "sum"),
-        Gross_Rev=("item_grossAmount", "sum"),
-        Net_Rev=("item_netAmount", "sum"),
-        Discount=("item_netDiscountAmount", lambda x: abs(x.sum()))
+        Qty_Sold=("item_quantity", "nunique"),
+        Gross_Rev=("item_grossAmount", "nunique"),
+        Net_Rev=("item_netAmount", "nunique"),
+        Discount=("item_netDiscountAmount", lambda x: abs(x.nunique()))
     )
     .reset_index()
 )
@@ -1630,10 +1630,10 @@ lw_mix = (
     lw.groupby("Product Mix")
     .agg(
         LW_Orders=("invoiceNumber", "nunique"),
-        LW_Qty_Sold=("item_quantity", "sum"),
-        LW_Gross_Rev=("item_grossAmount", "sum"),
-        LW_Net_Rev=("item_netAmount", "sum"),
-        LW_Discount=("item_netDiscountAmount", lambda x: abs(x.sum()))
+        LW_Qty_Sold=("item_quantity", "nunique"),
+        LW_Gross_Rev=("item_grossAmount", "nunique"),
+        LW_Net_Rev=("item_netAmount", "nunique"),
+        LW_Discount=("item_netDiscountAmount", lambda x: abs(x.nunique()))
     )
     .reset_index()
 )
@@ -1773,25 +1773,25 @@ def create_hourly_dashboard(
         current_qty = (
             curr["item_quantity"]
             .fillna(0)
-            .sum()
+            .nunique()
         )
 
         current_gross = (
             curr["item_grossAmount"]
             .fillna(0)
-            .sum()
+            .nunique()
         )
 
         current_discount = abs(
             curr["item_netDiscountAmount"]
             .fillna(0)
-            .sum()
+            .nunique()
         )
 
         current_net = (
             curr["item_netAmount"]
             .fillna(0)
-            .sum()
+            .nunique()
         )
 
         current_aov = (
@@ -1813,25 +1813,25 @@ def create_hourly_dashboard(
         lw_qty = (
             lw["item_quantity"]
             .fillna(0)
-            .sum()
+            .nunique()
         )
 
         lw_gross = (
             lw["item_grossAmount"]
             .fillna(0)
-            .sum()
+            .nunique()
         )
 
         lw_discount = abs(
             lw["item_netDiscountAmount"]
             .fillna(0)
-            .sum()
+            .nunique()
         )
 
         lw_net = (
             lw["item_netAmount"]
             .fillna(0)
-            .sum()
+            .nunique()
         )
 
         lw_aov = (
@@ -2087,22 +2087,22 @@ def create_product_mix_dashboard(
 
                     "Gross Rev": (
                         "item_grossAmount",
-                        "sum"
+                        "nunique"
                     ),
 
                     "Qty Sold": (
                         "item_quantity",
-                        "sum"
+                        "nunique"
                     ),
 
                     "Net Rev": (
                         "item_netAmount",
-                        "sum"
+                        "nunique"
                     ),
 
                     "Discount": (
                         "item_netDiscountAmount",
-                        lambda x: abs(x.sum())
+                        lambda x: abs(x.nunique())
                     )
                 }
             )
@@ -2136,22 +2136,22 @@ def create_product_mix_dashboard(
 
                     "LW Qty Sold": (
                         "item_quantity",
-                        "sum"
+                        "nunique"
                     ),
 
                     "LW Net Rev": (
                         "item_netAmount",
-                        "sum"
+                        "nunique"
                     ),
 
                     "LW Gross Rev": (
                         "item_grossAmount",
-                        "sum"
+                        "nunique"
                     ),
 
                     "LW Discount": (
                         "item_netDiscountAmount",
-                        lambda x: abs(x.sum())
+                        lambda x: abs(x.nunique())
                     )
                 }
             )
@@ -2370,22 +2370,22 @@ def create_category_dashboard(
 
                     "Qty Sold": (
                         "item_quantity",
-                        "sum"
+                        "nunique"
                     ),
 
                     "Net Rev": (
                         "item_netAmount",
-                        "sum"
+                        "nunique"
                     ),
 
                     "Gross Rev": (
                         "item_grossAmount",
-                        "sum"
+                        "nunique"
                     ),
 
                     "Discount": (
                         "item_netDiscountAmount",
-                        lambda x: abs(x.sum())
+                        lambda x: abs(x.nunique())
                     )
                 }
             )
@@ -2416,17 +2416,17 @@ def create_category_dashboard(
                 **{
                     "LW Net Rev": (
                         "item_netAmount",
-                        "sum"
+                        "nunique"
                     ),
 
                     "LW Gross Rev": (
                         "item_grossAmount",
-                        "sum"
+                        "nunique"
                     ),
 
                     "LW Qty": (
                         "item_quantity",
-                        "sum"
+                        "nunique"
                     ),
 
                     "LW Orders": (
@@ -2437,7 +2437,7 @@ def create_category_dashboard(
                     "LW Discount": (
                         "item_netDiscountAmount",
                         lambda x:
-                        abs(x.sum())
+                        abs(x.nunique())
                     )
                 }
             )
@@ -2584,12 +2584,12 @@ def create_category_channel_dashboard(
             curr.groupby("Category Group")
             .agg(
                 Orders=("invoiceNumber", "nunique"),
-                Qty_Sold=("item_quantity", "sum"),
-                Net_Rev=("item_netAmount", "sum"),
-                Gross_Rev=("item_grossAmount", "sum"),
+                Qty_Sold=("item_quantity", "nunique"),
+                Net_Rev=("item_netAmount", "nunique"),
+                Gross_Rev=("item_grossAmount", "nunique"),
                 Discount=(
                     "item_netDiscountAmount",
-                    lambda x: abs(x.sum())
+                    lambda x: abs(x.nunique())
                 )
             )
             .reset_index()
@@ -2607,13 +2607,13 @@ def create_category_channel_dashboard(
         lw_cat = (
             lw.groupby("Category Group")
             .agg(
-                LW_Net_Rev=("item_netAmount", "sum"),
-                LW_Gross_Rev=("item_grossAmount", "sum"),
-                LW_Qty=("item_quantity", "sum"),
+                LW_Net_Rev=("item_netAmount", "nunique"),
+                LW_Gross_Rev=("item_grossAmount", "nunique"),
+                LW_Qty=("item_quantity", "nunique"),
                 LW_Orders=("invoiceNumber", "nunique"),
                 LW_Discount=(
                     "item_netDiscountAmount",
-                    lambda x: abs(x.sum())
+                    lambda x: abs(x.nunique())
                 )
             )
             .reset_index()
@@ -2817,17 +2817,17 @@ def create_item_dashboard(
                 **{
                     "Net Rev": (
                         "item_netAmount",
-                        "sum"
+                        "nunique"
                     ),
 
                     "Gross Rev": (
                         "item_grossAmount",
-                        "sum"
+                        "nunique"
                     ),
 
                     "Qty Sold": (
                         "item_quantity",
-                        "sum"
+                        "nunique"
                     ),
 
                     "Orders": (
@@ -2838,7 +2838,7 @@ def create_item_dashboard(
                     "Discount": (
                         "item_netDiscountAmount",
                         lambda x:
-                        abs(x.sum())
+                        abs(x.nunique())
                     )
                 }
             )
@@ -2871,17 +2871,17 @@ def create_item_dashboard(
                 **{
                     "LW Net Rev": (
                         "item_netAmount",
-                        "sum"
+                        "nunique"
                     ),
 
                     "LW Gross Rev": (
                         "item_grossAmount",
-                        "sum"
+                        "nunique"
                     ),
 
                     "LW Qty": (
                         "item_quantity",
-                        "sum"
+                        "nunique"
                     ),
 
                     "LW Orders": (
@@ -2892,7 +2892,7 @@ def create_item_dashboard(
                     "LW Discount": (
                         "item_netDiscountAmount",
                         lambda x:
-                        abs(x.sum())
+                        abs(x.nunique())
                     )
                 }
             )
@@ -3309,23 +3309,23 @@ def create_discount_dashboard(
 
                     "Qty Sold": (
                         "item_quantity",
-                        "sum"
+                        "nunique"
                     ),
 
                     "Gross Rev": (
                         "item_grossAmount",
-                        "sum"
+                        "nunique"
                     ),
 
                     "Net Rev": (
                         "item_netAmount",
-                        "sum"
+                        "nunique"
                     ),
 
                     "Discount Given": (
                         "item_netDiscountAmount",
                         lambda x:
-                        abs(x.sum())
+                        abs(x.nunique())
                     )
                 }
             )
@@ -3373,23 +3373,23 @@ def create_discount_dashboard(
 
                     "LW Qty": (
                         "item_quantity",
-                        "sum"
+                        "nunique"
                     ),
 
                     "LW Gross Rev": (
                         "item_grossAmount",
-                        "sum"
+                        "nunique"
                     ),
 
                     "LW Net Rev": (
                         "item_netAmount",
-                        "sum"
+                        "nunique"
                     ),
 
                     "LW Discount": (
                         "item_netDiscountAmount",
                         lambda x:
-                        abs(x.sum())
+                        abs(x.nunique())
                     )
                 }
             )
