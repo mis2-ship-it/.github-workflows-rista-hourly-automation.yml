@@ -1373,6 +1373,7 @@ print("✅ Product Mix Safe")
 # =========================================================
 # HOURLY COMPARISON DASHBOARD
 # CURRENT VS LAST WEEK
+# FIXED: Changed .str.contains() to == for exact match
 # =========================================================
 
 def create_hourly_dashboard(
@@ -1394,7 +1395,7 @@ def create_hourly_dashboard(
         print(f"Brand: {brand}")
 
         # =============================================
-        # FILTER BRAND
+        # FILTER BRAND - FIXED: Use == instead of .str.contains()
         # =============================================
 
         curr = current_sales[
@@ -1402,10 +1403,8 @@ def create_hourly_dashboard(
             .astype(str)
             .str.strip()
             .str.upper()
-            .str.contains(
-                brand_filter.upper(),
-                na=False
-            )
+            ==
+            brand_filter.upper()
         ].copy()
 
         lw = lw_sales[
@@ -1413,10 +1412,8 @@ def create_hourly_dashboard(
             .astype(str)
             .str.strip()
             .str.upper()
-            .str.contains(
-                brand_filter.upper(),
-                na=False
-            )
+            ==
+            brand_filter.upper()
         ].copy()
 
         # =============================================
