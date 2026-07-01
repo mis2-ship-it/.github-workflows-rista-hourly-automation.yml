@@ -1113,7 +1113,7 @@ def style_dashboard_table(df, metric="KPT"):
         border-collapse:collapse;
         width:70%;
         font-family:Arial;
-        font-size:10px;
+        font-size:18px;
     ">
     """
 
