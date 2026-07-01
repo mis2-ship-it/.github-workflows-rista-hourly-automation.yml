@@ -2850,7 +2850,7 @@ current_sales["Zomato Code"] = (
 print("✅ Discount Codes Extracted")
 
 # =========================================================
-# DASHBOARD FUNCTION
+# DASHBOARD FUNCTION - FIXED BUG
 # =========================================================
 
 def create_discount_dashboard(
@@ -2920,39 +2920,20 @@ def create_discount_dashboard(
         ].copy()
 
         # =====================================================
-        # CURRENT SUMMARY
+        # CURRENT SUMMARY - FIXED
         # =====================================================
 
         code_df = (
             temp.groupby(code_col)
             .agg(
-                **{
-                    "Orders": (
-                        "invoiceNumber",
-                        "nunique"
-                    ),
-
-                    "Qty Sold": (
-                        "item_quantity",
-                        "sum"
-                    ),
-
-                    "Gross Rev": (
-                        "item_baseGrossAmount",
-                        "sum"
-                    ),
-
-                    "Net Rev": (
-                        "item_baseNetAmount",
-                        "sum"
-                    ),
-
-                    "Discount Given": (
-                        "item_baseNetDiscountAmount",
-                        lambda x:
-                        abs(x.sum())
-                    )
-                }
+                Orders=("invoiceNumber", "nunique"),
+                Qty_Sold=("item_quantity", "sum"),
+                Gross_Rev=("item_baseGrossAmount", "sum"),
+                Net_Rev=("item_baseNetAmount", "sum"),
+                Discount_Given=(
+                    "item_baseNetDiscountAmount",
+                    lambda x: abs(x.sum())
+                )
             )
             .reset_index()
         )
@@ -2962,11 +2943,11 @@ def create_discount_dashboard(
         # =====================================================
 
         code_df["Dis %"] = np.where(
-            code_df["Net Rev"] > 0,
+            code_df["Net_Rev"] > 0,
             (
-                code_df["Discount Given"]
+                code_df["Discount_Given"]
                 /
-                code_df["Net Rev"]
+                code_df["Net_Rev"]
             ) * 100,
             0
         ).round(1)
@@ -2977,46 +2958,27 @@ def create_discount_dashboard(
 
         code_df["AOV"] = np.where(
             code_df["Orders"] > 0,
-            code_df["Net Rev"]
+            code_df["Net_Rev"]
             /
             code_df["Orders"],
             0
         ).round(1)
 
         # =====================================================
-        # LW SUMMARY
+        # LW SUMMARY - FIXED
         # =====================================================
 
         lw_code_df = (
             lw_temp.groupby(code_col)
             .agg(
-                **{
-                    "LW Orders": (
-                        "invoiceNumber",
-                        "nunique"
-                    ),
-
-                    "LW Gross Rev": (
-                        "item_baseGrossAmount",
-                        "sum"
-                    ),
-
-                    "LW Qty": (
-                        "item_quantity",
-                        "sum"
-                    ),
-
-                    "LW Net Rev": (
-                        "item_baseNetAmount",
-                        "sum"
-                    ),
-
-                    "LW Discount": (
-                        "item_baseNetDiscountAmount",
-                        lambda x:
-                        abs(x.sum())
-                    )
-                }
+                LW_Orders=("invoiceNumber", "nunique"),
+                LW_Gross_Rev=("item_baseGrossAmount", "sum"),
+                LW_Qty=("item_quantity", "sum"),
+                LW_Net_Rev=("item_baseNetAmount", "sum"),
+                LW_Discount=(
+                    "item_baseNetDiscountAmount",
+                    lambda x: abs(x.sum())
+                )
             )
             .reset_index()
         )
@@ -3036,11 +2998,11 @@ def create_discount_dashboard(
         # =====================================================
 
         code_df["LW Dis %"] = np.where(
-            code_df["LW Net Rev"] > 0,
+            code_df["LW_Net_Rev"] > 0,
             (
-                code_df["LW Discount"]
+                code_df["LW_Discount"]
                 /
-                code_df["LW Gross Rev"]
+                code_df["LW_Gross_Rev"]
             ) * 100,
             0
         ).round(1)
@@ -3050,10 +3012,10 @@ def create_discount_dashboard(
         # =====================================================
 
         code_df["LW AOV"] = np.where(
-            code_df["LW Orders"] > 0,
-            code_df["LW Net Rev"]
+            code_df["LW_Orders"] > 0,
+            code_df["LW_Net_Rev"]
             /
-            code_df["LW Orders"],
+            code_df["LW_Orders"],
             0
         ).round(1)
 
@@ -3078,15 +3040,15 @@ def create_discount_dashboard(
             [
                 code_col,
                 "Orders",
-                "Qty Sold",
-                "Net Rev",
-                "Discount Given",
+                "Qty_Sold",
+                "Net_Rev",
+                "Discount_Given",
                 "Dis %",
                 "AOV",
-                "LW Orders",
-                "LW Qty",
-                "LW Net Rev",
-                "LW Discount",
+                "LW_Orders",
+                "LW_Qty",
+                "LW_Net_Rev",
+                "LW_Discount",
                 "LW Dis %",
                 "LW AOV"
             ]
