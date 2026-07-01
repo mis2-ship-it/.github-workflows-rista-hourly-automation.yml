@@ -2192,7 +2192,7 @@ def create_category_dashboard(
     return category_dashboard
 
 # =========================================================
-# CATEGORY CHANNEL DASHBOARD
+# CATEGORY CHANNEL DASHBOARD - FIXED BUG
 # =========================================================
 
 def create_category_channel_dashboard(
@@ -2240,15 +2240,19 @@ def create_category_channel_dashboard(
             len(lw)
         )
 
+        # =========================================
+        # CURRENT AGGREGATION - FIXED
+        # =========================================
+
         curr_cat = (
             curr.groupby("Category Group")
             .agg(
                 Orders=("invoiceNumber", "nunique"),
                 Qty_Sold=("item_quantity", "sum"),
                 Net_Rev=("item_baseNetAmount", "sum"),
-                Gross_Rev=("item_grossAmount", "sum"),
+                Gross_Rev=("item_baseGrossAmount", "sum"),
                 Discount=(
-                    "item_discountAmount",
+                    "item_baseNetDiscountAmount",
                     lambda x: abs(x.sum())
                 )
             )
@@ -2264,15 +2268,21 @@ def create_category_channel_dashboard(
             0
         ).round(1)
 
+        # =========================================
+        # LAST WEEK AGGREGATION - FIXED BUG
+        # Changed from wrong column names to correct ones
+        # Changed from nunique to sum, and sum to nunique
+        # =========================================
+
         lw_cat = (
             lw.groupby("Category Group")
             .agg(
-                LW_Net_Rev=("item_netAmount", "nunique"),
-                LW_Gross_Rev=("item_grossAmount", "sum"),
+                LW_Net_Rev=("item_baseNetAmount", "sum"),
+                LW_Gross_Rev=("item_baseGrossAmount", "sum"),
                 LW_Qty=("item_quantity", "sum"),
-                LW_Orders=("invoiceNumber", "sum"),
+                LW_Orders=("invoiceNumber", "nunique"),
                 LW_Discount=(
-                    "item_netDiscountAmount",
+                    "item_baseNetDiscountAmount",
                     lambda x: abs(x.sum())
                 )
             )
@@ -3095,7 +3105,7 @@ swiggy_discount_dashboard = (
     create_discount_dashboard(
         current_sales,
         lw_sales,
-        "Swiggy Discount Code",
+        "Swiggy Code",
         "Swiggy"
     )
 )
@@ -3112,7 +3122,7 @@ zomato_discount_dashboard = (
     create_discount_dashboard(
         current_sales,
         lw_sales,
-        "Zomato Discount Code",
+        "Zomato Code",
         "Zomato"
     )
 )
