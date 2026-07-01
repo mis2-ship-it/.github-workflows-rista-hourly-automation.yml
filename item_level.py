@@ -2834,8 +2834,45 @@ if (
     )
 
 print("✅ Discount Columns Fixed")
+
 # =========================================================
-# CREATE CODE COLUMNS
+# FIX LW DISCOUNT COLUMNS
+# =========================================================
+
+if (
+    "item_discounts" not in lw_sales.columns
+    and
+    "item_discounts_x" in lw_sales.columns
+):
+
+    lw_sales["item_discounts"] = (
+        lw_sales["item_discounts_x"]
+        .combine_first(
+            lw_sales.get(
+                "item_discounts_y"
+            )
+        )
+    )
+
+if (
+    "discounts" not in lw_sales.columns
+    and
+    "discounts_x" in lw_sales.columns
+):
+
+    lw_sales["discounts"] = (
+        lw_sales["discounts_x"]
+        .combine_first(
+            lw_sales.get(
+                "discounts_y"
+            )
+        )
+    )
+
+print("✅ LW Discount Columns Fixed")
+
+# =========================================================
+# CREATE CODE COLUMNS - CURRENT
 # =========================================================
 
 current_sales["Swiggy Code"] = (
@@ -2847,7 +2884,24 @@ current_sales["Zomato Code"] = (
     current_sales["discounts"]
     .apply(extract_zomato_code)
 )
-print("✅ Discount Codes Extracted")
+
+print("✅ Current Discount Codes Extracted")
+
+# =========================================================
+# CREATE CODE COLUMNS - LW
+# =========================================================
+
+lw_sales["Swiggy Code"] = (
+    lw_sales["item_discounts"]
+    .apply(extract_swiggy_code)
+)
+
+lw_sales["Zomato Code"] = (
+    lw_sales["discounts"]
+    .apply(extract_zomato_code)
+)
+
+print("✅ LW Discount Codes Extracted")
 
 # =========================================================
 # DASHBOARD FUNCTION - FIXED BUG
