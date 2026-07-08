@@ -1654,7 +1654,8 @@ print(hourly_dashboard.head())
 
 def create_product_mix_dashboard(
     current_sales,
-    lw_sales
+    lw_sales,
+    l2w_sales
 ):
 
     print("Function Current Columns")
@@ -1684,6 +1685,14 @@ def create_product_mix_dashboard(
 
         lw = lw_sales[
             lw_sales["brandName"]
+            .astype(str)
+            .str.upper()
+            ==
+            brand_filter.upper()
+        ].copy()
+
+        l2w = l2w_sales[
+            l2w_sales["brandName"]
             .astype(str)
             .str.upper()
             ==
@@ -1729,27 +1738,15 @@ def create_product_mix_dashboard(
             curr.groupby("Product Mix")
             .agg(
                 **{
-                    "Orders": (
+                    "Today Orders": (
                         "invoiceNumber",
                         "nunique"
                     ),
-
-                    "Gross Rev": (
+                    "Today Gross": (
                         "item_baseGrossAmount",
                         "sum"
                     ),
-
-                    "Qty Sold": (
-                        "item_quantity",
-                        "sum"
-                    ),
-
-                    "Net Rev": (
-                        "item_baseNetAmount",
-                        "sum"
-                    ),
-
-                    "Discount": (
+                    "Today Discount": (
                         "item_baseNetDiscountAmount",
                         lambda x: abs(x.sum())
                     )
@@ -1757,14 +1754,11 @@ def create_product_mix_dashboard(
             )
             .reset_index()
         )
-
-        curr_mix["Dis %"] = np.where(
-            curr_mix["Net Rev"] > 0,
-            (
-                curr_mix["Discount"]
-                /
-                curr_mix["Gross Rev"]
-            ) * 100,
+        
+        curr_mix["Today Dis %"] = np.where(
+            curr_mix["Today Gross"] > 0,
+            curr_mix["Today Discount"] /
+            curr_mix["Today Gross"] * 100,
             0
         ).round(1)
 
@@ -1782,22 +1776,10 @@ def create_product_mix_dashboard(
                         "invoiceNumber",
                         "nunique"
                     ),
-
-                    "LW Qty Sold": (
-                        "item_quantity",
-                        "sum"
-                    ),
-
-                    "LW Gross Rev": (
+                    "LW Gross": (
                         "item_baseGrossAmount",
                         "sum"
                     ),
-                    
-                    "LW Net Rev": (
-                        "item_baseNetAmount",
-                        "sum"
-                    ),
-
                     "LW Discount": (
                         "item_baseNetDiscountAmount",
                         lambda x: abs(x.sum())
@@ -1806,46 +1788,43 @@ def create_product_mix_dashboard(
             )
             .reset_index()
         )
-
-        print("Function LW Columns")
-        print(lw_mix.columns.tolist())
-
+        
         lw_mix["LW Dis %"] = np.where(
-            lw_mix["LW Net Rev"] > 0,
-            (
-                lw_mix["LW Discount"]
-                /
-                lw_mix["LW Gross Rev"]
-            ) * 100,
+            lw_mix["LW Gross"] > 0,
+            lw_mix["LW Discount"] /
+            lw_mix["LW Gross"] * 100,
             0
         ).round(1)
 
-        lw_mix["LW AOV"] = np.where(
-            lw_mix["LW Orders"] > 0,
-            lw_mix["LW Net Rev"]
-            /
-            lw_mix["LW Orders"],
-            0
-        ).round(1)
+        l2w_mix = (
+            l2w.groupby("Product Mix")
+            .agg(
+                **{
+                    "L2W Orders": (
+                        "invoiceNumber",
+                        "nunique"
+                    )
+                }
+            )
+            .reset_index()
+        )
 
 
         # =============================================
         # MERGE
         # =============================================
 
-        final_mix = curr_mix.merge(
-            lw_mix,
-            on="Product Mix",
-            how="left"
-        )
-
-        final_mix = final_mix.fillna(0)
-
         final_mix = (
-            final_mix
-            .sort_values(
-                "Net Rev",
-                ascending=False
+            curr_mix
+            .merge(
+                lw_mix,
+                on="Product Mix",
+                how="left"
+            )
+            .merge(
+                l2w_mix,
+                on="Product Mix",
+                how="left"
             )
         )
 
@@ -1897,6 +1876,18 @@ for col in metric_cols:
             )
         )
 
+    # L2W SALES
+    if (
+        col not in l2w_sales.columns
+        and x_col in l2w_sales.columns
+    ):
+    
+        l2w_sales[col] = (
+            l2w_sales[x_col]
+            .combine_first(
+                l2w_sales.get(y_col)
+            )
+        )
     # NUMERIC CONVERSION
     current_sales[col] = pd.to_numeric(
         current_sales[col],
@@ -1905,6 +1896,11 @@ for col in metric_cols:
 
     lw_sales[col] = pd.to_numeric(
         lw_sales[col],
+        errors="coerce"
+    ).fillna(0)
+
+    l2w_sales[col] = pd.to_numeric(
+        l2w_sales[col],
         errors="coerce"
     ).fillna(0)
 
@@ -1950,6 +1946,17 @@ for col in dashboard_cols:
             )
         )
 
+    if (
+        col not in l2w_sales.columns
+        and x_col in l2w_sales.columns
+    ):
+    
+        l2w_sales[col] = (
+            l2w_sales[x_col]
+            .combine_first(
+                l2w_sales.get(y_col)
+            )
+        )
 print("✅ Dashboard Columns Fixed")
 
 
@@ -1975,7 +1982,8 @@ print(
 product_mix_dashboard = (
     create_product_mix_dashboard(
         current_sales,
-        lw_sales
+        lw_sales,
+        l2w_sales
     )
 )
 
@@ -1988,78 +1996,116 @@ for k, v in (
 ):
     print(k, len(v))
 
+
 # =========================================================
-# CATEGORY DASHBOARD
+# PRODUCT MIX SOURCE DASHBOARD
 # =========================================================
+
+product_mix_source_dashboard = (
+    create_product_mix_source_dashboard(
+        current_sales,
+        lw_sales,
+        l2w_sales
+    )
+)
+
+print("✅ Product Mix Source Dashboard Created")
+
+# =========================================================
+# PRODUCT MIX SOURCE DASHBOARD
+# =========================================================
+
+def create_product_mix_source_dashboard(
+    current_sales,
+    lw_sales,
+    l2w_sales
+):
+
+    dashboard = {}
+
+    for source in [
+        "In Store",
+        "Swiggy",
+        "Zomato"
+    ]:
+
+        curr = current_sales[
+            current_sales["Channel"]
+            .str.contains(source, na=False)
+        ].copy()
+
+        lw = lw_sales[
+            lw_sales["Channel"]
+            .str.contains(source, na=False)
+        ].copy()
+
+        l2w = l2w_sales[
+            l2w_sales["Channel"]
+            .str.contains(source, na=False)
+        ].copy()
+
+        dashboard[source] = create_product_mix_dashboard(
+            curr,
+            lw,
+            l2w
+        )
+
+    return dashboard
+
 
 def create_category_dashboard(
     current_sales,
-    lw_sales
+    lw_sales,
+    l2w_sales
 ):
 
     brands = {
-    "Frozen Bottle": "Frozen Bottle",
-    "Boba Bar": "Boba Bar",
-    "Madno": "Madno",
-    "Lubov": "Lubov- Patisserie"
+        "Frozen Bottle": "Frozen Bottle",
+        "Boba Bar": "Boba Bar",
+        "Madno": "Madno",
+        "Lubov": "Lubov- Patisserie"
     }
 
     category_dashboard = {}
 
     for brand, brand_filter in brands.items():
 
-        # =============================================
-        # BRAND FILTER
-        # =============================================
-
         curr = current_sales[
             current_sales["brandName"]
-            .astype(str)
-            .str.strip()
             .str.upper()
             ==
             brand_filter.upper()
         ].copy()
-
 
         lw = lw_sales[
             lw_sales["brandName"]
-            .astype(str)
-            .str.strip()
             .str.upper()
             ==
             brand_filter.upper()
         ].copy()
 
-        # =============================================
-        # CURRENT MIX
-        # =============================================
+        l2w = l2w_sales[
+            l2w_sales["brandName"]
+            .str.upper()
+            ==
+            brand_filter.upper()
+        ].copy()
 
-        curr_cat = (
+        # ---------------- TODAY ----------------
+
+        curr_grp = (
             curr.groupby("Category Group")
             .agg(
                 **{
-                    "Orders": (
+                    "Today Orders": (
                         "invoiceNumber",
                         "nunique"
                     ),
-
-                    "Qty Sold": (
-                        "item_quantity",
-                        "sum"
-                    ),
-
-                    "Net Rev": (
-                        "item_baseNetAmount",
-                        "sum"
-                    ),
-
-                    "Gross Rev": (
+                    "Today Gross Rev": (
                         "item_baseGrossAmount",
                         "sum"
                     ),
-
-                    "Discount": (
+                    "Today Discount": (
                         "item_baseNetDiscountAmount",
                         lambda x: abs(x.sum())
                     )
@@ -2068,125 +2114,281 @@ def create_category_dashboard(
             .reset_index()
         )
 
-        curr_cat["Dis %"] = np.where(
-            curr_cat["Net Rev"] > 0,
+        curr_grp["Today Dis %"] = np.where(
+            curr_grp["Today Gross Rev"] > 0,
             (
-                curr_cat["Discount"]
+                curr_grp["Today Discount"]
                 /
-                curr_cat["Net Rev"]
+                curr_grp["Today Gross Rev"]
             ) * 100,
             0
         ).round(1)
 
+        # ---------------- LW ----------------
 
-
-        # =============================================
-        # LAST WEEK CATEGORY
-        # =============================================
-
-        lw_cat = (
-            lw.groupby(
-                "Category Group"
-            )
+        lw_grp = (
+            lw.groupby("Category Group")
             .agg(
                 **{
-                    "LW Net Rev": (
-                        "item_baseNetAmount",
-                        "sum"
-                    ),
-
-                    "LW Qty": (
-                        "item_quantity",
-                        "sum"
-                    ),
-
-                    "LW Gross Rev": (
-                        "item_baseGrossAmount",
-                        "sum"
-                    ),
-
                     "LW Orders": (
                         "invoiceNumber",
                         "nunique"
                     ),
-
+                    "LW Gross Rev": (
+                        "item_baseGrossAmount",
+                        "sum"
+                    ),
                     "LW Discount": (
                         "item_baseNetDiscountAmount",
-                        lambda x:
-                        abs(x.sum())
+                        lambda x: abs(x.sum())
                     )
                 }
             )
             .reset_index()
         )
 
-        lw_cat["LW Dis %"] = np.where(
-            lw_cat["LW Net Rev"] > 0,
+        lw_grp["LW Dis %"] = np.where(
+            lw_grp["LW Gross Rev"] > 0,
             (
-                lw_cat["LW Discount"]
+                lw_grp["LW Discount"]
                 /
-                lw_cat["LW Gross Rev"]
+                lw_grp["LW Gross Rev"]
             ) * 100,
             0
         ).round(1)
 
-        lw_cat = lw_cat.drop(
-            columns="LW Discount"
+        # ---------------- L2W ----------------
+
+        l2w_grp = (
+            l2w.groupby("Category Group")
+            .agg(
+                **{
+                    "L2W Orders": (
+                        "invoiceNumber",
+                        "nunique"
+                    )
+                }
+            )
+            .reset_index()
         )
 
-        # =============================================
-        # MERGE CURRENT + LW
-        # =============================================
+        # ---------------- MERGE ----------------
 
-        final_cat = curr_cat.merge(
-            lw_cat,
-            on="Category Group",
-            how="left"
-        )
-
-        final_cat = (
-            final_cat
-            .fillna(0)
-        )
-
-        # =============================================
-        # SORT
-        # =============================================
-
-        final_cat = (
-            final_cat
-            .sort_values(
-                "Net Rev",
-                ascending=False
+        final = (
+            curr_grp
+            .merge(
+                lw_grp,
+                on="Category Group",
+                how="outer"
+            )
+            .merge(
+                l2w_grp,
+                on="Category Group",
+                how="outer"
             )
         )
 
-        # round values
-        numeric_cols = [
-            "Net Rev",
-            "Qty Sold",
-            "Orders",
-            "Dis %",
-            "LW Net Rev",
-            "LW Qty",
-            "LW Orders",
-            "LW Dis %"
+        final = final.fillna(0)
+
+        final["Today Growth %"] = np.where(
+            final["LW Orders"] > 0,
+            (
+                final["Today Orders"]
+                /
+                final["LW Orders"]
+                - 1
+            ) * 100,
+            0
+        ).round(1)
+
+        final["LW Growth %"] = np.where(
+            final["L2W Orders"] > 0,
+            (
+                final["LW Orders"]
+                /
+                final["L2W Orders"]
+                - 1
+            ) * 100,
+            0
+        ).round(1)
+
+        final = final[
+            [
+                "Category Group",
+                "Today Orders",
+                "LW Orders",
+                "L2W Orders",
+                "Today Dis %",
+                "LW Dis %",
+                "Today Growth %",
+                "LW Growth %"
+            ]
         ]
 
-        final_cat[
-            numeric_cols
-        ] = (
-            final_cat[
-                numeric_cols
-            ]
-            .round(1)
-        )
-
-        category_dashboard[
-            brand
-        ] = final_cat
+        category_dashboard[brand] = final
 
     return category_dashboard
+
+# =========================================================
+# CATEGORY SOURCE DASHBOARD
+# =========================================================
+
+def create_category_source_dashboard(
+    current_sales,
+    lw_sales,
+    l2w_sales
+):
+
+    dashboard = {}
+
+    for source in [
+        "In Store",
+        "Swiggy",
+        "Zomato"
+    ]:
+
+        curr = current_sales[
+            current_sales["Channel"]
+            .str.contains(source, na=False)
+        ].copy()
+
+        lw = lw_sales[
+            lw_sales["Channel"]
+            .str.contains(source, na=False)
+        ].copy()
+
+        l2w = l2w_sales[
+            l2w_sales["Channel"]
+            .str.contains(source, na=False)
+        ].copy()
+
+        dashboard[source] = (
+            create_category_dashboard(
+                curr,
+                lw,
+                l2w
+            )
+        )
+
+    return dashboard
+
+# =========================================================
+# REGION + CATEGORY DASHBOARD
+# =========================================================
+
+def create_region_category_dashboard(
+    current_sales,
+    lw_sales,
+    l2w_sales
+):
+
+    dashboard = {}
+
+    regions = sorted(
+        current_sales["Region"]
+        .dropna()
+        .unique()
+    )
+
+    for region in regions:
+
+        curr = current_sales[
+            current_sales["Region"] == region
+        ].copy()
+
+        lw = lw_sales[
+            lw_sales["Region"] == region
+        ].copy()
+
+        l2w = l2w_sales[
+            l2w_sales["Region"] == region
+        ].copy()
+
+        dashboard[region] = (
+            create_category_dashboard(
+                curr,
+                lw,
+                l2w
+            )
+        )
+
+    return dashboard
+
+# =========================================================
+# REGION + PRODUCT MIX SOURCE DASHBOARD
+# =========================================================
+
+def create_region_product_mix_source_dashboard(
+    current_sales,
+    lw_sales,
+    l2w_sales
+):
+
+    dashboard = {}
+
+    regions = sorted(
+        current_sales["Region"]
+        .dropna()
+        .unique()
+    )
+
+    sources = [
+        "In Store",
+        "Swiggy",
+        "Zomato"
+    ]
+
+    for region in regions:
+
+        dashboard[region] = {}
+
+        for source in sources:
+
+            curr = current_sales[
+                (current_sales["Region"] == region)
+                &
+                (
+                    current_sales["Channel"]
+                    .str.contains(
+                        source,
+                        na=False
+                    )
+                )
+            ].copy()
+
+            lw = lw_sales[
+                (lw_sales["Region"] == region)
+                &
+                (
+                    lw_sales["Channel"]
+                    .str.contains(
+                        source,
+                        na=False
+                    )
+                )
+            ].copy()
+
+            l2w = l2w_sales[
+                (l2w_sales["Region"] == region)
+                &
+                (
+                    l2w_sales["Channel"]
+                    .str.contains(
+                        source,
+                        na=False
+                    )
+                )
+            ].copy()
+
+            dashboard[region][source] = (
+                create_product_mix_dashboard(
+                    curr,
+                    lw,
+                    l2w
+                )
+            )
+
+    return dashboard
 
 # =========================================================
 # CATEGORY CHANNEL DASHBOARD - FIXED BUG
@@ -2368,7 +2570,8 @@ print("✅ Category Group Fixed")
 category_dashboard = (
     create_category_dashboard(
         current_sales,
-        lw_sales
+        lw_sales,
+        l2w_sales
     )
 )
 
@@ -2378,6 +2581,28 @@ print(
 
 for k, v in (
     category_dashboard.items()
+):
+    print(
+        k,
+        len(v)
+    )
+
+# =========================================================
+# CATEGORY SOURCE DASHBOARD
+# =========================================================
+
+category_source_dashboard = (
+    create_category_source_dashboard(
+        current_sales,
+        lw_sales,
+        l2w_sales
+    )
+)
+
+print("✅ Category Source Dashboard Created")
+
+for k, v in (
+    category_source_dashboard.items()
 ):
     print(
         k,
@@ -2409,32 +2634,28 @@ for k, v in (
 
 
 # =========================================================
-# TOP 15 ITEM LEVEL DASHBOARD
+# ITEM DASHBOARD
 # =========================================================
 
 def create_item_dashboard(
     current_sales,
-    lw_sales
+    lw_sales,
+    l2w_sales
 ):
 
     brands = {
-    "Frozen Bottle": "Frozen Bottle",
-    "Boba Bar": "Boba Bar",
-    "Madno": "Madno",
-    "Lubov": "Lubov- Patisserie"
+        "Frozen Bottle": "Frozen Bottle",
+        "Boba Bar": "Boba Bar",
+        "Madno": "Madno",
+        "Lubov": "Lubov- Patisserie"
     }
 
     item_dashboard = {}
 
     for brand, brand_filter in brands.items():
 
-        # =============================================
-        # FILTER BRAND
-        # =============================================
-
         curr = current_sales[
             current_sales["brandName"]
-            .astype(str)
             .str.upper()
             ==
             brand_filter.upper()
@@ -2442,84 +2663,62 @@ def create_item_dashboard(
 
         lw = lw_sales[
             lw_sales["brandName"]
-            .astype(str)
             .str.upper()
             ==
             brand_filter.upper()
         ].copy()
 
-        # =============================================
-        # CURRENT ITEM LEVEL
-        # =============================================
+        l2w = l2w_sales[
+            l2w_sales["brandName"]
+            .str.upper()
+            ==
+            brand_filter.upper()
+        ].copy()
 
-        curr_item = (
-            curr.groupby(
-                "Item Group Name"
-            )
+        # ---------------- TODAY ----------------
+
+        curr_grp = (
+            curr.groupby("Item Group Name")
             .agg(
                 **{
-                    "Net Rev": (
-                        "item_baseNetAmount",
-                        "sum"
-                    ),
-
-                    "Qty Sold": (
-                        "item_quantity",
-                        "sum"
-                    ),
-
-                    "Orders": (
+                    "Today Orders": (
                         "invoiceNumber",
-                        "nunique"
+                        "count"
                     ),
 
-                    "Gross Rev": (
+                    "Today Gross Rev": (
                         "item_baseGrossAmount",
                         "sum"
                     ),
 
-                    "Discount": (
+                    "Today Discount": (
                         "item_baseNetDiscountAmount",
-                        lambda x:
-                        abs(x.sum())
+                        lambda x: abs(x.sum())
                     )
                 }
             )
             .reset_index()
         )
 
-        curr_item["Dis %"] = np.where(
-            curr_item["Net Rev"] > 0,
+        curr_grp["Today Dis %"] = np.where(
+            curr_grp["Today Gross Rev"] > 0,
             (
-                curr_item["Discount"]
+                curr_grp["Today Discount"]
                 /
-                curr_item["Gross Rev"]
+                curr_grp["Today Gross Rev"]
             ) * 100,
             0
         ).round(1)
 
-        curr_item = curr_item.drop(
-            columns="Discount"
-        )
+        # ---------------- LW ----------------
 
-        # =============================================
-        # LAST WEEK ITEM LEVEL
-        # =============================================
-
-        lw_item = (
-            lw.groupby(
-                "Item Group Name"
-            )
+        lw_grp = (
+            lw.groupby("Item Group Name")
             .agg(
                 **{
-                    "LW Net Rev": (
-                        "item_baseNetAmount",
-                        "sum"
-                    ),
-
-                    "LW Qty": (
-                        "item_quantity",
-                        "sum"
+                    "LW Orders": (
+                        "invoiceNumber",
+                        "count"
                     ),
 
                     "LW Gross Rev": (
@@ -2527,99 +2726,148 @@ def create_item_dashboard(
                         "sum"
                     ),
 
-                    "LW Orders": (
-                        "invoiceNumber",
-                        "nunique"
-                    ),
-
                     "LW Discount": (
                         "item_baseNetDiscountAmount",
-                        lambda x:
-                        abs(x.sum())
+                        lambda x: abs(x.sum())
                     )
                 }
             )
             .reset_index()
         )
 
-        lw_item["LW Dis %"] = np.where(
-            lw_item["LW Net Rev"] > 0,
+        lw_grp["LW Dis %"] = np.where(
+            lw_grp["LW Gross Rev"] > 0,
             (
-                lw_item["LW Discount"]
+                lw_grp["LW Discount"]
                 /
-                lw_item["LW Gross Rev"]
+                lw_grp["LW Gross Rev"]
             ) * 100,
             0
         ).round(1)
 
-        lw_item = lw_item.drop(
-            columns="LW Discount"
+        # ---------------- L2W ----------------
+
+        l2w_grp = (
+            l2w.groupby("Item Group Name")
+            .agg(
+                **{
+                    "L2W Orders": (
+                        "invoiceNumber",
+                        "count"
+                    )
+                }
+            )
+            .reset_index()
         )
 
-        # =============================================
-        # MERGE
-        # =============================================
+        # ---------------- MERGE ----------------
 
-        final_item = curr_item.merge(
-            lw_item,
-            on="Item Group Name",
-            how="left"
-        )
-
-        final_item = (
-            final_item
-            .fillna(0)
-        )
-        # =============================================
-        # SORT BY NET REV
-        # =============================================
-
-        final_item = (
-            final_item
-            .sort_values(
-                "Net Rev",
-                ascending=False
+        final = (
+            curr_grp
+            .merge(
+                lw_grp,
+                on="Item Group Name",
+                how="outer"
+            )
+            .merge(
+                l2w_grp,
+                on="Item Group Name",
+                how="outer"
             )
         )
 
-        # =============================================
-        # TOP 15 ONLY
-        # =============================================
+        final = final.fillna(0)
 
-        final_item = (
-            final_item
-            .head(15)
-        )
+        final["Today Growth %"] = np.where(
+            final["LW Orders"] > 0,
+            (
+                final["Today Orders"]
+                /
+                final["LW Orders"]
+                - 1
+            ) * 100,
+            0
+        ).round(1)
 
+        final["LW Growth %"] = np.where(
+            final["L2W Orders"] > 0,
+            (
+                final["LW Orders"]
+                /
+                final["L2W Orders"]
+                - 1
+            ) * 100,
+            0
+        ).round(1)
 
-        # =============================================
-        # ROUND VALUES
-        # =============================================
-
-        numeric_cols = [
-            "Net Rev",
-            "Qty Sold",
-            "Orders",
-            "Dis %",
-            "LW Net Rev",
-            "LW Orders",
-            "LW Dis %"
+        final = final[
+            [
+                "Item Group Name",
+                "Today Orders",
+                "LW Orders",
+                "L2W Orders",
+                "Today Dis %",
+                "LW Dis %",
+                "Today Growth %",
+                "LW Growth %"
+            ]
         ]
 
-        final_item[
-            numeric_cols
-        ] = (
-            final_item[
-                numeric_cols
-            ]
-            .round(1)
-        )
-
-        item_dashboard[
-            brand
-        ] = final_item
+        item_dashboard[brand] = final
 
     return item_dashboard
+
+# =========================================================
+# ITEM SOURCE DASHBOARD
+# =========================================================
+
+def create_item_source_dashboard(
+    current_sales,
+    lw_sales,
+    l2w_sales
+):
+
+    dashboard = {}
+
+    for source in [
+        "In Store",
+        "Swiggy",
+        "Zomato"
+    ]:
+
+        curr = current_sales[
+            current_sales["Channel"]
+            .str.contains(
+                source,
+                na=False
+            )
+        ].copy()
+
+        lw = lw_sales[
+            lw_sales["Channel"]
+            .str.contains(
+                source,
+                na=False
+            )
+        ].copy()
+
+        l2w = l2w_sales[
+            l2w_sales["Channel"]
+            .str.contains(
+                source,
+                na=False
+            )
+        ].copy()
+
+        dashboard[source] = (
+            create_item_dashboard(
+                curr,
+                lw,
+                l2w
+            )
+        )
+
+    return dashboard
 
 # =========================================================
 # FIX ITEM GROUP NAME COLUMN
@@ -2664,16 +2912,81 @@ print("✅ Item Group Name Fixed")
 item_dashboard = (
     create_item_dashboard(
         current_sales,
-        lw_sales
+        lw_sales,
+        l2w_sales
     )
 )
 
-print(
-    "✅ Item Dashboard Created"
-)
+print("✅ Item Dashboard Created")
 
 for k, v in (
     item_dashboard.items()
+):
+    print(
+        k,
+        len(v)
+    )
+
+# =========================================================
+# ITEM SOURCE DASHBOARD
+# =========================================================
+
+item_source_dashboard = (
+    create_item_source_dashboard(
+        current_sales,
+        lw_sales,
+        l2w_sales
+    )
+)
+
+print("✅ Item Source Dashboard Created")
+
+for k, v in (
+    item_source_dashboard.items()
+):
+    print(
+        k,
+        len(v)
+    )
+
+# =========================================================
+# REGION CATEGORY DASHBOARD
+# =========================================================
+
+region_category_dashboard = (
+    create_region_category_dashboard(
+        current_sales,
+        lw_sales,
+        l2w_sales
+    )
+)
+
+print("✅ Region Category Dashboard Created")
+
+for k, v in (
+    region_category_dashboard.items()
+):
+    print(
+        k,
+        len(v)
+    )
+
+# =========================================================
+# REGION PRODUCT MIX SOURCE DASHBOARD
+# =========================================================
+
+region_product_mix_source_dashboard = (
+    create_region_product_mix_source_dashboard(
+        current_sales,
+        lw_sales,
+        l2w_sales
+    )
+)
+
+print("✅ Region Product Mix Source Dashboard Created")
+
+for k, v in (
+    region_product_mix_source_dashboard.items()
 ):
     print(
         k,
@@ -3763,7 +4076,7 @@ summary_html = f"""
 
 
 # =========================================================
-# PRODUCT MIX
+# PRODUCT MIX DASHBOARD
 # =========================================================
 
 for brand, df in product_mix_dashboard.items():
@@ -3780,12 +4093,40 @@ for brand, df in product_mix_dashboard.items():
 
     else:
 
-        summary_html += (
-            apply_growth_style(
-                df.head(10)
-            )
-        )
+        summary_html += apply_growth_style(df)
 
+
+# =========================================================
+# PRODUCT MIX SOURCE DASHBOARD
+# =========================================================
+
+summary_html += """
+<hr>
+
+<h3>🍨 Product Mix Source Dashboard</h3>
+"""
+
+for source, brand_data in product_mix_source_dashboard.items():
+
+    summary_html += f"""
+    <h3>{source}</h3>
+    """
+
+    for brand, df in brand_data.items():
+
+        summary_html += f"""
+        <h4>{brand}</h4>
+        """
+
+        if df.empty:
+
+            summary_html += """
+            <p>No Data Available</p>
+            """
+
+        else:
+
+            summary_html += apply_growth_style(df)
 
 # =========================================================
 # CATEGORY DASHBOARD
@@ -3817,6 +4158,37 @@ for brand, df in category_dashboard.items():
         )
 
 # =========================================================
+# CATEGORY SOURCE DASHBOARD
+# =========================================================
+
+summary_html += """
+<hr>
+
+<h3>🍨 Category Source Dashboard</h3>
+"""
+
+for source, brand_data in category_source_dashboard.items():
+
+    summary_html += f"""
+    <h3>{source}</h3>
+    """
+
+    for brand, df in brand_data.items():
+
+        summary_html += f"""
+        <h4>{brand}</h4>
+        """
+
+        if df.empty:
+
+            summary_html += """
+            <p>No Data Available</p>
+            """
+
+        else:
+
+            summary_html += apply_growth_style(df)
+# =========================================================
 # CATEGORY CHANNEL DASHBOARD
 # =========================================================
 
@@ -3847,12 +4219,12 @@ for channel, df in (
         )
 
 # =========================================================
-# TOP ITEMS
+# Item Dashboard
 # =========================================================
 
 summary_html += """
 <hr>
-<h3>🏆 Top Items</h3>
+<h3>🏆 Item Dashboard </h3>
 """
 
 for brand, df in item_dashboard.items():
@@ -3875,7 +4247,118 @@ for brand, df in item_dashboard.items():
             )
         )
 
+# =========================================================
+# ITEM SOURCE DASHBOARD
+# =========================================================
 
+summary_html += """
+<hr>
+
+<h3>🍨 Item Source Dashboard</h3>
+"""
+
+for source, brand_data in item_source_dashboard.items():
+
+    summary_html += f"""
+    <h3>{source}</h3>
+    """
+
+    for brand, df in brand_data.items():
+
+        summary_html += f"""
+        <h4>{brand}</h4>
+        """
+
+        if df.empty:
+
+            summary_html += """
+            <p>No Data Available</p>
+            """
+
+        else:
+
+            summary_html += apply_growth_style(df)
+
+
+# =========================================================
+# REGION CATEGORY DASHBOARD
+# =========================================================
+
+summary_html += """
+<hr>
+
+<h3>📍 Region + Category Dashboard</h3>
+"""
+
+for region, brand_data in region_category_dashboard.items():
+
+    summary_html += f"""
+    <h2>{region}</h2>
+    """
+
+    for brand, df in brand_data.items():
+
+        summary_html += f"""
+        <h3>{brand}</h3>
+        """
+
+        if df.empty:
+
+            summary_html += """
+            <p>No Data Available</p>
+            """
+
+        else:
+
+            summary_html += apply_growth_style(df)
+
+    summary_html += "<br><br>"
+
+# =========================================================
+# REGION PRODUCT MIX SOURCE DASHBOARD
+# =========================================================
+
+summary_html += """
+<hr>
+
+<h3>📍 Region + Product Mix Source Dashboard</h3>
+"""
+
+for region, source_data in (
+    region_product_mix_source_dashboard.items()
+):
+
+    summary_html += f"""
+    <h2>{region}</h2>
+    """
+
+    for source, brand_data in source_data.items():
+
+        summary_html += f"""
+        <h3>{source}</h3>
+        """
+
+        for brand, df in brand_data.items():
+
+            summary_html += f"""
+            <h4>{brand}</h4>
+            """
+
+            if df.empty:
+
+                summary_html += """
+                <p>No Data Available</p>
+                """
+
+            else:
+
+                summary_html += (
+                    apply_growth_style(df)
+                )
+
+        summary_html += "<br>"
+
+    summary_html += "<br><br>"
 
 # =========================================================
 # SWIGGY DISCOUNT DASHBOARD
