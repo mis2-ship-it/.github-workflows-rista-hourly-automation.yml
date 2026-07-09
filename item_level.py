@@ -824,6 +824,8 @@ current_sales = current_df.copy()
 
 lw_sales = lw_df.copy()
 
+l2w_sales = l2w_df.copy()
+
 print("✅ Sales DataFrames Created")
 
 # =========================================================
