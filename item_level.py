@@ -1940,36 +1940,27 @@ def create_category_source_dashboard(
 
     dashboard = {}
 
-    for source in [
-        "In Store",
-        "Swiggy",
-        "Zomato"
-    ]:
-
+    for source in ["In Store", "Swiggy", "Zomato"]:
         curr = current_sales[
-            current_sales["Channel"]
-            .str.contains(source, na=False)
+            current_sales["Channel"].str.contains(source, na=False)
         ].copy()
 
         lw = lw_sales[
-            lw_sales["Channel"]
-            .str.contains(source, na=False)
+            lw_sales["Channel"].str.contains(source, na=False)
         ].copy()
 
         l2w = l2w_sales[
-            l2w_sales["Channel"]
-            .str.contains(source, na=False)
+            l2w_sales["Channel"].str.contains(source, na=False)
         ].copy()
 
-        dashboard[source] = (
-            create_category_dashboard(
-                curr,
-                lw,
-                l2w
-            )
+        dashboard[source] = create_category_dashboard(
+            curr,
+            lw,
+            l2w
         )
 
     return dashboard
+
 
 # =========================================================
 # REGION + CATEGORY DASHBOARD
