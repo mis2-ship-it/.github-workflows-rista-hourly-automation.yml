@@ -2384,7 +2384,9 @@ for k, v in (
 category_channel_dashboard = (
     create_category_channel_dashboard(
         current_sales,
-        lw_sales
+        lw_sales,
+        l2w_sales
+        
     )
 )
 
