@@ -1297,31 +1297,22 @@ print(
 # =========================================================
 
 if "Product Mix_x" in current_sales.columns:
-
-    current_sales["Product Mix"] = (
-        current_sales["Product Mix_x"]
-    )
-
+    current_sales["Product Mix"] = current_sales["Product Mix_x"]
 elif "Product Mix_y" in current_sales.columns:
-
-    current_sales["Product Mix"] = (
-        current_sales["Product Mix_y"]
-    )
-
+    current_sales["Product Mix"] = current_sales["Product Mix_y"]
 
 if "Product Mix_x" in lw_sales.columns:
-
-    lw_sales["Product Mix"] = (
-        lw_sales["Product Mix_x"]
-    )
-
+    lw_sales["Product Mix"] = lw_sales["Product Mix_x"]
 elif "Product Mix_y" in lw_sales.columns:
+    lw_sales["Product Mix"] = lw_sales["Product Mix_y"]
 
-    lw_sales["Product Mix"] = (
-        lw_sales["Product Mix_y"]
-    )
+if "Product Mix_x" in l2w_sales.columns:   # NEW
+    l2w_sales["Product Mix"] = l2w_sales["Product Mix_x"]
+elif "Product Mix_y" in l2w_sales.columns: # NEW
+    l2w_sales["Product Mix"] = l2w_sales["Product Mix_y"]
 
 print("✅ Product Mix Fixed")
+
 
 # =========================================================
 # ITEM GROUP FOR WINDOW DATA
@@ -1334,20 +1325,16 @@ merge_cols = [
     "Category Group"
 ]
 
-current_sales["item_shortName"] = (
-    current_sales["item_shortName"]
-    .astype(str)
-    .str.strip()
-    .str.upper()
-)
+# Clean item_shortName for all three datasets
+for df in [current_sales, lw_sales, l2w_sales]:
+    df["item_shortName"] = (
+        df["item_shortName"]
+        .astype(str)
+        .str.strip()
+        .str.upper()
+    )
 
-lw_sales["item_shortName"] = (
-    lw_sales["item_shortName"]
-    .astype(str)
-    .str.strip()
-    .str.upper()
-)
-
+# Merge item group info into all three datasets
 current_sales = current_sales.merge(
     item_df[merge_cols],
     left_on="item_shortName",
@@ -1362,13 +1349,21 @@ lw_sales = lw_sales.merge(
     how="left"
 )
 
+l2w_sales = l2w_sales.merge(   # NEW
+    item_df[merge_cols],
+    left_on="item_shortName",
+    right_on="Item Name",
+    how="left"
+)
+
 print("✅ Product Mix Merged")
+
 
 # =========================================================
 # SAFE PRODUCT MIX
 # =========================================================
 
-for df in [current_df, lw_df]:
+for df in [current_df, lw_df, l2w_df]:
 
     if "Product Mix" not in df.columns:
 
@@ -1466,6 +1461,14 @@ def create_product_mix_dashboard(
                 )
 
                 lw[col] = 0
+
+            if col not in l2w.columns:
+
+                print(
+                    f"⚠ Missing Column in LW: {col}"
+                )
+
+                l2w[col] = 0
 
         print("Curr Columns:")
         print(curr.columns.tolist())
@@ -2136,7 +2139,8 @@ def create_region_product_mix_source_dashboard(
 
 def create_category_channel_dashboard(
     current_sales,
-    lw_sales
+    lw_sales,
+    l2w_sales
 ):
 
     channel_groups = [
@@ -2168,6 +2172,15 @@ def create_category_channel_dashboard(
             ==
             channel.upper()
         ].copy()
+
+        l2w = l2w_sales[
+            l2w_sales["Channel Group"]
+            .astype(str)
+            .str.strip()
+            .str.upper()
+            ==
+            channel.upper()
+        ].copy()
     
         print(
             "Current Rows:",
@@ -2177,6 +2190,11 @@ def create_category_channel_dashboard(
         print(
             "LW Rows:",
             len(lw)
+        )
+        
+        print(
+            "L2W Rows:",
+            len(l2w)
         )
 
         # =========================================
