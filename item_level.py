@@ -692,6 +692,15 @@ lw_df = fetch_sales_window(
     lw_window_end,
     "LW"
 )
+
+l2w_window_start = current_window_start - timedelta(days=14)
+l2w_window_end = current_window_end - timedelta(days=14)
+
+l2w_df = fetch_sales_window(
+    l2w_window_start,
+    l2w_window_end,
+    "L2W"
+)
 # =========================================================
 # FLATTEN ITEM LEVEL DATA
 # =========================================================
@@ -766,6 +775,10 @@ lw_df = flatten_items(
     lw_df
 )
 
+l2w_df = flatten_items(
+    l2w_df
+)
+
 print(
     "✅ Item Level Data Ready"
 )
@@ -815,6 +828,9 @@ print(current_df.columns.tolist())
 
 print("LW DF COLUMNS")
 print(lw_df.columns.tolist())
+
+print("L2W DF COLUMNS")
+print(l2w_df.columns.tolist())
 
 # =========================================================
 # STANDARD DATAFRAME NAMES
