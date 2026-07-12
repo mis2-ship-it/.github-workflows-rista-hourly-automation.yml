@@ -1740,29 +1740,6 @@ for k, v in (
     print(k, len(v))
 
 
-# =========================================================
-# PRODUCT MIX SOURCE DASHBOARD
-# =========================================================
-
-source_dashboard = (
-    create_product_mix_source_dashboard(
-        current_sales,
-        lw_sales,
-        l2w_sales
-    )
-)
-
-print("✅ Product Mix Source Dashboard Created")
-
-
-for k, v in (
-    source_dashboard.items()
-):
-    print(k, len(v))
-
-for source, df in source_dashboard.items():
-    print(f"\n🔹 Source: {source}")
-    print(df)
 
 # =========================================================
 # PRODUCT MIX SOURCE DASHBOARD
@@ -1797,7 +1774,7 @@ def create_product_mix_source_dashboard(
             .str.contains(source, na=False)
         ].copy()
 
-        dashboard[source] = create_product_mix_dashboard(
+        dashboard[source] = create_product_mix_source_dashboard(
             curr,
             lw,
             l2w
@@ -2396,6 +2373,32 @@ print(
 
 for k, v in (
     category_channel_dashboard.items()
+):
+    print(
+        k,
+        len(v)
+    )
+
+
+# =========================================================
+# Product Mix Source DASHBOARD
+# =========================================================
+
+product_mix_source_dashboard = (
+    create_product_mix_source_dashboard(
+        current_sales,
+        lw_sales,
+        l2w_sales
+        
+    )
+)
+
+print(
+    "✅ Product Mix Source Dashboard Created"
+)
+
+for k, v in (
+    product_mix_source_dashboard.items()
 ):
     print(
         k,
@@ -3942,6 +3945,8 @@ for source, brand_data in category_source_dashboard.items():
         else:
 
             summary_html += apply_growth_style(df)
+
+
 # =========================================================
 # CATEGORY CHANNEL DASHBOARD
 # =========================================================
@@ -3971,6 +3976,7 @@ for channel, df in (
                 df
             )
         )
+
 
 # =========================================================
 # Item Dashboard
