@@ -1744,7 +1744,7 @@ for k, v in (
 # PRODUCT MIX SOURCE DASHBOARD
 # =========================================================
 
-product_mix_source_dashboard = (
+source_dashboard = (
     create_product_mix_source_dashboard(
         current_sales,
         lw_sales,
@@ -1753,6 +1753,13 @@ product_mix_source_dashboard = (
 )
 
 print("✅ Product Mix Source Dashboard Created")
+
+
+for k, v in (
+    source_dashboard.items()
+):
+    print(k, len(v))
+
 
 # =========================================================
 # PRODUCT MIX SOURCE DASHBOARD
