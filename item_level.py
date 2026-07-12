@@ -878,7 +878,7 @@ help_merge = help_df[
         "Store Name",
         "Region",
         "Channel",       # keep original name
-        "Help Source"
+        "Source"
     ]
 ].copy()
 
