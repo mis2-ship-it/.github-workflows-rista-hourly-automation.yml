@@ -1760,6 +1760,9 @@ for k, v in (
 ):
     print(k, len(v))
 
+for source, df in source_dashboard.items():
+    print(f"\n🔹 Source: {source}")
+    print(df)
 
 # =========================================================
 # PRODUCT MIX SOURCE DASHBOARD
