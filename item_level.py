@@ -202,31 +202,17 @@ missing_cols = [
 ]
 
 if missing_cols:
-
-    print(
-        "❌ Missing Help Columns:",
-        missing_cols
-    )
-
-    print(
-        "📋 Available Columns:",
-        help_df.columns.tolist()
-    )
-
+    print("❌ Missing Help Columns:", missing_cols)
+    print("📋 Available Columns:", help_df.columns.tolist())
     exit()
-
 
 # =========================================================
 # RENAME
 # =========================================================
-
+# Keep "Channel" as is, only rename "Source"
 help_df = help_df.rename(
     columns={
-        "Channel":
-        "Help Channel",
-
-        "Source":
-        "Help Source"
+        "Source": "Help Source"
     }
 )
 
@@ -247,39 +233,22 @@ branches = (
     .tolist()
 )
 
-print(
-    "🏪 Branch Count:",
-    len(branches)
-)
+print("🏪 Branch Count:", len(branches))
 
 # =========================================================
 # CHANNEL GROUP MAPPING
 # =========================================================
 
-if (
-    "Help Channel" in help_df.columns
-    and
-    "Help Source" in help_df.columns
-):
-
+if "Channel" in help_df.columns and "Help Source" in help_df.columns:
     channel_map = dict(
         zip(
-            help_df["Help Channel"],
+            help_df["Channel"],
             help_df["Help Source"]
         )
     )
-
-    print(
-        "✅ Channel Mapping:",
-        len(channel_map)
-    )
-
+    print("✅ Channel Mapping:", len(channel_map))
 else:
-
-    print(
-        "⚠️ Channel Mapping Skipped"
-    )
-
+    print("⚠️ Channel Mapping Skipped")
 
 # =========================================================
 # ITEM GROUP TAB
@@ -908,7 +877,7 @@ help_merge = help_df[
         "branchCode",
         "Store Name",
         "Region",
-        "Help Channel",
+        "Channel",       # keep original name
         "Help Source"
     ]
 ].copy()
@@ -1760,17 +1729,17 @@ def create_product_mix_source_dashboard(
     ]:
 
         curr = current_sales[
-            current_sales["Channel"]
+            current_sales["Help Channel"]
             .str.contains(source, na=False)
         ].copy()
 
         lw = lw_sales[
-            lw_sales["Channel"]
+            lw_sales["Help Channel"]
             .str.contains(source, na=False)
         ].copy()
 
         l2w = l2w_sales[
-            l2w_sales["Channel"]
+            l2w_sales["Help Channel"]
             .str.contains(source, na=False)
         ].copy()
 
