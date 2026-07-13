@@ -192,8 +192,7 @@ required_cols = [
     "Store Name",
     "Ownership",
     "Region",
-    "Channel",
-    "Source"
+    "Channel"
 ]
 
 missing_cols = [
@@ -877,8 +876,7 @@ help_merge = help_df[
         "branchCode",
         "Store Name",
         "Region",
-        "Channel",       # keep original name
-        "Source"
+        "Channel"      # keep original name
     ]
 ].copy()
 
