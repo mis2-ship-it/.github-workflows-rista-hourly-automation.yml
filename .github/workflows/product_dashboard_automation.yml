@@ -2,14 +2,6 @@ name: Product Dashboard Automation
 
 on:
 
-  schedule:
-
-    # ==================================================
-    # HOURLY RUN
-    # Every Hour
-    # ==================================================
-    - cron: '*/35 * * * *'
-
   workflow_dispatch:
 
 jobs:
