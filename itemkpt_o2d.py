@@ -392,10 +392,8 @@ def process_sales_data(df):
     # =====================================================
 
     if "branchCode" not in final_df.columns:
-
         print("❌ branchCode Missing")
         print(final_df.columns.tolist())
-
         return pd.DataFrame()
 
     final_df["branchCode"] = (
@@ -405,11 +403,25 @@ def process_sales_data(df):
     )
 
     # =====================================================
+    # 🌟 FIX: Explode and Normalize Nested Items
+    # =====================================================
+    if "items" in final_df.columns:
+        # Explode the list of items into separate rows
+        final_df = final_df.explode("items")
+        
+        # Normalize the dictionary items and prefix them with 'item_'
+        items_df = pd.json_normalize(final_df["items"]).add_prefix("item_")
+        
+        # Reset indices to align and concatenate back
+        final_df = final_df.reset_index(drop=True)
+        items_df = items_df.reset_index(drop=True)
+        final_df = pd.concat([final_df, items_df], axis=1)
+
+    # =====================================================
     # FIX CHANNEL COLUMN
     # =====================================================
 
     if "Channel" not in final_df.columns:
-
         if "channel" in final_df.columns:
             final_df["Channel"] = final_df["channel"]
 
