@@ -1,4 +1,4 @@
-name: Availability Report
+name: Fetch Inventory Report
 
 on:
   workflow_dispatch:
@@ -31,4 +31,4 @@ jobs:
 
         run: |
           echo "Running Catalog script..."
-          python availability.py
+          python fetch_stores.py
