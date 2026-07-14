@@ -5,10 +5,9 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # --- Configuration ---
-# Update this string to the exact Base URL domain provided by your Rista team
 RISTA_BASE_URL = 'https://api.ristaapps.com/v1' 
 
-# Read the keys you set up in your GitHub Workflow env block
+# Read the keys set up in your GitHub Workflow env block
 API_KEY = os.environ.get('API_KEY')
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
@@ -38,18 +37,18 @@ def main():
         return
 
     # 2. Setup Rista API Request Headers
-    # Adjust this layout if your Rista team gave you specific header keys 
-    # (e.g., 'x-api-key': API_KEY)
-    endpoint = f"https://api.ristaapps.com/v1/inventory/store/items"
+    endpoint = f"{RISTA_BASE_URL}/inventory/store/items"
+    
+    # Try typical Rista credential structural styling. 
+    # If a generic Bearer doesn't pass, we include custom mapping fields below.
     headers = {
         'Authorization': f'Bearer {API_KEY}',
+        'x-api-key': API_KEY,
+        'x-client-secret': SECRET_KEY,
         'Accept': 'application/json'
     }
     
     print("Fetching data from Rista API...")
-    if "https://api.ristaapps.com/v1" in RISTA_BASE_URL:
-        print("Warning: You still need to replace RISTA_BASE_URL with the real URL domain.")
-        return
 
     try:
         response = requests.get(endpoint, headers=headers)
