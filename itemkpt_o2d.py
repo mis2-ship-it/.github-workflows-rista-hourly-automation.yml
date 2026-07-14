@@ -906,7 +906,19 @@ def generate_rca_analysis(sales_df, category_dash, item_dash, region_cat_dict, r
 
     rca_df = pd.DataFrame(rca_rows)
     if not rca_df.empty:
-        rca_df = rca_df.sort_values(by="Orders (FTD)", ascending=False)
+        # Create helper columns to establish the strict sorting hierarchy
+        rca_df["_scope_sort"] = rca_df["Scope"].apply(lambda x: 0 if x == "Overall" else 1)
+        rca_df["_type_sort"] = rca_df["Type"].apply(lambda x: 0 if x == "Category" else 1)
+        
+        # Sort sequentially by Scope bucket, then Type bucket, then high-to-low order impact
+        rca_df = rca_df.sort_values(
+            by=["_scope_sort", "Scope", "_type_sort", "Orders (FTD)"], 
+            ascending=[True, True, True, False]
+        )
+        
+        # Clean up the sorting helper columns before returning the data
+        rca_df = rca_df.drop(columns=["_scope_sort", "_type_sort"])
+        
     return rca_df
 
 # Generate RCA DataFrame
@@ -914,46 +926,45 @@ rca_dashboard = generate_rca_analysis(
     sales_df, category_dashboard, item_dashboard, region_category_dashboards, region_item_dashboards
 )
 # =========================================================
-# WRITE TO GOOGLE SHEET
+# WRITE TO GOOGLE SHEET (WITH SAFE WORKOS MAPPING)
 # =========================================================
 
+def safe_update_sheet(sheet_title, dataframe):
+    try:
+        # Check if the worksheet tab exists; if not, create it dynamically
+        try:
+            ws = spreadsheet.worksheet(sheet_title)
+        except gspread.exceptions.WorksheetNotFound:
+            ws = spreadsheet.add_worksheet(title=sheet_title, rows="1000", cols="20")
+            print(f"🛠 Created new worksheet tab: '{sheet_title}'")
+        
+        ws.clear()
+        
+        # Avoid payload issues by converting NaN to empty strings and changing float metrics to clean text formatting
+        export_df = dataframe.fillna("").copy()
+        
+        # Build the final transmission body matrix
+        data_matrix = [export_df.columns.values.tolist()] + export_df.values.tolist()
+        
+        # Push update
+        ws.update(data_matrix, "A1")
+        print(f"✅ Google Sheet Tab '{sheet_title}' synchronized successfully with {len(export_df)} rows.")
+    except Exception as sheet_err:
+        print(f"❌ Failed to sync tab '{sheet_title}': {str(sheet_err)}")
+
 try:
+    # 1. Push Core Categories to the principal workspace
+    safe_update_sheet("Sales Dashboard", category_dashboard)
 
-    report_ws = spreadsheet.worksheet("Sales Dashboard")
-
-    report_ws.clear()
-
-    # Note: If your script doesn't build a 'top_kpi' dataframe in this file,
-    # update this line with 'category_dashboard' or your preferred layout sheet.
-    report_ws.update(
-        [category_dashboard.columns.values.tolist()] +
-        category_dashboard.values.tolist(),
-        "A1"
-    )
-
-    print("✅ Sales Dashboard Updated in GSheet")
-
-    # =========================================================
-    # 🌟 NEW: Push RCA Analysis to GSheet Tab
-    # =========================================================
+    # 2. Push organized Troubleshoot Log to the RCA workspace
     if not rca_dashboard.empty:
-        rca_ws = spreadsheet.worksheet("RCA Analysis")
-        rca_ws.clear()
-        rca_ws.update(
-            [rca_dashboard.columns.values.tolist()] +
-            rca_dashboard.values.tolist(),
-            "A1"
-        )
-        print("✅ RCA Analysis pushed successfully to Google Sheet")
+        safe_update_sheet("RCA Analysis", rca_dashboard)
     else:
-        print("✅ No critical operational SLA breaches found yesterday")
+        print("✅ RCA Log is empty. Operational metrics are within targeted parameters.")
 
 except Exception as e:
-
-    print(
-        "❌ Sheet Update Error:",
-        str(e)
-    )
+    print("❌ Critical System Error updating Google Sheet:", str(e))
+    
 # =========================================================
 # EMAIL LIST
 # =========================================================
