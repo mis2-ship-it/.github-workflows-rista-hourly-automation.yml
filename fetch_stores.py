@@ -40,7 +40,7 @@ def main():
     # 2. Setup Rista API Request Headers
     # Adjust this layout if your Rista team gave you specific header keys 
     # (e.g., 'x-api-key': API_KEY)
-    endpoint = f"{RISTA_BASE_URL}/inventory/store/items"
+    endpoint = f"https://api.ristaapps.com/v1/inventory/store/items"
     headers = {
         'Authorization': f'Bearer {API_KEY}',
         'Accept': 'application/json'
