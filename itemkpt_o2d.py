@@ -392,8 +392,10 @@ def process_sales_data(df):
     # =====================================================
 
     if "branchCode" not in final_df.columns:
+
         print("❌ branchCode Missing")
         print(final_df.columns.tolist())
+
         return pd.DataFrame()
 
     final_df["branchCode"] = (
@@ -416,6 +418,10 @@ def process_sales_data(df):
         final_df = final_df.reset_index(drop=True)
         items_df = items_df.reset_index(drop=True)
         final_df = pd.concat([final_df, items_df], axis=1)
+
+    # =====================================================
+    # FIX CHANNEL COLUMN
+    # =====================================================
 
     # =====================================================
     # FIX CHANNEL COLUMN
@@ -805,153 +811,108 @@ def build_item_dashboard(
 
 
 # =========================================================
-# CATEGORY DASHBOARD
+# 1. CATEGORY DASHBOARD
 # =========================================================
-
 category_dashboard = build_item_dashboard(
-    sales_df,
-    mtd_df,
-    "item_categoryName",
-    order_method="nunique"
+    sales_df, mtd_df, "item_categoryName", order_method="nunique"
 )
 
 # =========================================================
-# CATEGORY BY SOURCE DASHBOARD
+# 2. ITEM DASHBOARD
 # =========================================================
-
-category_source_dashboards = {}
-
-for source in ["Swiggy", "Zomato"]:
-
-    ftd_source = sales_df[
-        sales_df["Channel"]
-        .str.contains(source, na=False)
-    ].copy()
-
-    mtd_source = mtd_df[
-        mtd_df["Channel"]
-        .str.contains(source, na=False)
-    ].copy()
-
-    category_source_dashboards[source] = (
-        build_item_dashboard(
-            ftd_source,
-            mtd_source,
-            "item_categoryName",
-            order_method="nunique"
-        )
-    )
-
-# =========================================================
-# ITEM DASHBOARD
-# =========================================================
-
 item_dashboard = build_item_dashboard(
-    sales_df,
-    mtd_df,
-    "item_shortName",
-    order_method="count"
+    sales_df, mtd_df, "item_shortName", order_method="count"
 )
 
 # =========================================================
-# ITEM BY SOURCE DASHBOARD
+# 3. REGION LEVEL CATEGORY AND ITEM DASHBOARDS
 # =========================================================
-
-item_source_dashboards = {}
-
-for source in ["Swiggy", "Zomato"]:
-
-    ftd_source = sales_df[
-        sales_df["Channel"]
-        .str.contains(source, na=False)
-    ].copy()
-
-    mtd_source = mtd_df[
-        mtd_df["Channel"]
-        .str.contains(source, na=False)
-    ].copy()
-
-    item_source_dashboards[source] = (
-        build_item_dashboard(
-            ftd_source,
-            mtd_source,
-            "item_shortName",
-            order_method="count"
-        )
-    )
-
-# =========================================================
-# REGION ITEM DASHBOARDS
-# =========================================================
-
+region_category_dashboards = {}
 region_item_dashboards = {}
 
-for region in sorted(
-    sales_df["Region"]
-    .dropna()
-    .unique()
-):
-
-    ftd_region = sales_df[
-        sales_df["Region"] == region
-    ]
-
-    mtd_region = mtd_df[
-        mtd_df["Region"] == region
-    ]
-
-    region_item_dashboards[region] = (
-        build_item_dashboard(
-            ftd_region,
-            mtd_region,
-            "item_shortName",
-            order_method="count"
-        )
+for region in sorted(sales_df["Region"].dropna().unique()):
+    ftd_region = sales_df[sales_df["Region"] == region]
+    mtd_region = mtd_df[mtd_df["Region"] == region]
+    
+    # Region + Category
+    region_category_dashboards[region] = build_item_dashboard(
+        ftd_region, mtd_region, "item_categoryName", order_method="nunique"
+    )
+    
+    # Region + Item
+    region_item_dashboards[region] = build_item_dashboard(
+        ftd_region, mtd_region, "item_shortName", order_method="count"
     )
 
 # =========================================================
-# REGION + ITEM BY SOURCE DASHBOARD
+# 🌟 4. ROOT CAUSE ANALYSIS (RCA) ENGINE
 # =========================================================
+def generate_rca_analysis(sales_df, category_dash, item_dash, region_cat_dict, region_item_dict):
+    rca_rows = []
+    
+    # Overall Category Issues (KPT > 12 or O2D > 35)
+    cat_issues = category_dash[(category_dash["KPT_FTD"] > 12) | (category_dash["O2D_FTD"] > 35)]
+    for _, row in cat_issues.iterrows():
+        rca_rows.append({
+            "Scope": "Overall",
+            "Type": "Category",
+            "Element Name": row["item_categoryName"],
+            "Orders (FTD)": row["Orders_FTD"],
+            "Avg KPT (Mins)": row["KPT_FTD"],
+            "Avg O2D (Mins)": row["O2D_FTD"],
+            "Primary Issue": "High Prep Time (KPT)" if row["KPT_FTD"] > 12 else "Logistics Delay (O2D)"
+        })
+        
+    # Overall Item Issues (With basic order volume filter)
+    item_issues = item_dash[((item_dash["KPT_FTD"] > 12) | (item_dash["O2D_FTD"] > 35)) & (item_dash["Orders_FTD"] >= 5)]
+    for _, row in item_issues.iterrows():
+        rca_rows.append({
+            "Scope": "Overall",
+            "Type": "Item",
+            "Element Name": row["item_shortName"],
+            "Orders (FTD)": row["Orders_FTD"],
+            "Avg KPT (Mins)": row["KPT_FTD"],
+            "Avg O2D (Mins)": row["O2D_FTD"],
+            "Primary Issue": "High Prep Time (KPT)" if row["KPT_FTD"] > 12 else "Logistics Delay (O2D)"
+        })
 
-region_item_source_dashboards = {}
+    # Region-wise Category Issues
+    for region, df in region_cat_dict.items():
+        issues = df[(df["KPT_FTD"] > 12) | (df["O2D_FTD"] > 35)]
+        for _, row in issues.iterrows():
+            rca_rows.append({
+                "Scope": f"Region: {region}",
+                "Type": "Category",
+                "Element Name": row["item_categoryName"],
+                "Orders (FTD)": row["Orders_FTD"],
+                "Avg KPT (Mins)": row["KPT_FTD"],
+                "Avg O2D (Mins)": row["O2D_FTD"],
+                "Primary Issue": "Target Dropped in Region"
+            })
+            
+    # Region-wise Item Issues
+    for region, df in region_item_dict.items():
+        issues = df[((df["KPT_FTD"] > 12) | (df["O2D_FTD"] > 35)) & (df["Orders_FTD"] >= 3)]
+        for _, row in issues.iterrows():
+            rca_rows.append({
+                "Scope": f"Region: {region}",
+                "Type": "Item",
+                "Element Name": row["item_shortName"],
+                "Orders (FTD)": row["Orders_FTD"],
+                "Avg KPT (Mins)": row["KPT_FTD"],
+                "Avg O2D (Mins)": row["O2D_FTD"],
+                "Primary Issue": "Target Dropped in Region"
+            })
 
-for region in sorted(
-    sales_df["Region"]
-    .dropna()
-    .unique()
-):
+    rca_df = pd.DataFrame(rca_rows)
+    if not rca_df.empty:
+        rca_df = rca_df.sort_values(by="Orders (FTD)", ascending=False)
+    return rca_df
 
-    region_item_source_dashboards[region] = {}
-
-    for source in ["Swiggy", "Zomato"]:
-
-        ftd_temp = sales_df[
-            (sales_df["Region"] == region)
-            &
-            (
-                sales_df["Channel"]
-                .str.contains(source, na=False)
-            )
-        ].copy()
-
-        mtd_temp = mtd_df[
-            (mtd_df["Region"] == region)
-            &
-            (
-                mtd_df["Channel"]
-                .str.contains(source, na=False)
-            )
-        ].copy()
-
-        region_item_source_dashboards[region][source] = (
-            build_item_dashboard(
-                ftd_temp,
-                mtd_temp,
-                "item_shortName",
-                order_method="count"
-            )
-        )
-
+# Generate RCA DataFrame
+rca_dashboard = generate_rca_analysis(
+    sales_df, category_dashboard, item_dashboard, region_category_dashboards, region_item_dashboards
+)
 # =========================================================
 # WRITE TO GOOGLE SHEET
 # =========================================================
@@ -962,13 +923,30 @@ try:
 
     report_ws.clear()
 
+    # Note: If your script doesn't build a 'top_kpi' dataframe in this file,
+    # update this line with 'category_dashboard' or your preferred layout sheet.
     report_ws.update(
-        [top_kpi.columns.values.tolist()] +
-        top_kpi.values.tolist(),
+        [category_dashboard.columns.values.tolist()] +
+        category_dashboard.values.tolist(),
         "A1"
     )
 
-    print("✅ Dashboard Updated in GSheet")
+    print("✅ Sales Dashboard Updated in GSheet")
+
+    # =========================================================
+    # 🌟 NEW: Push RCA Analysis to GSheet Tab
+    # =========================================================
+    if not rca_dashboard.empty:
+        rca_ws = spreadsheet.worksheet("RCA Analysis")
+        rca_ws.clear()
+        rca_ws.update(
+            [rca_dashboard.columns.values.tolist()] +
+            rca_dashboard.values.tolist(),
+            "A1"
+        )
+        print("✅ RCA Analysis pushed successfully to Google Sheet")
+    else:
+        print("✅ No critical operational SLA breaches found yesterday")
 
 except Exception as e:
 
@@ -976,7 +954,6 @@ except Exception as e:
         "❌ Sheet Update Error:",
         str(e)
     )
-
 # =========================================================
 # EMAIL LIST
 # =========================================================
@@ -1077,9 +1054,9 @@ def style_dashboard_table(df, metric="KPT"):
     html = """
     <table style="
         border-collapse:collapse;
-        width:70%;
+        width:80%;
         font-family:Arial;
-        font-size:10px;
+        font-size:11px;
     ">
     """
 
@@ -1096,8 +1073,9 @@ def style_dashboard_table(df, metric="KPT"):
         background:#1F4E78;
         color:white;
         border:1px solid #d9d9d9;
-        padding:8px;
+        padding:12px;
         text-align:center;
+        white-space:nowrap;
         ">
         {col}
         </th>
@@ -1148,11 +1126,17 @@ def style_dashboard_table(df, metric="KPT"):
                 except:
                     pass
 
+            # 🌟 FIX: Force names/categories to display as full long text without wrapping
+            # Text alignment left makes long item names much easier to read than centering them
+            if "Name" in str(col) or "shortName" in str(col) or "categoryName" in str(col) or col in ["Element Name", "Scope"]:
+                style += "white-space:nowrap; text-align:left; font-weight:bold; padding-right:15px;"
+            else:
+                style += "text-align:center;"
+
             html += f"""
             <td style="
             border:1px solid #d9d9d9;
             padding:8px;
-            text-align:center;
             {style}
             ">
             {val}
@@ -1167,7 +1151,7 @@ def style_dashboard_table(df, metric="KPT"):
 
 
 # =========================================================
-# CATEGORY HTML
+# 🌟 UPDATED HTML RENDER SECTIONS
 # =========================================================
 
 category_html = f"""
@@ -1175,144 +1159,68 @@ category_html = f"""
 {style_dashboard_table(category_dashboard)}
 """
 
-# =========================================================
-# CATEGORY SOURCE HTML
-# =========================================================
-
-category_source_html = ""
-
-for source, df in category_source_dashboards.items():
-
-    category_source_html += f"""
-    <h3>{source}</h3>
-    {style_dashboard_table(df)}
-    <br><br>
-    """
-
-# =========================================================
-# ITEM HTML
-# =========================================================
-
 item_html = f"""
 <h2>Item Dashboard</h2>
 {style_dashboard_table(item_dashboard)}
 """
 
-# =========================================================
-# ITEM SOURCE HTML
-# =========================================================
+# RCA Executive Summary for Email
+rca_html = "<h2>🚨 Root Cause Analysis (Critical Operational Bottlenecks)</h2>"
+if not rca_dashboard.empty:
+    rca_html += style_dashboard_table(rca_dashboard)
+else:
+    rca_html += "<p style='color:green; font-weight:bold;'>✅ All items and categories met performance SLA targets yesterday!</p>"
 
-item_source_html = ""
-
-for source, df in item_source_dashboards.items():
-
-    item_source_html += f"""
-    <h3>{source}</h3>
-    {style_dashboard_table(df)}
+# Region-wise breakdown sections
+region_breakdown_html = ""
+for region in sorted(sales_df["Region"].dropna().unique()):
+    region_breakdown_html += f"""
+    <hr style="border:1px solid #d9d9d9;">
+    <h2>📍 Region: {region}</h2>
+    <h3>{region} - Category Performance</h3>
+    {style_dashboard_table(region_category_dashboards.get(region, pd.DataFrame()))}
+    <br>
+    <h3>{region} - Item Performance</h3>
+    {style_dashboard_table(region_item_dashboards.get(region, pd.DataFrame()))}
     <br><br>
     """
 
 # =========================================================
-# REGION ITEM HTML
+# DEBUG LOGS
 # =========================================================
-
-region_item_html = ""
-
-for region, df in region_item_dashboards.items():
-
-    region_item_html += f"""
-    <h2>{region}</h2>
-    {style_dashboard_table(df)}
-    <br><br>
-    """
-
-# =========================================================
-# REGION ITEM SOURCE HTML
-# =========================================================
-
-region_item_source_html = ""
-
-for region, source_data in region_item_source_dashboards.items():
-
-    region_item_source_html += f"""
-    <h2>{region}</h2>
-    """
-
-    for source, df in source_data.items():
-
-        region_item_source_html += f"""
-        <h3>{source}</h3>
-        {style_dashboard_table(df)}
-        <br>
-        """
-
-    region_item_source_html += "<br><br>"
-
-
-# =========================================================
-# DEBUG
-# =========================================================
-
 print("FTD Rows:", len(sales_df))
 print("MTD Rows:", len(mtd_df))
-
 print("Category Dashboard Rows:", len(category_dashboard))
 print("Item Dashboard Rows:", len(item_dashboard))
-print("Region Item Dashboards:", len(region_item_dashboards))
-print("Region Item Source Dashboards:", len(region_item_source_dashboards))
+print("RCA Dashboard Rows:", len(rca_dashboard))
 
 # =========================================================
-# SUMMARY HTML
+# CLEAN RESTRUCTURED SUMMARY HTML EMAIL
 # =========================================================
-
 summary_html = f"""
 <html>
+<body style="font-family:Arial; color:#333;">
 
-<body style="font-family:Arial;">
-
-<h2>
-📊 Item Level KPT & O2D Performance Dashboard
-({fetch_date})
-</h2>
+<h2>📊 Operational KPT & O2D Performance Dashboard ({fetch_date})</h2>
+<p><i>Note: Full tracking data has been dynamically compiled. Detailed logs are available in the centralized Google Sheets master workspace under the 'Sales Dashboard' and 'RCA Analysis' tabs.</i></p>
 
 <br>
+{rca_html}
+<br>
 
-<h2>1. Category Dashboard</h2>
+<h2>1. Overall Category Performance</h2>
 {category_html}
-
 <br>
 
-<h2>2. Category by Source Dashboard</h2>
-{category_source_html}
-
-<br>
-
-<h2>3. Item Dashboard</h2>
+<h2>2. Overall Item Performance</h2>
 {item_html}
-
 <br>
 
-<h2>4. Item by Source Dashboard</h2>
-{item_source_html}
-
-<br>
-
-<h2>5. Region + Item Dashboard</h2>
-{region_item_html}
-
-<br>
-
-<h2>6. Region + Item by Source Dashboard</h2>
-{region_item_source_html}
+<h2>3. Regional Operational Performance Breakdowns</h2>
+{region_breakdown_html}
 
 <br><br>
-
-<p>
-Regards,
-<br>
-MIS Team
-</p>
-
+<p>Regards,<br><b>MIS Team</b></p>
 </body>
 </html>
 """
@@ -1322,13 +1230,11 @@ MIS Team
 # =========================================================
 
 print("✅ Category Dashboard Ready")
-print("✅ Category by Source Dashboard Ready")
-
 print("✅ Item Dashboard Ready")
-print("✅ Item by Source Dashboard Ready")
-
+print("✅ Region + Category Dashboard Ready")
 print("✅ Region + Item Dashboard Ready")
-print("✅ Region + Item by Source Dashboard Ready")
+print("✅ Root Cause Analysis (RCA) Engine Completed")
+
 
 # =========================================================
 # SEND EMAIL
