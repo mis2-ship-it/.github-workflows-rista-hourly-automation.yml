@@ -964,7 +964,18 @@ try:
     if not rca_dashboard.empty:
         safe_update_sheet(rca_workbook, "RCA Analysis", rca_dashboard)
     else:
-        print("✅ RCA Log is empty. Operational metrics are within targeted parameters.")
+        # 🌟 FIX: If empty, explicitly write an "All Clear" status row so the sheet isn't blank
+        print("✅ RCA Log is empty. Pushing clean status row to Google Sheet.")
+        all_clear_df = pd.DataFrame([{
+            "Scope": "Overall",
+            "Type": "Status Log",
+            "Element Name": "All Categories & Items",
+            "Orders (FTD)": 0,
+            "Avg KPT (Mins)": 0,
+            "Avg O2D (Mins)": 0,
+            "Primary Issue": "✅ All metrics within targeted SLA parameters yesterday!"
+        }])
+        safe_update_sheet(rca_workbook, "RCA Analysis", all_clear_df)
 
     # =========================================================
     # 🌟 NEW: Create Region-Wise Tabs in the Target Workbook
