@@ -3,107 +3,166 @@ import json
 import time
 import jwt
 import requests
+import pandas as pd
+from datetime import datetime, timedelta
 import gspread
 from google.oauth2.service_account import Credentials
 
-# --- Configuration ---
-RISTA_BASE_URL = 'https://api.ristaapps.com/v1' 
+print("🚀 Rista Inventory & Consumption Script Started")
 
-# Read the keys set up in your GitHub Workflow env block
-API_KEY = os.environ.get('API_KEY')
-SECRET_KEY = os.environ.get('SECRET_KEY')
+# =========================================================
+# AUTHENTICATION
+# =========================================================
+API_KEY = os.environ["API_KEY"]
+SECRET_KEY = os.environ["SECRET_KEY"]
+RISTA_BASE_URL = "https://api.ristaapps.com/v1"
 
-SPREADSHEET_ID = '1umqb0k_G0F-cAzMbrmqSYnEz06-NjmCANWtWEa_NS9w'
-SHEET_NAME = 'Help_Sheet'
-
-def generate_jwt_token(api_key, secret_key):
-    """
-    Generates a signed JWT token using the secret key.
-    Adjust payload keys if your Rista documentation specifies different names.
-    """
-    current_time = int(time.time())
+def get_token():
     payload = {
-        'iss': api_key,                  # Issuer (your API Key)
-        'iat': current_time,             # Issued at time
-        'exp': current_time + 3600       # Expires in 1 hour
+        "iss": API_KEY,
+        "iat": int(time.time())
     }
-    
-    # Sign the token using HS256 algorithm
-    token = jwt.encode(payload, secret_key, algorithm='HS256')
-    return token
+    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
-def main():
-    # 1. Authenticate with Google Sheets using GitHub Secrets
-    google_creds_json = os.environ.get('GOOGLE_CREDENTIALS')
-    if not google_creds_json:
-        print("Error: GOOGLE_CREDENTIALS environment variable is missing.")
+def headers():
+    return {
+        "x-api-key": API_KEY,
+        "x-api-token": get_token(),
+        "content-type": "application/json"
+    }
+
+# =========================================================
+# GOOGLE SHEETS CONNECTOR
+# =========================================================
+creds = Credentials.from_service_account_info(
+    json.loads(os.environ["GOOGLE_CREDENTIALS"]),
+    scopes=[
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+)
+client = gspread.authorize(creds)
+SPREADSHEET_ID = "1umqb0k_G0F-cAzMbrmqSYnEz06-NjmCANWtWEa_NS9w"
+spreadsheet = client.open_by_key(SPREADSHEET_ID)
+print("✅ Connected Google Sheet")
+
+# =========================================================
+# DATE FRAMEWORK
+# =========================================================
+fetch_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+print("📅 Processing Target Business Day:", fetch_date)
+
+# =========================================================
+# LOAD AND FILTER COCO BRANCHES
+# =========================================================
+try:
+    help_ws = spreadsheet.worksheet("Help_Sheet")
+except Exception:
+    # Fallback to spaced version if named differently
+    help_ws = spreadsheet.worksheet("Help Sheet")
+
+help_data = help_ws.get()
+if not help_data:
+    print("❌ Help Sheet Empty")
+    exit()
+
+raw_headers = [str(h).strip().lower().replace(" ", "") for h in help_data[0]]
+rows = help_data[1:]
+help_df = pd.DataFrame(rows, columns=raw_headers[:len(rows[0])])
+
+# Safe validation for filtering ownership
+if "ownership" in help_df.columns:
+    help_df = help_df[help_df["ownership"].astype(str).str.upper().str.strip() == "COCO"].copy()
+else:
+    print("⚠️ Warning: 'ownership' column missing. Continuing with all stores.")
+
+if "branchcode" not in help_df.columns:
+    print("❌ branchcode column missing in Help Sheet.")
+    exit()
+
+branches = help_df["branchcode"].dropna().astype(str).str.strip().unique().tolist()
+print(f"🏪 Active COCO Branch Count found: {len(branches)}")
+
+# =========================================================
+# DATA EXTRACTION LOOPS
+# =========================================================
+availability_list = []
+inventory_list = []
+consumption_list = []
+
+for idx, branch in enumerate(branches):
+    print(f"🔄 Processing Branch [{idx+1}/{len(branches)}]: {branch}")
+    
+    # --- 1. ITEM AVAILABILITY (Sold-out Current State) ---
+    try:
+        res = requests.get(f"{RISTA_BASE_URL}/items/soldout", headers=headers(), params={"branch": branch}, timeout=60)
+        if res.status_code == 200:
+            data = res.json().get("data", [])
+            if data:
+                df = pd.json_normalize(data)
+                df["branchCode"] = branch
+                availability_list.append(df)
+    except Exception as e:
+        print(f"⚠️ Error item availability ({branch}): {e}")
+
+    # --- 2. INVENTORY TRACKING (Store Items Balances) ---
+    try:
+        res = requests.get(f"{RISTA_BASE_URL}/inventory/store/items", headers=headers(), params={"branch": branch}, timeout=60)
+        if res.status_code == 200:
+            data = res.json().get("data", [])
+            if data:
+                df = pd.json_normalize(data)
+                df["branchCode"] = branch
+                inventory_list.append(df)
+    except Exception as e:
+        print(f"⚠️ Error inventory balances ({branch}): {e}")
+
+    # --- 3. CONSUMPTION REPORTING (Via Sales Page Elements) ---
+    try:
+        res = requests.get(f"{RISTA_BASE_URL}/sales/page", headers=headers(), params={"branch": branch, "day": fetch_date}, timeout=60)
+        if res.status_code == 200:
+            data = res.json().get("data", [])
+            if data:
+                df = pd.json_normalize(data)
+                if "items" in df.columns:
+                    df = df.explode("items").reset_index(drop=True)
+                    items_df = pd.json_normalize(df["items"]).add_prefix("item_")
+                    df = pd.concat([df.drop(columns=["items"]), items_df], axis=1)
+                df["branchCode"] = branch
+                consumption_list.append(df)
+    except Exception as e:
+        print(f"⚠️ Error consumption data ({branch}): {e}")
+
+# =========================================================
+# FORMAT AND WRITE DATA TO SHEETS
+# =========================================================
+def update_spreadsheet_tab(tab_name, data_frames):
+    try:
+        ws = spreadsheet.worksheet(tab_name)
+    except Exception:
+        ws = spreadsheet.add_worksheet(title=tab_name, rows="100", cols="20")
+        
+    ws.clear()
+    
+    if not data_frames:
+        ws.update([["Status"] , ["No records found for target day."]], "A1")
+        print(f"⚠️ No data compiled for tab: {tab_name}")
         return
         
-    scopes = [
-        'https://www.googleapis.com/auth/spreadsheets',
-        'https://www.googleapis.com/auth/drive'
-    ]
+    final_df = pd.concat(data_frames, ignore_index=True)
     
-    try:
-        creds_dict = json.loads(google_creds_json)
-        creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-        gc = gspread.authorize(creds)
-        sh = gc.open_by_key(SPREADSHEET_ID)
-        sheet = sh.worksheet(SHEET_NAME)
-    except Exception as e:
-        print(f"Error authenticating or opening Google Sheet: {e}")
-        return
+    # Fill empty values cleanly for GSheet compatibility
+    final_df = final_df.fillna("")
+    
+    # Convert dataframe to nested arrays
+    sheet_output = [final_df.columns.tolist()] + final_df.values.tolist()
+    
+    ws.update(sheet_output, "A1")
+    print(f"✅ Successfully exported data to tab: {tab_name}")
 
-    # 2. Setup Rista API Request Headers using a signed JWT
-    endpoint = f"{RISTA_BASE_URL}/inventory/store/items"
-    
-    print("Generating secure token...")
-    try:
-        token = generate_jwt_token(API_KEY, SECRET_KEY)
-    except Exception as e:
-        print(f"Failed to generate JWT token: {e}")
-        return
+# Executing sheet updates for visual review
+update_spreadsheet_tab("Raw_Availability", availability_list)
+update_spreadsheet_tab("Raw_Inventory", inventory_list)
+update_spreadsheet_tab("Raw_Consumption", consumption_list)
 
-    headers = {
-        'Authorization': f'Bearer {token}',
-        'Accept': 'application/json'
-    }
-    
-    print("Fetching data from Rista API...")
-
-    try:
-        response = requests.get(endpoint, headers=headers)
-        if response.status_code != 200:
-            print(f"API Error: Status {response.status_code}. Response: {response.text}")
-            return
-            
-        response_data = response.json()
-    except Exception as e:
-        print(f"HTTP Request failed: {e}")
-        return
-
-    # 3. Parse and filter available stores
-    stores = response_data.get('stores', response_data.get('data', []))
-    
-    # Prepare rows with headers
-    rows = [['Store Name', 'Ownership', 'Region']]
-    
-    for store in stores:
-        if store.get('available') is True or store.get('status') == 'available' or store.get('isActive') != False:
-            rows.append([
-                store.get('storeName', store.get('name', 'N/A')),
-                store.get('ownership', 'N/A'),
-                store.get('region', 'N/A')
-            ])
-            
-    # 4. Update the Google Sheet
-    print(f"Writing {len(rows) - 1} available store records to Google Sheet...")
-    sheet.clear()
-    sheet.update('A1', rows)
-    
-    # Format the header row to bold
-    sheet.format('A1:C1', {'textFormat': {'bold': True}})
-    print("Successfully updated Help_Sheet!")
-
-if __name__ == '__main__':
-    main()
+print("🏁 Process Complete. Review raw datasets to confirm metric layout rules.")
