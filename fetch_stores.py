@@ -1,5 +1,7 @@
 import os
 import json
+import time
+import jwt
 import requests
 import gspread
 from google.oauth2.service_account import Credentials
@@ -13,6 +15,22 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 
 SPREADSHEET_ID = '1umqb0k_G0F-cAzMbrmqSYnEz06-NjmCANWtWEa_NS9w'
 SHEET_NAME = 'Help_Sheet'
+
+def generate_jwt_token(api_key, secret_key):
+    """
+    Generates a signed JWT token using the secret key.
+    Adjust payload keys if your Rista documentation specifies different names.
+    """
+    current_time = int(time.time())
+    payload = {
+        'iss': api_key,                  # Issuer (your API Key)
+        'iat': current_time,             # Issued at time
+        'exp': current_time + 3600       # Expires in 1 hour
+    }
+    
+    # Sign the token using HS256 algorithm
+    token = jwt.encode(payload, secret_key, algorithm='HS256')
+    return token
 
 def main():
     # 1. Authenticate with Google Sheets using GitHub Secrets
@@ -36,15 +54,18 @@ def main():
         print(f"Error authenticating or opening Google Sheet: {e}")
         return
 
-    # 2. Setup Rista API Request Headers
+    # 2. Setup Rista API Request Headers using a signed JWT
     endpoint = f"{RISTA_BASE_URL}/inventory/store/items"
     
-    # Try typical Rista credential structural styling. 
-    # If a generic Bearer doesn't pass, we include custom mapping fields below.
+    print("Generating secure token...")
+    try:
+        token = generate_jwt_token(API_KEY, SECRET_KEY)
+    except Exception as e:
+        print(f"Failed to generate JWT token: {e}")
+        return
+
     headers = {
-        'Authorization': f'Bearer {API_KEY}',
-        'x-api-key': API_KEY,
-        'x-client-secret': SECRET_KEY,
+        'Authorization': f'Bearer {token}',
         'Accept': 'application/json'
     }
     
@@ -68,7 +89,6 @@ def main():
     rows = [['Store Name', 'Ownership', 'Region']]
     
     for store in stores:
-        # Check if the store is marked as available/active
         if store.get('available') is True or store.get('status') == 'available' or store.get('isActive') != False:
             rows.append([
                 store.get('storeName', store.get('name', 'N/A')),
