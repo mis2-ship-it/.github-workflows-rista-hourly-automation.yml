@@ -926,21 +926,21 @@ rca_dashboard = generate_rca_analysis(
     sales_df, category_dashboard, item_dashboard, region_category_dashboards, region_item_dashboards
 )
 # =========================================================
-# WRITE TO GOOGLE SHEET (WITH SAFE WORKOS MAPPING)
+# WRITE TO GOOGLE SHEET (WITH TARGETED WORKSPACE MAPPING)
 # =========================================================
 
-def safe_update_sheet(sheet_title, dataframe):
+def safe_update_sheet(target_spreadsheet, sheet_title, dataframe):
     try:
         # Check if the worksheet tab exists; if not, create it dynamically
         try:
-            ws = spreadsheet.worksheet(sheet_title)
+            ws = target_spreadsheet.worksheet(sheet_title)
         except gspread.exceptions.WorksheetNotFound:
-            ws = spreadsheet.add_worksheet(title=sheet_title, rows="1000", cols="20")
-            print(f"🛠 Created new worksheet tab: '{sheet_title}'")
+            ws = target_spreadsheet.add_worksheet(title=sheet_title, rows="1000", cols="20")
+            print(f"🛠 Created new worksheet tab: '{sheet_title}' in workbook.")
         
         ws.clear()
         
-        # Avoid payload issues by converting NaN to empty strings and changing float metrics to clean text formatting
+        # Avoid payload issues by converting NaN to empty strings
         export_df = dataframe.fillna("").copy()
         
         # Build the final transmission body matrix
@@ -948,22 +948,66 @@ def safe_update_sheet(sheet_title, dataframe):
         
         # Push update
         ws.update(data_matrix, "A1")
-        print(f"✅ Google Sheet Tab '{sheet_title}' synchronized successfully with {len(export_df)} rows.")
+        print(f"✅ Tab '{sheet_title}' synchronized successfully with {len(export_df)} rows.")
     except Exception as sheet_err:
         print(f"❌ Failed to sync tab '{sheet_title}': {str(sheet_err)}")
 
 try:
-    # 1. Push Core Categories to the principal workspace
-    safe_update_sheet("Sales Dashboard", category_dashboard)
+    # 1. Push Core Categories to the original spreadsheet workspace
+    safe_update_sheet(spreadsheet, "Sales Dashboard", category_dashboard)
 
-    # 2. Push organized Troubleshoot Log to the RCA workspace
+    # 2. Open the distinct RCA workbook for target logging and regional views
+    print("🔗 Connecting specifically to the Target Workbook...")
+    rca_workbook = client.open_by_key("1sO0I_0z7z8zLv3t0QyHihxwvWKn1sS2cMxsN3lHiEAw")
+    
+    # Push the Master RCA Analysis tab
     if not rca_dashboard.empty:
-        safe_update_sheet("RCA Analysis", rca_dashboard)
+        safe_update_sheet(rca_workbook, "RCA Analysis", rca_dashboard)
     else:
         print("✅ RCA Log is empty. Operational metrics are within targeted parameters.")
 
+    # =========================================================
+    # 🌟 NEW: Create Region-Wise Tabs in the Target Workbook
+    # =========================================================
+    for region in sorted(sales_df["Region"].dropna().unique()):
+        tab_name = f"Region_{region}"
+        
+        # Pull Category and Item DataFrames calculated for this specific region
+        cat_df = region_category_dashboards.get(region, pd.DataFrame()).fillna("")
+        item_df = region_item_dashboards.get(region, pd.DataFrame()).fillna("")
+        
+        # Combine both dataframes into a single clear layout sheet with spacing rows
+        combined_rows = []
+        
+        # Add Category section block
+        combined_rows.append([f"📋 {region} - CATEGORY BREAKDOWN LEVEL OUTPUT", "", "", "", "", "", "", ""])
+        combined_rows.append(cat_df.columns.values.tolist())
+        combined_rows.extend(cat_df.values.tolist())
+        
+        # Add 3 clear space rows to cleanly separate the tables vertically
+        combined_rows.extend([[] for _ in range(3)])
+        
+        # Add Item section block
+        combined_rows.append([f"📦 {region} - ITEM BREAKDOWN LEVEL OUTPUT", "", "", "", "", "", "", ""])
+        combined_rows.append(item_df.columns.values.tolist())
+        combined_rows.extend(item_df.values.tolist())
+        
+        # Safely push the entire data matrix to the region tab
+        try:
+            try:
+                ws = rca_workbook.worksheet(tab_name)
+            except gspread.exceptions.WorksheetNotFound:
+                ws = rca_workbook.add_worksheet(title=tab_name, rows="2000", cols="20")
+                print(f"🛠 Created regional worksheet tab: '{tab_name}'")
+            
+            ws.clear()
+            ws.update(combined_rows, "A1")
+            print(f"✅ Regional Workspace Tab '{tab_name}' fully populated.")
+        except Exception as reg_sheet_err:
+            print(f"❌ Failed to populate regional tab '{tab_name}': {str(reg_sheet_err)}")
+
 except Exception as e:
-    print("❌ Critical System Error updating Google Sheet:", str(e))
+    print("❌ Critical System Error updating Google Sheet workspaces:", str(e))
     
 # =========================================================
 # EMAIL LIST
@@ -1208,11 +1252,24 @@ print("RCA Dashboard Rows:", len(rca_dashboard))
 # =========================================================
 # CLEAN RESTRUCTURED SUMMARY HTML EMAIL
 # =========================================================
+gsheet_url = "https://docs.google.com/spreadsheets/d/1sO0I_0z7z8zLv3t0QyHihxwvWKn1sS2cMxsN3lHiEAw/edit"
+
 summary_html = f"""
 <html>
 <body style="font-family:Arial; color:#333;">
 
 <h2>📊 Operational KPT & O2D Performance Dashboard ({fetch_date})</h2>
+
+<!-- 🌟 ADDED: Direct Access Link for the Boss at the top -->
+<div style="background-color: #f8f9fa; border-left: 6px solid #1F4E78; padding: 15px; margin-bottom: 20px;">
+    <p style="margin: 0; font-size: 14px;">
+        🔗 <b>Direct Workspace Link:</b> 
+        <a href="{gsheet_url}" target="_blank" style="color: #1F4E78; font-weight: bold; text-decoration: underline;">
+            Open Google Sheets Master RCA Workspace
+        </a>
+    </p>
+</div>
+
 <p><i>Note: Full tracking data has been dynamically compiled. Detailed logs are available in the centralized Google Sheets master workspace under the 'Sales Dashboard' and 'RCA Analysis' tabs.</i></p>
 
 <br>
