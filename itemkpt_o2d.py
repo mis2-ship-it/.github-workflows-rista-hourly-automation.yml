@@ -845,78 +845,73 @@ for region in sorted(sales_df["Region"].dropna().unique()):
     )
 
 # =========================================================
-# 🌟 4. ROOT CAUSE ANALYSIS (RCA) ENGINE
+# 🌟 UPDATED: RCA ENGINE POWERED BY P80 METRICS
 # =========================================================
 def generate_rca_analysis(sales_df, category_dash, item_dash, region_cat_dict, region_item_dict):
     rca_rows = []
     
-    # Overall Category Issues (KPT > 12 or O2D > 35)
-    cat_issues = category_dash[(category_dash["KPT_FTD"] > 12) | (category_dash["O2D_FTD"] > 35)]
+    # Overall Category Issues (Based on P80)
+    cat_issues = category_dash[(category_dash["KPT_P80_FTD"] > 12) | (category_dash["O2D_P80_FTD"] > 35)]
     for _, row in cat_issues.iterrows():
         rca_rows.append({
             "Scope": "Overall",
             "Type": "Category",
             "Element Name": row["item_categoryName"],
             "Orders (FTD)": row["Orders_FTD"],
-            "Avg KPT (Mins)": row["KPT_FTD"],
-            "Avg O2D (Mins)": row["O2D_FTD"],
-            "Primary Issue": "High Prep Time (KPT)" if row["KPT_FTD"] > 12 else "Logistics Delay (O2D)"
+            "KPT P80 (Mins)": row["KPT_P80_FTD"],
+            "O2D P80 (Mins)": row["O2D_P80_FTD"],
+            "Primary Issue": "High Prep Time (KPT)" if row["KPT_P80_FTD"] > 12 else "Logistics Delay (O2D)"
         })
         
-    # Overall Item Issues (With basic order volume filter)
-    item_issues = item_dash[((item_dash["KPT_FTD"] > 12) | (item_dash["O2D_FTD"] > 35)) & (item_dash["Orders_FTD"] >= 5)]
+    # Overall Item Issues (Based on P80)
+    item_issues = item_dash[((item_dash["KPT_P80_FTD"] > 12) | (item_dash["O2D_P80_FTD"] > 35)) & (item_dash["Orders_FTD"] >= 5)]
     for _, row in item_issues.iterrows():
         rca_rows.append({
             "Scope": "Overall",
             "Type": "Item",
             "Element Name": row["item_shortName"],
             "Orders (FTD)": row["Orders_FTD"],
-            "Avg KPT (Mins)": row["KPT_FTD"],
-            "Avg O2D (Mins)": row["O2D_FTD"],
-            "Primary Issue": "High Prep Time (KPT)" if row["KPT_FTD"] > 12 else "Logistics Delay (O2D)"
+            "KPT P80 (Mins)": row["KPT_P80_FTD"],
+            "O2D P80 (Mins)": row["O2D_P80_FTD"],
+            "Primary Issue": "High Prep Time (KPT)" if row["KPT_P80_FTD"] > 12 else "Logistics Delay (O2D)"
         })
 
-    # Region-wise Category Issues
+    # Region-wise Category Issues (Based on P80)
     for region, df in region_cat_dict.items():
-        issues = df[(df["KPT_FTD"] > 12) | (df["O2D_FTD"] > 35)]
+        issues = df[(df["KPT_P80_FTD"] > 12) | (df["O2D_P80_FTD"] > 35)]
         for _, row in issues.iterrows():
             rca_rows.append({
                 "Scope": f"Region: {region}",
                 "Type": "Category",
                 "Element Name": row["item_categoryName"],
                 "Orders (FTD)": row["Orders_FTD"],
-                "Avg KPT (Mins)": row["KPT_FTD"],
-                "Avg O2D (Mins)": row["O2D_FTD"],
+                "KPT P80 (Mins)": row["KPT_P80_FTD"],
+                "O2D P80 (Mins)": row["O2D_P80_FTD"],
                 "Primary Issue": "Target Dropped in Region"
             })
             
-    # Region-wise Item Issues
+    # Region-wise Item Issues (Based on P80)
     for region, df in region_item_dict.items():
-        issues = df[((df["KPT_FTD"] > 12) | (df["O2D_FTD"] > 35)) & (df["Orders_FTD"] >= 3)]
+        issues = df[((df["KPT_P80_FTD"] > 12) | (df["O2D_P80_FTD"] > 35)) & (df["Orders_FTD"] >= 3)]
         for _, row in issues.iterrows():
             rca_rows.append({
                 "Scope": f"Region: {region}",
                 "Type": "Item",
                 "Element Name": row["item_shortName"],
                 "Orders (FTD)": row["Orders_FTD"],
-                "Avg KPT (Mins)": row["KPT_FTD"],
-                "Avg O2D (Mins)": row["O2D_FTD"],
+                "KPT P80 (Mins)": row["KPT_P80_FTD"],
+                "O2D P80 (Mins)": row["O2D_P80_FTD"],
                 "Primary Issue": "Target Dropped in Region"
             })
 
     rca_df = pd.DataFrame(rca_rows)
     if not rca_df.empty:
-        # Create helper columns to establish the strict sorting hierarchy
         rca_df["_scope_sort"] = rca_df["Scope"].apply(lambda x: 0 if x == "Overall" else 1)
         rca_df["_type_sort"] = rca_df["Type"].apply(lambda x: 0 if x == "Category" else 1)
-        
-        # Sort sequentially by Scope bucket, then Type bucket, then high-to-low order impact
         rca_df = rca_df.sort_values(
             by=["_scope_sort", "Scope", "_type_sort", "Orders (FTD)"], 
             ascending=[True, True, True, False]
         )
-        
-        # Clean up the sorting helper columns before returning the data
         rca_df = rca_df.drop(columns=["_scope_sort", "_type_sort"])
         
     return rca_df
@@ -1163,32 +1158,15 @@ def style_dashboard_table(df, metric="KPT"):
 
             style = ""
 
-            highlight_cols = [
-                "KPT",
-                "O2D",
-                "Avg",
-                "P80",
-                "Median"
-            ]
-
-            if any(x in str(col) for x in highlight_cols):
-
+           # 🌟 FIX: Check for metric columns and strictly isolate O2D rules from KPT rules
+            if any(x in str(col) for x in ["KPT", "O2D", "Avg", "P80", "Median"]):
                 try:
-
                     float(val)
-
+                    # Force O2D rule if O2D string matches anywhere in the header
                     if "O2D" in str(col):
-                        style = get_cell_color(
-                            val,
-                            "O2D"
-                        )
-
+                        style = get_cell_color(val, "O2D")
                     else:
-                        style = get_cell_color(
-                            val,
-                            "KPT"
-                        )
-
+                        style = get_cell_color(val, "KPT")
                 except:
                     pass
 
