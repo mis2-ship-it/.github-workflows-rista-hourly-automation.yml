@@ -1263,7 +1263,7 @@ print("RCA Dashboard Rows:", len(rca_dashboard))
 # =========================================================
 # CLEAN RESTRUCTURED SUMMARY HTML EMAIL
 # =========================================================
-gsheet_url = "https://docs.google.com/spreadsheets/d/1sO0I_0z7z8zLv3t0QyHihxwvWKn1sS2cMxsN3lHiEAw/edit"
+gsheet_url = "https://docs.google.com/spreadsheets/d/14jVSgxEmyNLulEOAJxgkILqPDAQv6lyJORjrAmnlxXM/edit"
 
 summary_html = f"""
 <html>
