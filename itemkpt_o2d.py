@@ -921,94 +921,174 @@ rca_dashboard = generate_rca_analysis(
     sales_df, category_dashboard, item_dashboard, region_category_dashboards, region_item_dashboards
 )
 # =========================================================
-# WRITE TO GOOGLE SHEET (WITH TARGETED WORKSPACE MAPPING)
+# WRITE TO GOOGLE SHEET (WITH CONDITIONAL COLOR HIGHLIGHTS)
 # =========================================================
 
-def safe_update_sheet(target_spreadsheet, sheet_title, dataframe):
+def wipe_gsheet_formats(ws):
+    """Clears all old color formatting so previous day colors don't bleed into new data."""
     try:
-        # Check if the worksheet tab exists; if not, create it dynamically
+        ws.spreadsheet.batch_update({
+            "requests": [{"updateCells": {"range": {"sheetId": ws.id}, "fields": "userEnteredFormat"}}]
+        })
+    except:
+        pass
+
+def beautify_gsheet_table(ws, df, start_row=1):
+    """Applies exact email HTML colors (Red, Yellow, Green) to Google Sheet cells dynamically."""
+    formats = []
+    
+    # Helper to convert col/row index to A1 notation (e.g. 1, 2 -> "B1")
+    def get_a1(row, col):
+        dividend = col
+        column_name = ""
+        while dividend > 0:
+            modulo = (dividend - 1) % 26
+            column_name = chr(65 + modulo) + column_name
+            dividend = int((dividend - modulo) / 26)
+        return f"{column_name}{row}"
+        
+    # 1. Format the Table Header (Blue Background, White Text)
+    formats.append({
+        "range": f"A{start_row}:{get_a1(start_row, len(df.columns))}",
+        "format": {
+            "backgroundColor": {"red": 0.12, "green": 0.30, "blue": 0.47}, # #1F4E78
+            "textFormat": {"foregroundColor": {"red": 1.0, "green": 1.0, "blue": 1.0}, "bold": True},
+            "horizontalAlignment": "CENTER"
+        }
+    })
+    
+    # 2. Row by Row SLA Evaluation
+    for row_idx, row in enumerate(df.values):
+        sheet_row = start_row + 1 + row_idx
+        for col_idx, val in enumerate(row):
+            col_name = str(df.columns[col_idx])
+            sheet_col = col_idx + 1
+            
+            # Align Category/Item names cleanly to the left and bold them
+            if any(x in col_name for x in ["Name", "shortName", "categoryName", "Element Name", "Scope", "Primary Issue"]):
+                formats.append({
+                    "range": get_a1(sheet_row, sheet_col),
+                    "format": {"horizontalAlignment": "LEFT", "textFormat": {"bold": True}}
+                })
+                continue
+            
+            # Apply Red/Yellow/Green to KPT & O2D metrics
+            if any(x in col_name for x in ["KPT", "O2D", "Avg", "P80", "Median"]):
+                try:
+                    f_val = float(val)
+                    metric = "O2D" if "O2D" in col_name else "KPT"
+                    bg, txt = None, None
+                    
+                    if metric == "KPT":
+                        if f_val < 12: bg, txt = {"red": 0.85, "green": 0.91, "blue": 0.82}, {"red": 0.0, "green": 0.38, "blue": 0.0}
+                        elif f_val <= 15: bg, txt = {"red": 1.0, "green": 0.94, "blue": 0.80}, {"red": 0.61, "green": 0.39, "blue": 0.0}
+                        else: bg, txt = {"red": 0.95, "green": 0.80, "blue": 0.80}, {"red": 0.61, "green": 0.0, "blue": 0.02}
+                    else: # O2D Logic
+                        if f_val < 30: bg, txt = {"red": 0.85, "green": 0.91, "blue": 0.82}, {"red": 0.0, "green": 0.38, "blue": 0.0}
+                        elif f_val <= 35: bg, txt = {"red": 1.0, "green": 0.94, "blue": 0.80}, {"red": 0.61, "green": 0.39, "blue": 0.0}
+                        else: bg, txt = {"red": 0.95, "green": 0.80, "blue": 0.80}, {"red": 0.61, "green": 0.0, "blue": 0.02}
+                    
+                    if bg:
+                        formats.append({
+                            "range": get_a1(sheet_row, sheet_col),
+                            "format": {"backgroundColor": bg, "textFormat": {"foregroundColor": txt, "bold": True}, "horizontalAlignment": "CENTER"}
+                        })
+                except:
+                    pass
+    
+    # 3. Apply formatting safely in chunk sizes to respect Google API limits
+    for i in range(0, len(formats), 2000):
+        try:
+            ws.batch_format(formats[i:i+2000])
+        except Exception as e:
+            print(f"⚠️ Formatting error chunks: {e}")
+
+# =========================================================
+# SHEET UPDATE EXECUTION
+# =========================================================
+
+def safe_update_sheet(target_spreadsheet, sheet_title, dataframe, start_row=1):
+    try:
         try:
             ws = target_spreadsheet.worksheet(sheet_title)
         except gspread.exceptions.WorksheetNotFound:
             ws = target_spreadsheet.add_worksheet(title=sheet_title, rows="1000", cols="20")
-            print(f"🛠 Created new worksheet tab: '{sheet_title}' in workbook.")
+            print(f"🛠 Created new worksheet tab: '{sheet_title}'")
         
+        # Wipe old styling and clear text
+        wipe_gsheet_formats(ws)
         ws.clear()
         
-        # Avoid payload issues by converting NaN to empty strings
         export_df = dataframe.fillna("").copy()
-        
-        # Build the final transmission body matrix
         data_matrix = [export_df.columns.values.tolist()] + export_df.values.tolist()
-        
-        # Push update
         ws.update(data_matrix, "A1")
-        print(f"✅ Tab '{sheet_title}' synchronized successfully with {len(export_df)} rows.")
+        
+        # Inject the new beautiful highlighting!
+        beautify_gsheet_table(ws, export_df, start_row=start_row)
+        
+        print(f"✅ Tab '{sheet_title}' synchronized & styled successfully.")
     except Exception as sheet_err:
         print(f"❌ Failed to sync tab '{sheet_title}': {str(sheet_err)}")
 
 try:
-    # 1. Push Core Categories to the original spreadsheet workspace
+    # 1. Push Core Categories
     safe_update_sheet(spreadsheet, "Sales Dashboard", category_dashboard)
 
-    # 2. Open the distinct RCA workbook for target logging and regional views
+    # 2. Push organized Troubleshoot Log to RCA workbook
     print("🔗 Connecting specifically to the Target Workbook...")
-    rca_workbook = client.open_by_key("14jVSgxEmyNLulEOAJxgkILqPDAQv6lyJORjrAmnlxXM")
+    rca_workbook = client.open_by_key("1sO0I_0z7z8zLv3t0QyHihxwvWKn1sS2cMxsN3lHiEAw")
     
-    # Push the Master RCA Analysis tab
     if not rca_dashboard.empty:
         safe_update_sheet(rca_workbook, "RCA Analysis", rca_dashboard)
     else:
-        # 🌟 FIX: If empty, explicitly write an "All Clear" status row so the sheet isn't blank
         print("✅ RCA Log is empty. Pushing clean status row to Google Sheet.")
         all_clear_df = pd.DataFrame([{
-            "Scope": "Overall",
-            "Type": "Status Log",
-            "Element Name": "All Categories & Items",
-            "Orders (FTD)": 0,
-            "Avg KPT (Mins)": 0,
-            "Avg O2D (Mins)": 0,
+            "Scope": "Overall", "Type": "Status Log", "Element Name": "All Categories & Items",
+            "Orders (FTD)": 0, "Avg KPT (Mins)": 0, "Avg O2D (Mins)": 0,
             "Primary Issue": "✅ All metrics within targeted SLA parameters yesterday!"
         }])
         safe_update_sheet(rca_workbook, "RCA Analysis", all_clear_df)
 
-    # =========================================================
-    # 🌟 NEW: Create Region-Wise Tabs in the Target Workbook
-    # =========================================================
+    # 3. Create Region-Wise Tabs in Target Workbook
     for region in sorted(sales_df["Region"].dropna().unique()):
         tab_name = f"Region_{region}"
         
-        # Pull Category and Item DataFrames calculated for this specific region
         cat_df = region_category_dashboards.get(region, pd.DataFrame()).fillna("")
         item_df = region_item_dashboards.get(region, pd.DataFrame()).fillna("")
         
-        # Combine both dataframes into a single clear layout sheet with spacing rows
         combined_rows = []
         
-        # Add Category section block
+        # Combine Matrices
         combined_rows.append([f"📋 {region} - CATEGORY BREAKDOWN LEVEL OUTPUT", "", "", "", "", "", "", ""])
         combined_rows.append(cat_df.columns.values.tolist())
         combined_rows.extend(cat_df.values.tolist())
         
-        # Add 3 clear space rows to cleanly separate the tables vertically
         combined_rows.extend([[] for _ in range(3)])
         
-        # Add Item section block
         combined_rows.append([f"📦 {region} - ITEM BREAKDOWN LEVEL OUTPUT", "", "", "", "", "", "", ""])
         combined_rows.append(item_df.columns.values.tolist())
         combined_rows.extend(item_df.values.tolist())
         
-        # Safely push the entire data matrix to the region tab
         try:
             try:
                 ws = rca_workbook.worksheet(tab_name)
             except gspread.exceptions.WorksheetNotFound:
                 ws = rca_workbook.add_worksheet(title=tab_name, rows="2000", cols="20")
-                print(f"🛠 Created regional worksheet tab: '{tab_name}'")
             
+            # Wipe formats and push data
+            wipe_gsheet_formats(ws)
             ws.clear()
             ws.update(combined_rows, "A1")
-            print(f"✅ Regional Workspace Tab '{tab_name}' fully populated.")
+            
+            # 🌟 Colorize both tables in the same sheet dynamically!
+            # Category table header starts at row 2
+            beautify_gsheet_table(ws, cat_df, start_row=2)
+            
+            # Item table header starts after Cat table length + 7 spacing rows
+            item_start_row = len(cat_df) + 7
+            beautify_gsheet_table(ws, item_df, start_row=item_start_row)
+            
+            print(f"✅ Regional Workspace Tab '{tab_name}' fully styled.")
         except Exception as reg_sheet_err:
             print(f"❌ Failed to populate regional tab '{tab_name}': {str(reg_sheet_err)}")
 
