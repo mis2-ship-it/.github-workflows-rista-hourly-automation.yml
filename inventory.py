@@ -27,6 +27,7 @@ def get_token():
 
 def headers():
     return {
+        "x-api-key": API_KEY,
         "Authorization": f"Bearer {get_token()}",
         "Content-Type": "application/json"
     }
