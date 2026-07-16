@@ -972,11 +972,12 @@ def beautify_gsheet_table(ws, df, start_row=1):
                 })
                 continue
             
-            # Apply Red/Yellow/Green to KPT & O2D metrics
-            if any(x in col_name for x in ["KPT", "O2D", "Avg", "P80", "Median"]):
+            # 🌟 FIX: Clean target detection ensuring headers like "KPT P80 (Mins)" match correctly
+            col_clean = col_name.upper().replace(" ", "")
+            if "KPT" in col_clean or "O2D" in col_clean or any(x in col_clean for x in ["AVG", "P80", "MEDIAN"]):
                 try:
                     f_val = float(val)
-                    metric = "O2D" if "O2D" in col_name else "KPT"
+                    metric = "O2D" if "O2D" in col_clean else "KPT"
                     bg, txt = None, None
                     
                     if metric == "KPT":
