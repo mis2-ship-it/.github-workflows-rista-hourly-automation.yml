@@ -151,14 +151,23 @@ def update_spreadsheet_tab(tab_name, data_frames):
         
     final_df = pd.concat(data_frames, ignore_index=True)
     
-    # Fill empty values cleanly for GSheet compatibility
+    # Fill empty values cleanly
     final_df = final_df.fillna("")
     
-    # Convert dataframe to nested arrays
+    # 🌟 FIX: Ensure all complex objects (lists/dicts) are converted to strings
+    for col in final_df.columns:
+        # If the column contains un-flattened lists or dictionaries, cast them safely
+        if final_df[col].apply(lambda x: isinstance(x, (list, dict))).any():
+            final_df[col] = final_df[col].apply(lambda x: json.dumps(x) if isinstance(x, (list, dict)) else x)
+    
+    # Convert dataframe to nested arrays for GSheet compatibility
     sheet_output = [final_df.columns.tolist()] + final_df.values.tolist()
     
-    ws.update(sheet_output, "A1")
-    print(f"✅ Successfully exported data to tab: {tab_name}")
+    try:
+        ws.update(sheet_output, "A1")
+        print(f"✅ Successfully exported data to tab: {tab_name}")
+    except Exception as sheet_err:
+        print(f"❌ Failed to push to tab {tab_name}. Error details: {sheet_err}")
 
 # Executing sheet updates for visual review
 update_spreadsheet_tab("Raw_Availability", availability_list)
