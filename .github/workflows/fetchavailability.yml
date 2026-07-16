@@ -31,4 +31,4 @@ jobs:
 
         run: |
           echo "Running Fetch Stores script..."
-          python fetch_stores.py
+          python fetch_availability.py
