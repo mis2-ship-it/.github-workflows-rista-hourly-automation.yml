@@ -25,12 +25,11 @@ def get_token():
     }
     return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
-def headers():
-    return {
-        "x-api-key": API_KEY,
-        "x-api-token": get_token(),
-        "content-type": "application/json"
+def headers = {
+    "Authorization": f"Bearer {get_token()}",
+    "Content-Type": "application/json"
     }
+
 
 # ---------------- GOOGLE ---------------- #
 
