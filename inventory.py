@@ -21,13 +21,14 @@ def get_token():
     payload = {
         "iss": API_KEY,
         "iat": int(time.time()),
-        "exp": int(time.time()) + 60  # token valid for 60s
+        "exp": int(time.time()) + 60
     }
     return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
-def headers = {
-    "Authorization": f"Bearer {get_token()}",
-    "Content-Type": "application/json"
+def headers():
+    return {
+        "Authorization": f"Bearer {get_token()}",
+        "Content-Type": "application/json"
     }
 
 
