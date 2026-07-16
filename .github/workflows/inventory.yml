@@ -1,29 +1,31 @@
 name: Fetch Inventory
 
 on:
-  workflow_dispatch:   # Allows you to click a button and run it manually anytime
+  workflow_dispatch:       # allow manual trigger
 
 jobs:
-  run-sync:
+  run-inventory:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository Code
-      uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
 
-    - name: Install Dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pandas gspread google-auth jwt matplotlib
 
-    - name: Execute Sync Script
-      env:
-        RISTA_BASE_URL: 'https://api.rista.com/v1' # Swap out if they use a different URL
-        RISTA_AUTH_TOKEN: ${{ secrets.RISTA_AUTH_TOKEN }}
-        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-      run: python inventory.py
+      - name: Run inventory script
+        env:
+          API_KEY: ${{ secrets.API_KEY }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: |
+          echo "Running script..."
+          python inventory.py
