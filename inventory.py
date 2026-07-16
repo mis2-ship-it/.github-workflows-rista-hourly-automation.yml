@@ -2,6 +2,7 @@ import os
 import json
 import time
 import jwt
+print("PyJWT version:", jwt.__version__)
 import requests
 import pandas as pd
 from datetime import datetime
