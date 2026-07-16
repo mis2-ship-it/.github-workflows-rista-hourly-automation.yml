@@ -14,6 +14,7 @@ print("🚀 Live Script Started")
 
 API_KEY = os.environ["API_KEY"]
 SECRET_KEY = os.environ["SECRET_KEY"]
+GOOGLE_CREDENTIALS = os.environ["GOOGLE_CREDENTIALS"]
 
 def get_token():
     payload = {
