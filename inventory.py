@@ -42,7 +42,7 @@ creds = Credentials.from_service_account_info(
 )
 
 client = gspread.authorize(creds)
-sheet_url = "https://docs.google.com/spreadsheets/d/1CVUS-BSBfDIoQI4Yk2GB4_Zp1CIJRF-9YRfpvCih-FM/edit"
+sheet_url = "https://docs.google.com/spreadsheets/d/1YAzHR1djQQSyW8Cz9-y6HxLV7XQY9xSm6mVnBy8a7lc/edit"
 
 retry = 5
 for i in range(retry):
