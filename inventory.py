@@ -74,8 +74,11 @@ def fetch_data(endpoint, method="GET", payload=None):
         response = requests.get(url, headers=headers())
     else:
         response = requests.post(url, headers=headers(), json=payload or {})
+
     if response.status_code != 200:
-        raise Exception(f"API call failed: {response.status_code} {response.text}")
+        # 👇 Add this line BEFORE raising the exception
+        print("Response body:", response.text)
+        raise Exception(f"API call failed: {response.status_code}")
     return response.json()
 
 # ---------------- FETCH & ENRICH ---------------- #
