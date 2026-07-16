@@ -1,4 +1,4 @@
-name: Fetch Inventory Report
+name: Fetch Availability Report
 
 on:
   workflow_dispatch:
