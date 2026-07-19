@@ -8,6 +8,7 @@ import pandas as pd
 from datetime import datetime
 import gspread
 from google.oauth2.service_account import Credentials
+import base64
 
 print("🚀 Live Script Started")
 
@@ -25,24 +26,36 @@ def get_token():
     }
     return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
-import base64
+# ---------------- HEADERS ---------------- #
+# 👉 Uncomment ONE of these depending on Rista’s docs
 
+# Option A: Bearer token only
+# def headers():
+#     return {
+#         "Authorization": f"Bearer {get_token()}",
+#         "Content-Type": "application/json"
+#     }
+
+# Option B: API key + Bearer token
+# def headers():
+#     return {
+#         "x-api-key": API_KEY,
+#         "Authorization": f"Bearer {get_token()}",
+#         "Content-Type": "application/json"
+#     }
+
+# Option C: Basic Auth (API key + secret)
 def headers():
-    # Combine API key and secret into a single string
     auth_string = base64.b64encode(f"{API_KEY}:{SECRET_KEY}".encode()).decode()
     return {
         "Authorization": f"Basic {auth_string}",
         "Content-Type": "application/json"
     }
 
-
-
-
-
 # ---------------- GOOGLE ---------------- #
 
 creds = Credentials.from_service_account_info(
-    json.loads(os.environ["GOOGLE_CREDENTIALS"]),
+    json.loads(GOOGLE_CREDENTIALS),
     scopes=[
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
@@ -79,11 +92,9 @@ def fetch_data(endpoint, method="GET", payload=None):
         response = requests.post(url, headers=headers(), json=payload or {})
 
     if response.status_code != 200:
-        # 👇 Add this line BEFORE raising the exception
-        print("Response body:", response.text)
+        print("Response body:", response.text)  # 👈 log full error
         raise Exception(f"API call failed: {response.status_code}")
     return response.json()
-
 
 # ---------------- FETCH & ENRICH ---------------- #
 
@@ -99,7 +110,6 @@ all_data += stock.get("data", [])
 if not all_data:
     raise Exception("❌ No data returned from API")
 
-# Enrich JSON
 for item in all_data:
     item["source"] = "Rista"
     item["fetched_at"] = datetime.utcnow().isoformat()
