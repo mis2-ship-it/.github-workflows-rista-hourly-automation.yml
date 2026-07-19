@@ -79,8 +79,9 @@ def fetch_data(endpoint, method="GET", payload=None):
 
 # ---------------- FETCH & ENRICH ---------------- #
 
-transfer = fetch_data("/inventory/transfer/page", "GET")
-grn = fetch_data("/inventory/grn/page", "GET")
+# Try adding standard pagination params to the GET requests
+transfer = fetch_data("/inventory/transfer/page?page=1&size=50", "GET")
+grn = fetch_data("/inventory/grn/page?page=1&size=50", "GET")
 stock = fetch_data("/inventory/item/stock", "POST")
 
 all_data = []
