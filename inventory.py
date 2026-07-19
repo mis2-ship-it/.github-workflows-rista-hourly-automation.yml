@@ -8,7 +8,6 @@ import pandas as pd
 from datetime import datetime
 import gspread
 from google.oauth2.service_account import Credentials
-import base64
 
 print("🚀 Live Script Started")
 
@@ -26,29 +25,11 @@ def get_token():
     }
     return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
-# ---------------- HEADERS ---------------- #
-# 👉 Uncomment ONE of these depending on Rista’s docs
-
-# Option A: Bearer token only
-# def headers():
-#     return {
-#         "Authorization": f"Bearer {get_token()}",
-#         "Content-Type": "application/json"
-#     }
-
-# Option B: API key + Bearer token
-# def headers():
-#     return {
-#         "x-api-key": API_KEY,
-#         "Authorization": f"Bearer {get_token()}",
-#         "Content-Type": "application/json"
-#     }
-
-# Option C: Basic Auth (API key + secret)
 def headers():
-    auth_string = base64.b64encode(f"{API_KEY}:{SECRET_KEY}".encode()).decode()
+    # 👉 This is the critical fix
     return {
-        "Authorization": f"Basic {auth_string}",
+        "x-api-key": API_KEY,
+        "x-api-token": get_token(),
         "Content-Type": "application/json"
     }
 
@@ -92,7 +73,7 @@ def fetch_data(endpoint, method="GET", payload=None):
         response = requests.post(url, headers=headers(), json=payload or {})
 
     if response.status_code != 200:
-        print("Response body:", response.text)  # 👈 log full error
+        print("Response body:", response.text)
         raise Exception(f"API call failed: {response.status_code}")
     return response.json()
 
