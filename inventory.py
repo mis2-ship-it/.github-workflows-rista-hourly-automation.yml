@@ -62,7 +62,7 @@ else:
 
 # ---------------- API CALL ---------------- #
 
-BASE_URL = "https://api.ristaapps.com"
+BASE_URL = "https://api.ristaapps.com/v1"
 
 def fetch_data(endpoint, method="GET", payload=None):
     url = BASE_URL + endpoint
