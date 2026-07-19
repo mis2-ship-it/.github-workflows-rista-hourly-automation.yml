@@ -102,3 +102,4 @@ sheet.clear()
 sheet.update([df.columns.tolist()] + df.values.tolist())
 
 print("✅ Inventory data pushed successfully!")
+
