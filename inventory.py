@@ -28,11 +28,14 @@ def get_token():
 import base64
 
 def headers():
+    # Combine API key and secret into a single string
     auth_string = base64.b64encode(f"{API_KEY}:{SECRET_KEY}".encode()).decode()
     return {
         "Authorization": f"Basic {auth_string}",
         "Content-Type": "application/json"
     }
+
+
 
 
 
@@ -80,6 +83,7 @@ def fetch_data(endpoint, method="GET", payload=None):
         print("Response body:", response.text)
         raise Exception(f"API call failed: {response.status_code}")
     return response.json()
+
 
 # ---------------- FETCH & ENRICH ---------------- #
 
