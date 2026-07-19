@@ -61,7 +61,6 @@ else:
     raise Exception("❌ Failed to connect Google Sheet after retries")
 
 # ---------------- API CALL ---------------- #
-
 BASE_URL = "https://api.ristaapps.com/v1"
 
 def fetch_data(endpoint, method="GET", payload=None):
@@ -71,30 +70,27 @@ def fetch_data(endpoint, method="GET", payload=None):
         response = requests.get(url, headers=headers())
     else:
         response = requests.post(url, headers=headers(), json=payload or {})
-
     if response.status_code != 200:
         print("Response body:", response.text)
         raise Exception(f"API call failed: {response.status_code}")
     return response.json()
 
 # ---------------- FETCH & ENRICH ---------------- #
+# 1. Get today's date formatted as YYYY-MM-DD
+today_str = datetime.utcnow().strftime("%Y-%m-%d")
 
-# Try adding standard pagination params to the GET requests
-transfer = fetch_data("/inventory/transfer/page?page=1&size=50", "GET")
-grn = fetch_data("/inventory/grn/page?page=1&size=50", "GET")
-stock = fetch_data("/inventory/item/stock", "POST")
+# 2. Add your Rista Branch ID here (Replace 'YOUR_BRANCH_ID_HERE' with your actual branch ID/code)
+BRANCH_ID = "YOUR_BRANCH_ID_HERE" 
 
-all_data = []
-all_data += transfer.get("data", [])
-all_data += grn.get("data", [])
-all_data += stock.get("data", [])
+# 3. Construct the query string with the mandatory filters
+query_params = f"?branch={BRANCH_ID}&day={today_str}&page=1&size=50"
 
-if not all_data:
-    raise Exception("❌ No data returned from API")
+transfer = fetch_data(f"/inventory/transfer/page{query_params}", "GET")
+grn = fetch_data(f"/inventory/grn/page{query_params}", "GET")
 
-for item in all_data:
-    item["source"] = "Rista"
-    item["fetched_at"] = datetime.utcnow().isoformat()
+# Note: The POST request for stock might also need the branch inside its JSON payload
+stock_payload = {"branch": BRANCH_ID}
+stock = fetch_data("/inventory/item/stock", "POST", payload=stock_payload)
 
 # ---------------- PUSH TO SHEET ---------------- #
 
