@@ -80,7 +80,7 @@ def fetch_data(endpoint, method="GET", payload=None):
 today_str = datetime.utcnow().strftime("%Y-%m-%d")
 
 # 2. Add your Rista Branch ID here (Replace 'YOUR_BRANCH_ID_HERE' with your actual branch ID/code)
-BRANCH_ID = "YOUR_BRANCH_ID_HERE" 
+BRANCH_ID = "FZBBLR023" 
 
 # 3. Construct the query string with the mandatory filters
 query_params = f"?branch={BRANCH_ID}&day={today_str}&page=1&size=50"
