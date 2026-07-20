@@ -76,26 +76,48 @@ def fetch_data(endpoint, method="GET", payload=None):
     return response.json()
 
 # ---------------- FETCH & ENRICH ---------------- #
-# 1. Get today's date formatted as YYYY-MM-DD
 today_str = datetime.utcnow().strftime("%Y-%m-%d")
-
-# 2. Add your Rista Branch ID here (Replace 'YOUR_BRANCH_ID_HERE' with your actual branch ID/code)
 BRANCH_ID = "FZBBLR023" 
-
-# 3. Construct the query string with the mandatory filters
 query_params = f"?branch={BRANCH_ID}&day={today_str}&page=1&size=50"
 
 transfer = fetch_data(f"/inventory/transfer/page{query_params}", "GET")
 grn = fetch_data(f"/inventory/grn/page{query_params}", "GET")
 
-# Change this:
-# stock_payload = {"branch": BRANCH_ID}
+# 💡 Dynamically collect unique SKU codes from the transfer and GRN data
+collected_skus = set()
 
-# To this:
+# Extract from transfer items
+for record in transfer.get("data", []):
+    # Adjust "skuCode" or "sku" key based on your API's actual response structure
+    if "skuCode" in record:
+        collected_skus.add(record["skuCode"])
+    elif "items" in record:
+        for item in record["items"]:
+            if "skuCode" in item:
+                collected_skus.add(item["skuCode"])
+
+# Extract from GRN items
+for record in grn.get("data", []):
+    if "skuCode" in record:
+        collected_skus.add(record["skuCode"])
+    elif "items" in record:
+        for item in record["items"]:
+            if "skuCode" in item:
+                collected_skus.add(item["skuCode"])
+
+# Convert set back to a list
+sku_list = list(collected_skus)
+
+# Fallback: If no transfers or GRNs happened today, use a dummy or specific SKU to prevent 400 error
+if not sku_list:
+    sku_list = ["ALL"] # Or substitute a known active SKU from your inventory
+
+# Build the payload with the gathered SKUs
 stock_payload = {
     "branchCode": BRANCH_ID,
-    "skuCodes": []  # If this returns empty, replace [] with specific SKUs like ["SKU001", "SKU002"]
+    "skuCodes": sku_list
 }
+
 stock = fetch_data("/inventory/item/stock", "POST", payload=stock_payload)
 
 # ---------------- PUSH TO SHEET ---------------- #
