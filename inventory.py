@@ -88,8 +88,14 @@ query_params = f"?branch={BRANCH_ID}&day={today_str}&page=1&size=50"
 transfer = fetch_data(f"/inventory/transfer/page{query_params}", "GET")
 grn = fetch_data(f"/inventory/grn/page{query_params}", "GET")
 
-# Note: The POST request for stock might also need the branch inside its JSON payload
-stock_payload = {"branch": BRANCH_ID}
+# Change this:
+# stock_payload = {"branch": BRANCH_ID}
+
+# To this:
+stock_payload = {
+    "branchCode": BRANCH_ID,
+    "skuCodes": []  # If this returns empty, replace [] with specific SKUs like ["SKU001", "SKU002"]
+}
 stock = fetch_data("/inventory/item/stock", "POST", payload=stock_payload)
 
 # ---------------- PUSH TO SHEET ---------------- #
