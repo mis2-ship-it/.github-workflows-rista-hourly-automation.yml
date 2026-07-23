@@ -813,22 +813,45 @@ l2w_sales = l2w_df.copy()
 print("✅ Sales DataFrames Created")
 
 # =========================================================
-# L2W HELP SHEET MAPPING
+# HELP SHEET MAPPING
 # =========================================================
 
-l2w_sales = l2w_sales.merge(
-    help_df[
-        [
-            "branchCode",
-            "Store Name",
-            "Region",
-            "Channel",
-            "Ownership"
-        ]
-    ],
+help_merge = help_df[
+    [
+        "branchCode",
+        "Store Name",
+        "Region",
+        "Channel",
+        "Source",
+        "Ownership"
+    ]
+].copy()
+
+current_sales = current_sales.merge(
+    help_merge,
     on="branchCode",
     how="left"
 )
+
+lw_sales = lw_sales.merge(
+    help_merge,
+    on="branchCode",
+    how="left"
+)
+
+l2w_sales = l2w_sales.merge(
+    help_merge,
+    on="branchCode",
+    how="left"
+)
+
+print("✅ Help Sheet Mapped to Current/LW/L2W")
+
+print("Current Columns")
+print(current_sales.columns.tolist())
+
+print("LW Columns")
+print(lw_sales.columns.tolist())
 
 print("L2W Columns")
 print(l2w_sales.columns.tolist())
@@ -897,7 +920,9 @@ help_merge = help_df[
         "branchCode",
         "Store Name",
         "Region",
-        "Channel"      # keep original name
+        "Channel",
+        "Source",
+        "Ownership"
     ]
 ].copy()
 
@@ -1350,6 +1375,15 @@ for df in [current_sales, lw_sales, l2w_sales]:
 print("✅ Help Channel Created")
 print(current_sales.columns.tolist())
 
+print("\n===== CURRENT SALES =====")
+print(current_sales[["branchCode","Channel","Source","Help Channel"]].head(10))
+
+print("\n===== LW SALES =====")
+print(lw_sales[["branchCode","Channel","Source","Help Channel"]].head(10))
+
+print("\n===== L2W SALES =====")
+print(l2w_sales[["branchCode","Channel","Source","Help Channel"]].head(10))
+
 # =========================================================
 # ITEM GROUP FOR WINDOW DATA
 # =========================================================
@@ -1776,7 +1810,7 @@ for k, v in (
     print(k, len(v))
 
 
-
+    print(current_sales[["Channel", "Source"]].head(20))
 # =========================================================
 # PRODUCT MIX SOURCE DASHBOARD
 # =========================================================
@@ -1796,18 +1830,21 @@ def create_product_mix_source_dashboard(
     ]:
 
         curr = current_sales[
-            current_sales["Help Channel"]
-            .str.contains(source, na=False)
+            current_sales["Channel Group"]
+            .astype(str)
+            .str.contains(source, case=False, na=False)
         ].copy()
         
         lw = lw_sales[
-            lw_sales["Help Channel"]
-            .str.contains(source, na=False)
+            lw_sales["Channel Group"]
+            .astype(str)
+            .str.contains(source, case=False, na=False)
         ].copy()
         
         l2w = l2w_sales[
-            l2w_sales["Help Channel"]
-            .str.contains(source, na=False)
+            l2w_sales["Channel Group"]
+            .astype(str)
+            .str.contains(source, case=False, na=False)
         ].copy()
         
         print("\n========== COLUMN CHECK ==========")
