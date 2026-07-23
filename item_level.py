@@ -813,6 +813,27 @@ l2w_sales = l2w_df.copy()
 print("✅ Sales DataFrames Created")
 
 # =========================================================
+# L2W HELP SHEET MAPPING
+# =========================================================
+
+l2w_sales = l2w_sales.merge(
+    help_df[
+        [
+            "branchCode",
+            "Store Name",
+            "Region",
+            "Channel",
+            "Ownership"
+        ]
+    ],
+    on="branchCode",
+    how="left"
+)
+
+print("L2W Columns")
+print(l2w_sales.columns.tolist())
+
+# =========================================================
 # EMPTY CHECK
 # =========================================================
 
