@@ -811,6 +811,8 @@ lw_sales = lw_df.copy()
 l2w_sales = l2w_df.copy()
 
 print("✅ Sales DataFrames Created")
+print("HELP DF COLUMNS BEFORE MERGE")
+print(help_df.columns.tolist())
 
 # =========================================================
 # HELP SHEET MAPPING
