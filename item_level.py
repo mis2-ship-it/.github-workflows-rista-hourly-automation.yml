@@ -1328,6 +1328,29 @@ print("✅ Product Mix Fixed")
 
 
 # =========================================================
+# CREATE HELP CHANNEL
+# =========================================================
+
+for df in [current_sales, lw_sales, l2w_sales]:
+
+    if "Help Channel" not in df.columns:
+
+        if "Source" in df.columns:
+
+            df["Help Channel"] = df["Source"]
+
+        elif "Channel" in df.columns:
+
+            df["Help Channel"] = df["Channel"]
+
+        elif "channel" in df.columns:
+
+            df["Help Channel"] = df["channel"]
+
+print("✅ Help Channel Created")
+print(current_sales.columns.tolist())
+
+# =========================================================
 # ITEM GROUP FOR WINDOW DATA
 # =========================================================
 
@@ -1776,17 +1799,30 @@ def create_product_mix_source_dashboard(
             current_sales["Help Channel"]
             .str.contains(source, na=False)
         ].copy()
-
+        
         lw = lw_sales[
             lw_sales["Help Channel"]
             .str.contains(source, na=False)
         ].copy()
-
+        
         l2w = l2w_sales[
             l2w_sales["Help Channel"]
             .str.contains(source, na=False)
         ].copy()
-
+        
+        print("\n========== COLUMN CHECK ==========")
+        
+        print("Current Sales Columns")
+        print(current_sales.columns.tolist())
+        
+        print("\nLW Sales Columns")
+        print(lw_sales.columns.tolist())
+        
+        print("\nL2W Sales Columns")
+        print(l2w_sales.columns.tolist())
+        
+        print("==================================")
+        
         dashboard[source] = create_product_mix_source_dashboard(
             curr,
             lw,
