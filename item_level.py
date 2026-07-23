@@ -1032,13 +1032,38 @@ def channel_group(x):
     return "Others"
 
 
+
 sales_df["Channel Group"] = (
     sales_df["channel"]
     .apply(channel_group)
 )
 
-print("✅ Channel Group Created")
+# =========================================================
+# COPY CHANNEL GROUP TO ALL DATASETS
+# =========================================================
 
+if "Channel Group" not in current_sales.columns:
+    current_sales["Channel Group"] = (
+        current_sales["channel"]
+        .apply(channel_group)
+    )
+
+if "Channel Group" not in lw_sales.columns:
+    lw_sales["Channel Group"] = (
+        lw_sales["channel"]
+        .apply(channel_group)
+    )
+
+if "Channel Group" not in l2w_sales.columns:
+    l2w_sales["Channel Group"] = (
+        l2w_sales["channel"]
+        .apply(channel_group)
+    )
+
+print("✅ Channel Group Created")
+print(current_sales.columns.tolist())
+print(lw_sales.columns.tolist())
+print(l2w_sales.columns.tolist())
 
 # =========================================================
 # DISCOUNT EXTRACTION
