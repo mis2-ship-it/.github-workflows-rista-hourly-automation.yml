@@ -242,15 +242,22 @@ print("🏪 Branch Count:", len(branches))
 # CHANNEL GROUP MAPPING
 # =========================================================
 
+# Keep original Help Sheet columns.
+# Do NOT rename Source.
+
 if "Channel" in help_df.columns and "Source" in help_df.columns:
+
     channel_map = dict(
         zip(
             help_df["Channel"],
             help_df["Source"]
         )
     )
+
     print("✅ Channel Mapping:", len(channel_map))
+
 else:
+
     print("⚠️ Channel Mapping Skipped")
 
 # =========================================================
