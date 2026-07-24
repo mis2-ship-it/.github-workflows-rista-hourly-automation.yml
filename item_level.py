@@ -688,26 +688,59 @@ def flatten_items(df):
 
     print("📦 Flattening Item Data...")
 
-    # explode items list
+    # =====================================================
+    # EMPTY DATA CHECK
+    # =====================================================
+
+    if df is None or len(df) == 0:
+        print("⚠ No records available.")
+        return pd.DataFrame()
+
+    # =====================================================
+    # ITEMS COLUMN CHECK
+    # =====================================================
+
+    if "items" not in df.columns:
+        print("⚠ 'items' column not found.")
+        print("Available Columns:", df.columns.tolist())
+        return pd.DataFrame()
+
+    # =====================================================
+    # EXPLODE ITEMS
+    # =====================================================
+
     df = df.explode("items")
 
-    # remove null items
+    # =====================================================
+    # REMOVE NULL ITEMS
+    # =====================================================
+
     df = df[
         df["items"].notna()
     ].copy()
 
-    # normalize item json
+    # If nothing remains after explode
+    if df.empty:
+        print("⚠ No item records after explode.")
+        return pd.DataFrame()
+
+    # =====================================================
+    # NORMALIZE ITEM JSON
+    # =====================================================
+
     item_df = pd.json_normalize(
         df["items"]
     )
 
-    # rename item columns
     item_df.columns = [
         f"item_{col}"
         for col in item_df.columns
     ]
 
-    # merge invoice + item level
+    # =====================================================
+    # MERGE ITEM + HEADER
+    # =====================================================
+
     df = (
         df
         .drop(columns=["items"])
@@ -724,13 +757,9 @@ def flatten_items(df):
         axis=1
     )
 
-    print(
-        "✅ Item Flatten Completed"
-    )
+    print("✅ Item Flatten Completed")
 
-    print(
-        "📋 Item Columns:"
-    )
+    print("📋 Item Columns:")
 
     print(
         [
