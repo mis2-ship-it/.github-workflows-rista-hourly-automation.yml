@@ -206,15 +206,19 @@ if missing_cols:
     exit()
 
 # =========================================================
-# RENAME
+# CHANNEL MAPPING
 # =========================================================
-# Keep "Channel" as is, only rename "Source"
-help_df = help_df.rename(
-    columns={
-        "Source": "Help Source"
-    }
+# Do NOT rename Source
+
+channel_map = dict(
+    zip(
+        help_df["Channel"],
+        help_df["Source"]
+    )
 )
 
+print("✅ Channel Mapping:", len(channel_map))
+    
 # =========================================================
 # CLEAN BRANCH CODE
 # =========================================================
@@ -238,11 +242,11 @@ print("🏪 Branch Count:", len(branches))
 # CHANNEL GROUP MAPPING
 # =========================================================
 
-if "Channel" in help_df.columns and "Help Source" in help_df.columns:
+if "Channel" in help_df.columns and "Source" in help_df.columns:
     channel_map = dict(
         zip(
             help_df["Channel"],
-            help_df["Help Source"]
+            help_df["Source"]
         )
     )
     print("✅ Channel Mapping:", len(channel_map))
