@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import gspread
 from google.oauth2.service_account import Credentials
 
-print("🚀 Rista Inventory & Consumption Script Started")
+print("🚀 Rista Inventory, Availability, Consumption & Analytics Automation Started")
 
 # =========================================================
 # AUTHENTICATION
@@ -50,15 +50,14 @@ print("✅ Connected Google Sheet")
 # DATE FRAMEWORK
 # =========================================================
 fetch_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-print("📅 Processing Target Business Day:", fetch_date)
+print("📅 Target Business Day for Sync:", fetch_date)
 
 # =========================================================
-# LOAD AND FILTER COCO BRANCHES
+# LOAD COCO BRANCHES FROM HELP SHEET
 # =========================================================
 try:
     help_ws = spreadsheet.worksheet("Help_Sheet")
 except Exception:
-    # Fallback to spaced version if named differently
     help_ws = spreadsheet.worksheet("Help Sheet")
 
 help_data = help_ws.get()
@@ -70,71 +69,103 @@ raw_headers = [str(h).strip().lower().replace(" ", "") for h in help_data[0]]
 rows = help_data[1:]
 help_df = pd.DataFrame(rows, columns=raw_headers[:len(rows[0])])
 
-# Safe validation for filtering ownership
 if "ownership" in help_df.columns:
     help_df = help_df[help_df["ownership"].astype(str).str.upper().str.strip() == "COCO"].copy()
-else:
-    print("⚠️ Warning: 'ownership' column missing. Continuing with all stores.")
 
 if "branchcode" not in help_df.columns:
     print("❌ branchcode column missing in Help Sheet.")
     exit()
 
 branches = help_df["branchcode"].dropna().astype(str).str.strip().unique().tolist()
-print(f"🏪 Active COCO Branch Count found: {len(branches)}")
+print(f"🏪 Active COCO Branch Count: {len(branches)}")
 
 # =========================================================
-# DATA EXTRACTION LOOPS
+# COLLECTORS FOR TARGET DATASETS
 # =========================================================
-availability_list = []
-inventory_list = []
-consumption_list = []
+avail_current_list = []
+avail_hist_list = []
+inv_store_items_list = []
+inv_items_list = []
+cons_sales_list = []
+cons_shrink_list = []
 
+# New Collectors
+coupon_utilization_list = []
+outlet_timings_list = []
+
+# Helper logic to extract data safely
+def safe_fetch(url, params):
+    try:
+        res = requests.get(url, headers=headers(), params=params, timeout=60)
+        if res.status_code == 200:
+            return res.json().get("data", []) or res.json().get("transactions", []) or res.json().get("timings", [])
+    except Exception as e:
+        print(f"⚠️ API Fetch Request failed on {url}: {e}")
+    return []
+
+# Loop branches and capture data structures
 for idx, branch in enumerate(branches):
-    print(f"🔄 Processing Branch [{idx+1}/{len(branches)}]: {branch}")
+    print(f"🔄 Fetching data blocks [{idx+1}/{len(branches)}] for Branch: {branch}")
     
-    # --- 1. ITEM AVAILABILITY (Sold-out Current State) ---
-    try:
-        res = requests.get(f"{RISTA_BASE_URL}/items/soldout", headers=headers(), params={"branch": branch}, timeout=60)
-        if res.status_code == 200:
-            data = res.json().get("data", [])
-            if data:
-                df = pd.json_normalize(data)
-                df["branchCode"] = branch
-                availability_list.append(df)
-    except Exception as e:
-        print(f"⚠️ Error item availability ({branch}): {e}")
+    # --- 1. AVAILABILITY BLOCKS ---
+    data = safe_fetch(f"{RISTA_BASE_URL}/items/soldout", {"branch": branch})
+    if data:
+        df = pd.json_normalize(data)
+        df["branchCode"] = branch
+        avail_current_list.append(df)
+        
+    data = safe_fetch(f"{RISTA_BASE_URL}/items/soldout/history", {"branch": branch, "day": fetch_date, "date": fetch_date})
+    if data:
+        df = pd.json_normalize(data)
+        df["branchCode"] = branch
+        avail_hist_list.append(df)
 
-    # --- 2. INVENTORY TRACKING (Store Items Balances) ---
-    try:
-        res = requests.get(f"{RISTA_BASE_URL}/inventory/store/items", headers=headers(), params={"branch": branch}, timeout=60)
-        if res.status_code == 200:
-            data = res.json().get("data", [])
-            if data:
-                df = pd.json_normalize(data)
-                df["branchCode"] = branch
-                inventory_list.append(df)
-    except Exception as e:
-        print(f"⚠️ Error inventory balances ({branch}): {e}")
+    # --- 2. INVENTORY BLOCKS ---
+    data = safe_fetch(f"{RISTA_BASE_URL}/inventory/store/items", {"branch": branch})
+    if data:
+        df = pd.json_normalize(data)
+        df["branchCode"] = branch
+        inv_store_items_list.append(df)
+        
+    data = safe_fetch(f"{RISTA_BASE_URL}/inventory/items", {"branch": branch, "day": fetch_date, "date": fetch_date})
+    if data:
+        df = pd.json_normalize(data)
+        df["branchCode"] = branch
+        inv_items_list.append(df)
 
-    # --- 3. CONSUMPTION REPORTING (Via Sales Page Elements) ---
-    try:
-        res = requests.get(f"{RISTA_BASE_URL}/sales/page", headers=headers(), params={"branch": branch, "day": fetch_date}, timeout=60)
-        if res.status_code == 200:
-            data = res.json().get("data", [])
-            if data:
-                df = pd.json_normalize(data)
-                if "items" in df.columns:
-                    df = df.explode("items").reset_index(drop=True)
-                    items_df = pd.json_normalize(df["items"]).add_prefix("item_")
-                    df = pd.concat([df.drop(columns=["items"]), items_df], axis=1)
-                df["branchCode"] = branch
-                consumption_list.append(df)
-    except Exception as e:
-        print(f"⚠️ Error consumption data ({branch}): {e}")
+    # --- 3. CONSUMPTION BLOCKS ---
+    data = safe_fetch(f"{RISTA_BASE_URL}/sales/page", {"branch": branch, "day": fetch_date})
+    if data:
+        df = pd.json_normalize(data)
+        if "items" in df.columns:
+            df = df.explode("items").reset_index(drop=True)
+            items_df = pd.json_normalize(df["items"]).add_prefix("item_")
+            df = pd.concat([df.drop(columns=["items"]), items_df], axis=1)
+        df["branchCode"] = branch
+        cons_sales_list.append(df)
+        
+    data = safe_fetch(f"{RISTA_BASE_URL}/inventory/shrinkage/page", {"branch": branch, "day": fetch_date, "date": fetch_date})
+    if data:
+        df = pd.json_normalize(data)
+        df["branchCode"] = branch
+        cons_shrink_list.append(df)
+
+    # --- 4. COUPON UTILIZATION DASHBOARD ---
+    data = safe_fetch(f"{RISTA_BASE_URL}/analytics/discount/transactions", {"branch": branch, "day": fetch_date, "date": fetch_date})
+    if data:
+        df = pd.json_normalize(data)
+        df["branchCode"] = branch
+        coupon_utilization_list.append(df)
+
+    # --- 5. OUTLET DELIVERY TIMINGS ---
+    data = safe_fetch(f"{RISTA_BASE_URL}/outlet/delivery/timings", {"branch": branch})
+    if data:
+        df = pd.json_normalize(data)
+        df["branchCode"] = branch
+        outlet_timings_list.append(df)
 
 # =========================================================
-# FORMAT AND WRITE DATA TO SHEETS
+# EXPORT TO TARGET DATA TABS
 # =========================================================
 def update_spreadsheet_tab(tab_name, data_frames):
     try:
@@ -145,33 +176,36 @@ def update_spreadsheet_tab(tab_name, data_frames):
     ws.clear()
     
     if not data_frames:
-        ws.update([["Status"] , ["No records found for target day."]], "A1")
-        print(f"⚠️ No data compiled for tab: {tab_name}")
+        ws.update([["Status"], [f"No data structures returned for {tab_name} on target date."]], "A1")
+        print(f"⚠️ No fields compiled for tab: {tab_name}")
         return
         
     final_df = pd.concat(data_frames, ignore_index=True)
-    
-    # Fill empty values cleanly
     final_df = final_df.fillna("")
     
-    # 🌟 FIX: Ensure all complex objects (lists/dicts) are converted to strings
+    # Sanitize data frames from containing un-flattened structural components (lists/dicts)
     for col in final_df.columns:
-        # If the column contains un-flattened lists or dictionaries, cast them safely
         if final_df[col].apply(lambda x: isinstance(x, (list, dict))).any():
             final_df[col] = final_df[col].apply(lambda x: json.dumps(x) if isinstance(x, (list, dict)) else x)
-    
-    # Convert dataframe to nested arrays for GSheet compatibility
+            
     sheet_output = [final_df.columns.tolist()] + final_df.values.tolist()
     
     try:
         ws.update(sheet_output, "A1")
-        print(f"✅ Successfully exported data to tab: {tab_name}")
-    except Exception as sheet_err:
-        print(f"❌ Failed to push to tab {tab_name}. Error details: {sheet_err}")
+        print(f"✅ Sheet Tab Updated successfully: {tab_name}")
+    except Exception as err:
+        print(f"❌ Target update failure on sheet {tab_name}: {err}")
 
-# Executing sheet updates for visual review
-update_spreadsheet_tab("Raw_Availability", availability_list)
-update_spreadsheet_tab("Raw_Inventory", inventory_list)
-update_spreadsheet_tab("Raw_Consumption", consumption_list)
+# Update the workspace sheets
+update_spreadsheet_tab("Raw_Availability_Current", avail_current_list)
+update_spreadsheet_tab("Raw_Availability_History", avail_hist_list)
+update_spreadsheet_tab("Raw_Inventory_StoreItems", inv_store_items_list)
+update_spreadsheet_tab("Raw_Inventory_Items", inv_items_list)
+update_spreadsheet_tab("Raw_Consumption_Sales", cons_sales_list)
+update_spreadsheet_tab("Raw_Consumption_Shrinkage", cons_shrink_list)
 
-print("🏁 Process Complete. Review raw datasets to confirm metric layout rules.")
+# Push the new requested targets
+update_spreadsheet_tab("Raw_Analytics_Coupons", coupon_utilization_list)
+update_spreadsheet_tab("Raw_Outlet_DeliveryTimings", outlet_timings_list)
+
+print("🏁 All available data models updated on target workspace tabs. Ready for operational layout review!")
