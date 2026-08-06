@@ -74,26 +74,60 @@ if not help_data:
     print("❌ Help Sheet Empty")
     exit()
 
+# Handle duplicate and blank column headers cleanly
 raw_headers = [str(h).strip().lower().replace(" ", "") for h in help_data[0]]
-rows = help_data[1:]
-help_df = pd.DataFrame(rows, columns=raw_headers[:len(rows[0])])
+safe_headers = []
+for i, h in enumerate(raw_headers):
+    if not h:
+        h = f"blank_col_{i}"
+    if h in safe_headers:
+        h = f"{h}_{i}"
+    safe_headers.append(h)
 
-# Filter both COCO and WARE HOUSE ownership
-if "ownership" in help_df.columns:
+rows = help_data[1:]
+normalized_rows = []
+header_len = len(safe_headers)
+
+for row in rows:
+    row_list = list(row)
+    if len(row_list) < header_len:
+        row_list.extend([""] * (header_len - len(row_list)))
+    elif len(row_list) > header_len:
+        row_list = row_list[:header_len]
+    normalized_rows.append(row_list)
+
+help_df = pd.DataFrame(normalized_rows, columns=safe_headers)
+
+# Find ownership column (matches 'ownership' or deduplicated versions)
+ownership_col = [c for c in help_df.columns if "ownership" in c]
+if ownership_col:
     allowed_ownership = ["COCO", "WARE HOUSE", "WAREHOUSE"]
     help_df = help_df[
-        help_df["ownership"]
+        help_df[ownership_col[0]]
         .astype(str)
         .str.upper()
         .str.strip()
         .isin(allowed_ownership)
     ].copy()
 
-if "branchcode" not in help_df.columns:
+# Find branchcode column
+branch_cols = [c for c in help_df.columns if "branchcode" in c]
+if not branch_cols:
     print("❌ branchcode column missing in Help Sheet.")
     exit()
 
-branches = help_df["branchcode"].dropna().astype(str).str.strip().unique().tolist()
+branch_series = help_df[branch_cols[0]]
+
+branches = (
+    branch_series
+    .dropna()
+    .astype(str)
+    .str.strip()
+    .loc[lambda x: x != ""]
+    .unique()
+    .tolist()
+)
+
 print(f"🏪 Active Filtered Branch Count (COCO & WARE HOUSE): {len(branches)}")
 
 # =========================================================
