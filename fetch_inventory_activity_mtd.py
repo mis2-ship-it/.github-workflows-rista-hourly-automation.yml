@@ -45,7 +45,7 @@ client = gspread.authorize(creds)
 spreadsheet = client.open_by_key(SPREADSHEET_ID)
 
 # =========================================================
-# DATE RANGE (1st of current month to Yesterday)
+# DATE RANGE & DYNAMIC MONTHLY FILE NAME
 # =========================================================
 today = datetime.now()
 start_date = today.replace(day=1)
@@ -59,11 +59,11 @@ while curr <= end_date:
 
 print(f"📅 MTD Range: {date_list[0]} to {date_list[-1]} ({len(date_list)} Days)")
 
-# Dynamic Monthly File Name: e.g., "2026-08.csv"
+# Dynamic Monthly File Name: e.g. "2026-08.csv"
 month_year_filename = f"{today.strftime('%Y-%m')}.csv"
 
 # =========================================================
-# LOAD HELP SHEET MAPPINGS
+# LOAD HELP SHEET & MAP STORES
 # =========================================================
 try:
     help_ws = spreadsheet.worksheet("Help_Sheet")
@@ -84,15 +84,10 @@ rows = help_data[1:]
 normalized_rows = [list(r) + [""] * (len(safe_headers) - len(r)) for r in rows]
 help_df = pd.DataFrame(normalized_rows, columns=safe_headers)
 
-# Flexible filter: COCO and Warehouse
-ownership_cols = [c for c in help_df.columns if "ownership" in c]
-if ownership_cols:
-    ownership_series = help_df[ownership_cols[0]].astype(str).str.upper().str.strip()
-    help_df = help_df[ownership_series.str.contains("COCO|WARE|WH", na=False)].copy()
-
 branch_cols = [c for c in help_df.columns if "branchcode" in c]
 store_cols = [c for c in help_df.columns if "storename" in c or "store" in c]
 region_cols = [c for c in help_df.columns if "region" in c]
+ownership_cols = [c for c in help_df.columns if "ownership" in c]
 
 branch_col_name = branch_cols[0]
 lookup_cols = [branch_col_name]
@@ -105,12 +100,30 @@ if region_cols:
     lookup_cols.append(region_cols[0])
     rename_dict[region_cols[0]] = "Region"
 
+# Must-include store codes
+explicit_stores = ["90003-2221", "90003-2216", "90003-2218", "90003-2214", "90003-2215", "DW"]
+
+# Ownership Filtering + Explicit Inclusion
+if ownership_cols:
+    ownership_series = help_df[ownership_cols[0]].astype(str).str.upper().str.strip()
+    branch_series = help_df[branch_col_name].astype(str).str.strip()
+    
+    is_coco_wh = ownership_series.str.contains("COCO|WARE|WH", na=False)
+    is_explicit = branch_series.isin(explicit_stores)
+    
+    help_df = help_df[is_coco_wh | is_explicit].copy()
+
 help_lookup = help_df[lookup_cols].copy().rename(columns=rename_dict)
 help_lookup["branchCode"] = help_lookup["branchCode"].astype(str).str.strip()
 help_lookup = help_lookup.drop_duplicates(subset=["branchCode"])
 
 branches = help_lookup["branchCode"].loc[lambda x: x != ""].tolist()
-print(f"🏪 Active Filtered Branches: {len(branches)}")
+print(f"🏪 Active Branches Loaded: {len(branches)}")
+
+# Verify specific stores in queue
+for check_code in explicit_stores:
+    status = "✅ Present" if check_code in branches else "❌ Missing"
+    print(f"Store {check_code}: {status}")
 
 # =========================================================
 # FETCH MTD INVENTORY ACTIVITY DATA
@@ -170,30 +183,35 @@ lead_cols = [c for c in ["branchCode", "Store Name", "Region", "activityDate"] i
 final_df = final_df[lead_cols + [c for c in final_df.columns if c not in lead_cols]]
 
 # =========================================================
-# 1. SAVE RAW CSV & UPLOAD TO GOOGLE DRIVE
+# 1. SAVE MASTER DATA TO CSV & UPLOAD/OVERWRITE ON GOOGLE DRIVE
 # =========================================================
 final_df.to_csv(month_year_filename, index=False)
-print(f"📁 Local CSV generated: {month_year_filename} ({len(final_df)} rows)")
+print(f"📁 Local Master CSV generated: {month_year_filename} ({len(final_df)} rows)")
 
 try:
     drive_service = build('drive', 'v3', credentials=creds)
     query = f"name = '{month_year_filename}' and '{DRIVE_FOLDER_ID}' in parents and trashed = false"
-    results = drive_service.files().list(q=query, fields="files(id, name)").execute()
+    results = drive_service.files().list(q=query, fields="files(id, name)", supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
     existing_files = results.get('files', [])
     
     media = MediaFileUpload(month_year_filename, mimetype='text/csv', resumable=True)
     
     if existing_files:
         file_id = existing_files[0]['id']
-        drive_service.files().update(fileId=file_id, media_body=media).execute()
+        drive_service.files().update(fileId=file_id, media_body=media, supportsAllDrives=True).execute()
         print(f"🔄 Updated existing Google Drive file: '{month_year_filename}' (ID: {file_id})")
     else:
         file_metadata = {'name': month_year_filename, 'parents': [DRIVE_FOLDER_ID]}
-        new_file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        new_file = drive_service.files().create(body=file_metadata, media_body=media, fields='id', supportsAllDrives=True).execute()
         print(f"☁️ Created new Google Drive file: '{month_year_filename}' (ID: {new_file.get('id')})")
         
 except Exception as e:
     print(f"❌ Google Drive API Error: {e}")
+
+# =========================================================
+# FILTER SALES ACTIVITY TYPE FOR STOCK ON HAND CALCULATIONS
+# =========================================================
+sales_df = final_df[final_df["activity_type"].astype(str).str.strip().str.upper() == "SALES"].copy()
 
 # =========================================================
 # 2. GENERATE STORE-LEVEL SUMMARY
@@ -202,9 +220,10 @@ min_date, max_date = date_list[0], date_list[-1]
 
 opening_df = final_df[final_df["activityDate"] == min_date].groupby(["Region", "Store Name"], as_index=False)[["openingCost", "openingBalance"]].sum()
 closing_df = final_df[final_df["activityDate"] == max_date].groupby(["Region", "Store Name"], as_index=False)[["closingCost", "closingBalance"]].sum()
-activity_sums = final_df.groupby(["Region", "Store Name"], as_index=False)[["activity_cost", "activity_quantity"]].sum()
 
-store_summary = opening_df.merge(closing_df, on=["Region", "Store Name"], how="outer").merge(activity_sums, on=["Region", "Store Name"], how="outer").fillna(0)
+sales_activity_sums = sales_df.groupby(["Region", "Store Name"], as_index=False)[["activity_cost", "activity_quantity"]].sum()
+
+store_summary = opening_df.merge(closing_df, on=["Region", "Store Name"], how="outer").merge(sales_activity_sums, on=["Region", "Store Name"], how="outer").fillna(0)
 
 store_summary["Stock on Hand Cost %"] = np.where(store_summary["closingCost"] > 0, (store_summary["activity_cost"] / store_summary["closingCost"]) * 100, 0)
 store_summary["Stock on Hand Qty %"] = np.where(store_summary["closingBalance"] > 0, (store_summary["activity_quantity"] / store_summary["closingBalance"]) * 100, 0)
@@ -243,12 +262,15 @@ for _, row in region_agg.iterrows():
     ]
 
 # =========================================================
-# 4. GENERATE DAILY STOCK ON HAND SHEET
+# 4. GENERATE DAILY STOCK ON HAND SHEET (SALES ONLY)
 # =========================================================
-daily_grp = final_df.groupby(["Region", "Store Name", "activityDate"], as_index=False)[["activity_cost", "closingCost"]].sum()
-daily_grp["SOH_Cost_Pct"] = np.where(daily_grp["closingCost"] > 0, (daily_grp["activity_cost"] / daily_grp["closingCost"]) * 100, 0)
+daily_sales = sales_df.groupby(["Region", "Store Name", "activityDate"], as_index=False)["activity_cost"].sum()
+daily_closing = final_df.groupby(["Region", "Store Name", "activityDate"], as_index=False)["closingCost"].sum()
 
-daily_pivot = daily_grp.pivot(index=["Region", "Store Name"], columns="activityDate", values="SOH_Cost_Pct").fillna(0).reset_index()
+daily_merged = daily_closing.merge(daily_sales, on=["Region", "Store Name", "activityDate"], how="left").fillna(0)
+daily_merged["SOH_Cost_Pct"] = np.where(daily_merged["closingCost"] > 0, (daily_merged["activity_cost"] / daily_merged["closingCost"]) * 100, 0)
+
+daily_pivot = daily_merged.pivot(index=["Region", "Store Name"], columns="activityDate", values="SOH_Cost_Pct").fillna(0).reset_index()
 
 for c in date_list:
     if c in daily_pivot.columns:
@@ -271,4 +293,4 @@ update_tab("Region_Summary", region_summary)
 update_tab("Store_Summary", store_summary_display)
 update_tab("Daily_Stock_On_Hand", daily_pivot)
 
-print("🏁 All calculations complete. Dashboard updated successfully!")
+print("🏁 Execution complete. Master data safely updated in Google Drive!")
