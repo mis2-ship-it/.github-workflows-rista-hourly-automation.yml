@@ -98,33 +98,48 @@ for row in rows:
 
 help_df = pd.DataFrame(normalized_rows, columns=safe_headers)
 
-# Find ownership column (matches 'ownership' or deduplicated versions)
-ownership_col = [c for c in help_df.columns if "ownership" in c]
-if ownership_col:
+# Filter both COCO and WARE HOUSE ownership
+ownership_cols = [c for c in help_df.columns if "ownership" in c]
+if ownership_cols:
     allowed_ownership = ["COCO", "WARE HOUSE", "WAREHOUSE"]
     help_df = help_df[
-        help_df[ownership_col[0]]
+        help_df[ownership_cols[0]]
         .astype(str)
         .str.upper()
         .str.strip()
         .isin(allowed_ownership)
     ].copy()
 
-# Find branchcode column
+# Find branchcode, storename, and region columns
 branch_cols = [c for c in help_df.columns if "branchcode" in c]
+store_cols = [c for c in help_df.columns if "storename" in c or "store" in c]
+region_cols = [c for c in help_df.columns if "region" in c]
+
 if not branch_cols:
     print("❌ branchcode column missing in Help Sheet.")
     exit()
 
-branch_series = help_df[branch_cols[0]]
+branch_col_name = branch_cols[0]
+
+# Build lookup mapping dataframe for Store Name and Region
+lookup_cols = [branch_col_name]
+rename_dict = {branch_col_name: "branchCode"}
+
+if store_cols:
+    lookup_cols.append(store_cols[0])
+    rename_dict[store_cols[0]] = "Store Name"
+
+if region_cols:
+    lookup_cols.append(region_cols[0])
+    rename_dict[region_cols[0]] = "Region"
+
+help_lookup = help_df[lookup_cols].copy().rename(columns=rename_dict)
+help_lookup["branchCode"] = help_lookup["branchCode"].astype(str).str.strip()
+help_lookup = help_lookup.drop_duplicates(subset=["branchCode"])
 
 branches = (
-    branch_series
-    .dropna()
-    .astype(str)
-    .str.strip()
+    help_lookup["branchCode"]
     .loc[lambda x: x != ""]
-    .unique()
     .tolist()
 )
 
@@ -168,7 +183,7 @@ for idx, branch in enumerate(branches):
             inv_items_list_activity.append(df)
 
 # =========================================================
-# EXPORT TO GOOGLE SHEET
+# EXPORT TO GOOGLE SHEET WITH MERGED HELP DETAILS
 # =========================================================
 TARGET_TAB = "Inventory_Activity_MTD"
 
@@ -184,6 +199,16 @@ if not inv_items_list_activity:
     print("⚠️ No data compiled for current month MTD.")
 else:
     final_df = pd.concat(inv_items_list_activity, ignore_index=True)
+    
+    # 🌟 MERGE STORE NAME & REGION FROM HELP SHEET
+    final_df["branchCode"] = final_df["branchCode"].astype(str).str.strip()
+    final_df = final_df.merge(help_lookup, on="branchCode", how="left")
+    
+    # Reorder key mapping columns to the front
+    lead_cols = [c for c in ["branchCode", "Store Name", "Region", "activityDate"] if c in final_df.columns]
+    other_cols = [c for c in final_df.columns if c not in lead_cols]
+    final_df = final_df[lead_cols + other_cols]
+    
     final_df = final_df.fillna("")
     
     # Sanitize remaining complex structures (if any)
