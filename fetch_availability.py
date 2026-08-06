@@ -133,6 +133,12 @@ for idx, branch in enumerate(branches):
         df["branchCode"] = branch
         inv_items_list.append(df)
 
+    data = safe_fetch(f"{RISTA_BASE_URL}/inventory/item/activity", {"branch": branch, "day": fetch_date, "date": fetch_date})
+    if data:
+        df = pd.json_normalize(data)
+        df["branchCode"] = branch
+        inv_items_list_activity.append(df)
+
     # --- 3. CONSUMPTION BLOCKS ---
     data = safe_fetch(f"{RISTA_BASE_URL}/sales/page", {"branch": branch, "day": fetch_date})
     if data:
@@ -201,6 +207,7 @@ update_spreadsheet_tab("Raw_Availability_Current", avail_current_list)
 update_spreadsheet_tab("Raw_Availability_History", avail_hist_list)
 update_spreadsheet_tab("Raw_Inventory_StoreItems", inv_store_items_list)
 update_spreadsheet_tab("Raw_Inventory_Items", inv_items_list)
+update_spreadsheet_tab("Raw_Inventory_Activity", inv_items_list_activity)
 update_spreadsheet_tab("Raw_Consumption_Sales", cons_sales_list)
 update_spreadsheet_tab("Raw_Consumption_Shrinkage", cons_shrink_list)
 
