@@ -3,25 +3,28 @@ import json
 import time
 import jwt
 import requests
+import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
 import gspread
 from google.oauth2.service_account import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
 
-print("🚀 Rista Inventory Activity MTD Automation Started")
+print("🚀 Rista Inventory Activity Pipeline Started")
 
 # =========================================================
-# AUTHENTICATION
+# CONFIGURATION & AUTH
 # =========================================================
 API_KEY = os.environ["API_KEY"]
 SECRET_KEY = os.environ["SECRET_KEY"]
 RISTA_BASE_URL = "https://api.ristaapps.com/v1"
 
+SPREADSHEET_ID = "130C3oQsVmONGVUulhGbDWroRKpkebwgnFhq3uiny_O0"
+DRIVE_FOLDER_ID = "1g5ap7nXTNwYl3RYyilKZIh0XrYhvCrwe"
+
 def get_token():
-    payload = {
-        "iss": API_KEY,
-        "iat": int(time.time())
-    }
+    payload = {"iss": API_KEY, "iat": int(time.time())}
     return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
 def headers():
@@ -31,23 +34,18 @@ def headers():
         "content-type": "application/json"
     }
 
-# =========================================================
-# GOOGLE SHEETS CONNECTOR
-# =========================================================
-creds = Credentials.from_service_account_info(
-    json.loads(os.environ["GOOGLE_CREDENTIALS"]),
-    scopes=[
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive"
-    ]
-)
+# Google Credentials
+google_creds_json = json.loads(os.environ["GOOGLE_CREDENTIALS"])
+scopes = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
+creds = Credentials.from_service_account_info(google_creds_json, scopes=scopes)
 client = gspread.authorize(creds)
-SPREADSHEET_ID = "130C3oQsVmONGVUulhGbDWroRKpkebwgnFhq3uiny_O0"
 spreadsheet = client.open_by_key(SPREADSHEET_ID)
-print("✅ Connected to Google Sheet:", SPREADSHEET_ID)
 
 # =========================================================
-# CURRENT MONTH DATE RANGE (1st of month to Yesterday)
+# DATE RANGE (1st of current month to Yesterday)
 # =========================================================
 today = datetime.now()
 start_date = today.replace(day=1)
@@ -59,10 +57,13 @@ while curr <= end_date:
     date_list.append(curr.strftime("%Y-%m-%d"))
     curr += timedelta(days=1)
 
-print(f"📅 Fetching MTD Range: {date_list[0]} to {date_list[-1]} ({len(date_list)} Days)")
+print(f"📅 MTD Range: {date_list[0]} to {date_list[-1]} ({len(date_list)} Days)")
+
+# Dynamic Monthly File Name: e.g., "2026-08.csv"
+month_year_filename = f"{today.strftime('%Y-%m')}.csv"
 
 # =========================================================
-# LOAD COCO & WAREHOUSE BRANCHES FROM HELP SHEET
+# LOAD HELP SHEET MAPPINGS
 # =========================================================
 try:
     help_ws = spreadsheet.worksheet("Help_Sheet")
@@ -70,65 +71,36 @@ except Exception:
     help_ws = spreadsheet.worksheet("Help Sheet")
 
 help_data = help_ws.get()
-if not help_data:
-    print("❌ Help Sheet Empty")
-    exit()
-
-# Handle duplicate and blank column headers cleanly
 raw_headers = [str(h).strip().lower().replace(" ", "") for h in help_data[0]]
+
 safe_headers = []
 for i, h in enumerate(raw_headers):
-    if not h:
-        h = f"blank_col_{i}"
+    h = f"blank_col_{i}" if not h else h
     if h in safe_headers:
         h = f"{h}_{i}"
     safe_headers.append(h)
 
 rows = help_data[1:]
-normalized_rows = []
-header_len = len(safe_headers)
-
-for row in rows:
-    row_list = list(row)
-    if len(row_list) < header_len:
-        row_list.extend([""] * (header_len - len(row_list)))
-    elif len(row_list) > header_len:
-        row_list = row_list[:header_len]
-    normalized_rows.append(row_list)
-
+normalized_rows = [list(r) + [""] * (len(safe_headers) - len(r)) for r in rows]
 help_df = pd.DataFrame(normalized_rows, columns=safe_headers)
 
-# Filter both COCO and WARE HOUSE ownership
+# Flexible filter: COCO and Warehouse
 ownership_cols = [c for c in help_df.columns if "ownership" in c]
 if ownership_cols:
-    allowed_ownership = ["COCO", "WARE HOUSE", "WAREHOUSE"]
-    help_df = help_df[
-        help_df[ownership_cols[0]]
-        .astype(str)
-        .str.upper()
-        .str.strip()
-        .isin(allowed_ownership)
-    ].copy()
+    ownership_series = help_df[ownership_cols[0]].astype(str).str.upper().str.strip()
+    help_df = help_df[ownership_series.str.contains("COCO|WARE|WH", na=False)].copy()
 
-# Find branchcode, storename, and region columns
 branch_cols = [c for c in help_df.columns if "branchcode" in c]
 store_cols = [c for c in help_df.columns if "storename" in c or "store" in c]
 region_cols = [c for c in help_df.columns if "region" in c]
 
-if not branch_cols:
-    print("❌ branchcode column missing in Help Sheet.")
-    exit()
-
 branch_col_name = branch_cols[0]
-
-# Build lookup mapping dataframe for Store Name and Region
 lookup_cols = [branch_col_name]
 rename_dict = {branch_col_name: "branchCode"}
 
 if store_cols:
     lookup_cols.append(store_cols[0])
     rename_dict[store_cols[0]] = "Store Name"
-
 if region_cols:
     lookup_cols.append(region_cols[0])
     rename_dict[region_cols[0]] = "Region"
@@ -137,16 +109,11 @@ help_lookup = help_df[lookup_cols].copy().rename(columns=rename_dict)
 help_lookup["branchCode"] = help_lookup["branchCode"].astype(str).str.strip()
 help_lookup = help_lookup.drop_duplicates(subset=["branchCode"])
 
-branches = (
-    help_lookup["branchCode"]
-    .loc[lambda x: x != ""]
-    .tolist()
-)
-
-print(f"🏪 Active Filtered Branch Count (COCO & WARE HOUSE): {len(branches)}")
+branches = help_lookup["branchCode"].loc[lambda x: x != ""].tolist()
+print(f"🏪 Active Filtered Branches: {len(branches)}")
 
 # =========================================================
-# FETCH & PROCESS INVENTORY ACTIVITY DATA
+# FETCH MTD INVENTORY ACTIVITY DATA
 # =========================================================
 inv_items_list_activity = []
 
@@ -156,24 +123,21 @@ def safe_fetch(url, params):
         if res.status_code == 200:
             return res.json().get("data", [])
     except Exception as e:
-        print(f"⚠️ API Fetch Request failed on {url}: {e}")
+        print(f"⚠️ API Error ({url}): {e}")
     return []
 
 for idx, branch in enumerate(branches):
     print(f"🔄 Processing Branch [{idx+1}/{len(branches)}]: {branch}")
-    
     for day_str in date_list:
         data = safe_fetch(
             f"{RISTA_BASE_URL}/inventory/item/activity/page", 
             {"branch": branch, "day": day_str, "date": day_str}
         )
-        
         if data:
             df = pd.json_normalize(data)
             df["branchCode"] = branch
             df["activityDate"] = day_str
             
-            # Explode & Split the 'activities' array
             if "activities" in df.columns:
                 df = df.dropna(subset=["activities"]).copy()
                 df = df.explode("activities").reset_index(drop=True)
@@ -182,46 +146,129 @@ for idx, branch in enumerate(branches):
                 
             inv_items_list_activity.append(df)
 
+if not inv_items_list_activity:
+    print("❌ No activity data retrieved.")
+    exit()
+
+final_df = pd.concat(inv_items_list_activity, ignore_index=True)
+final_df["branchCode"] = final_df["branchCode"].astype(str).str.strip()
+final_df = final_df.merge(help_lookup, on="branchCode", how="left")
+
+# Sanitize numbers and convert activity quantities/costs to absolute positive values
+num_fields = ["activity_quantity", "activity_cost", "openingBalance", "openingCost", "closingBalance", "closingCost"]
+for col in num_fields:
+    if col in final_df.columns:
+        final_df[col] = pd.to_numeric(final_df[col], errors="coerce").fillna(0)
+    else:
+        final_df[col] = 0.0
+
+final_df["activity_quantity"] = final_df["activity_quantity"].abs()
+final_df["activity_cost"] = final_df["activity_cost"].abs()
+
+# Reorder key columns to front
+lead_cols = [c for c in ["branchCode", "Store Name", "Region", "activityDate"] if c in final_df.columns]
+final_df = final_df[lead_cols + [c for c in final_df.columns if c not in lead_cols]]
+
 # =========================================================
-# EXPORT TO GOOGLE SHEET WITH MERGED HELP DETAILS
+# 1. SAVE RAW CSV & UPLOAD TO GOOGLE DRIVE
 # =========================================================
-TARGET_TAB = "Inventory_Activity_MTD"
+final_df.to_csv(month_year_filename, index=False)
+print(f"📁 Local CSV generated: {month_year_filename} ({len(final_df)} rows)")
 
 try:
-    ws = spreadsheet.worksheet(TARGET_TAB)
-except Exception:
-    ws = spreadsheet.add_worksheet(title=TARGET_TAB, rows="5000", cols="30")
+    drive_service = build('drive', 'v3', credentials=creds)
+    query = f"name = '{month_year_filename}' and '{DRIVE_FOLDER_ID}' in parents and trashed = false"
+    results = drive_service.files().list(q=query, fields="files(id, name)").execute()
+    existing_files = results.get('files', [])
+    
+    media = MediaFileUpload(month_year_filename, mimetype='text/csv', resumable=True)
+    
+    if existing_files:
+        file_id = existing_files[0]['id']
+        drive_service.files().update(fileId=file_id, media_body=media).execute()
+        print(f"🔄 Updated existing Google Drive file: '{month_year_filename}' (ID: {file_id})")
+    else:
+        file_metadata = {'name': month_year_filename, 'parents': [DRIVE_FOLDER_ID]}
+        new_file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        print(f"☁️ Created new Google Drive file: '{month_year_filename}' (ID: {new_file.get('id')})")
+        
+except Exception as e:
+    print(f"❌ Google Drive API Error: {e}")
 
-ws.clear()
+# =========================================================
+# 2. GENERATE STORE-LEVEL SUMMARY
+# =========================================================
+min_date, max_date = date_list[0], date_list[-1]
 
-if not inv_items_list_activity:
-    ws.update([["Status"], ["No activity records found for current month MTD."]], "A1")
-    print("⚠️ No data compiled for current month MTD.")
-else:
-    final_df = pd.concat(inv_items_list_activity, ignore_index=True)
-    
-    # 🌟 MERGE STORE NAME & REGION FROM HELP SHEET
-    final_df["branchCode"] = final_df["branchCode"].astype(str).str.strip()
-    final_df = final_df.merge(help_lookup, on="branchCode", how="left")
-    
-    # Reorder key mapping columns to the front
-    lead_cols = [c for c in ["branchCode", "Store Name", "Region", "activityDate"] if c in final_df.columns]
-    other_cols = [c for c in final_df.columns if c not in lead_cols]
-    final_df = final_df[lead_cols + other_cols]
-    
-    final_df = final_df.fillna("")
-    
-    # Sanitize remaining complex structures (if any)
-    for col in final_df.columns:
-        if final_df[col].apply(lambda x: isinstance(x, (list, dict))).any():
-            final_df[col] = final_df[col].apply(lambda x: json.dumps(x) if isinstance(x, (list, dict)) else x)
-            
-    sheet_output = [final_df.columns.tolist()] + final_df.values.tolist()
-    
+opening_df = final_df[final_df["activityDate"] == min_date].groupby(["Region", "Store Name"], as_index=False)[["openingCost", "openingBalance"]].sum()
+closing_df = final_df[final_df["activityDate"] == max_date].groupby(["Region", "Store Name"], as_index=False)[["closingCost", "closingBalance"]].sum()
+activity_sums = final_df.groupby(["Region", "Store Name"], as_index=False)[["activity_cost", "activity_quantity"]].sum()
+
+store_summary = opening_df.merge(closing_df, on=["Region", "Store Name"], how="outer").merge(activity_sums, on=["Region", "Store Name"], how="outer").fillna(0)
+
+store_summary["Stock on Hand Cost %"] = np.where(store_summary["closingCost"] > 0, (store_summary["activity_cost"] / store_summary["closingCost"]) * 100, 0)
+store_summary["Stock on Hand Qty %"] = np.where(store_summary["closingBalance"] > 0, (store_summary["activity_quantity"] / store_summary["closingBalance"]) * 100, 0)
+
+store_summary = store_summary.rename(columns={
+    "openingCost": "Opening Cost",
+    "openingBalance": "Opening Qty",
+    "closingCost": "Closing Cost",
+    "closingBalance": "Closing Qty"
+}).sort_values(by=["Region", "Store Name"])
+
+store_summary_display = store_summary[["Region", "Store Name", "Opening Cost", "Opening Qty", "Closing Cost", "Closing Qty", "Stock on Hand Cost %", "Stock on Hand Qty %"]].copy()
+store_summary_display["Stock on Hand Cost %"] = store_summary_display["Stock on Hand Cost %"].round(2).astype(str) + "%"
+store_summary_display["Stock on Hand Qty %"] = store_summary_display["Stock on Hand Qty %"].round(2).astype(str) + "%"
+
+# =========================================================
+# 3. GENERATE OVERALL REGION SUMMARY
+# =========================================================
+region_agg = store_summary.groupby("Region", as_index=False)[["Opening Cost", "Opening Qty", "Closing Cost", "Closing Qty", "activity_cost", "activity_quantity"]].sum()
+
+region_agg["Stock on Hand Cost %"] = np.where(region_agg["Closing Cost"] > 0, (region_agg["activity_cost"] / region_agg["Closing Cost"]) * 100, 0)
+region_agg["Stock on Hand Qty %"] = np.where(region_agg["Closing Qty"] > 0, (region_agg["activity_quantity"] / region_agg["Closing Qty"]) * 100, 0)
+
+kpi_cols = ["Opening Cost", "Opening Qty", "Closing Cost", "Closing Qty", "Stock on Hand Cost %", "Stock on Hand Qty %"]
+region_summary = pd.DataFrame({"KPI Metrics": kpi_cols})
+
+for _, row in region_agg.iterrows():
+    reg = row["Region"]
+    region_summary[reg] = [
+        round(row["Opening Cost"], 2),
+        round(row["Opening Qty"], 2),
+        round(row["Closing Cost"], 2),
+        round(row["Closing Qty"], 2),
+        f"{round(row['Stock on Hand Cost %'], 2)}%",
+        f"{round(row['Stock on Hand Qty %'], 2)}%"
+    ]
+
+# =========================================================
+# 4. GENERATE DAILY STOCK ON HAND SHEET
+# =========================================================
+daily_grp = final_df.groupby(["Region", "Store Name", "activityDate"], as_index=False)[["activity_cost", "closingCost"]].sum()
+daily_grp["SOH_Cost_Pct"] = np.where(daily_grp["closingCost"] > 0, (daily_grp["activity_cost"] / daily_grp["closingCost"]) * 100, 0)
+
+daily_pivot = daily_grp.pivot(index=["Region", "Store Name"], columns="activityDate", values="SOH_Cost_Pct").fillna(0).reset_index()
+
+for c in date_list:
+    if c in daily_pivot.columns:
+        daily_pivot[c] = daily_pivot[c].round(2).astype(str) + "%"
+
+# =========================================================
+# 5. EXPORT DASHBOARD TABS TO GOOGLE SHEET
+# =========================================================
+def update_tab(tab_name, df):
     try:
-        ws.update(sheet_output, "A1")
-        print(f"✅ Successfully exported {len(final_df)} rows to tab: '{TARGET_TAB}'")
-    except Exception as err:
-        print(f"❌ Target update failure on sheet {TARGET_TAB}: {err}")
+        ws = spreadsheet.worksheet(tab_name)
+    except Exception:
+        ws = spreadsheet.add_worksheet(title=tab_name, rows=str(len(df) + 100), cols=str(len(df.columns) + 10))
+    ws.clear()
+    sheet_data = [df.columns.tolist()] + df.values.tolist()
+    ws.update(sheet_data, "A1")
+    print(f"✅ Dashboard updated: '{tab_name}' ({len(df)} rows)")
 
-print("🏁 Inventory Activity MTD execution complete.")
+update_tab("Region_Summary", region_summary)
+update_tab("Store_Summary", store_summary_display)
+update_tab("Daily_Stock_On_Hand", daily_pivot)
+
+print("🏁 All calculations complete. Dashboard updated successfully!")
