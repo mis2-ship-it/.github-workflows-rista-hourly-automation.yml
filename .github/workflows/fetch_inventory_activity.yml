@@ -19,7 +19,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install pandas requests PyJWT gspread google-auth pytz
+          pip install pandas numpy requests PyJWT gspread google-auth google-api-python-client pytz
 
       - name: Run Inventory Activity Script
         env:
