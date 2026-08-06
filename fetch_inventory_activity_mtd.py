@@ -32,7 +32,7 @@ def headers():
     }
 
 # =========================================================
-# GOOGLE SHEETS CONNECTOR (NEW GSHEET)
+# GOOGLE SHEETS CONNECTOR
 # =========================================================
 creds = Credentials.from_service_account_info(
     json.loads(os.environ["GOOGLE_CREDENTIALS"]),
@@ -62,7 +62,7 @@ while curr <= end_date:
 print(f"📅 Fetching MTD Range: {date_list[0]} to {date_list[-1]} ({len(date_list)} Days)")
 
 # =========================================================
-# LOAD COCO BRANCHES FROM HELP SHEET
+# LOAD COCO & WAREHOUSE BRANCHES FROM HELP SHEET
 # =========================================================
 try:
     help_ws = spreadsheet.worksheet("Help_Sheet")
@@ -78,15 +78,23 @@ raw_headers = [str(h).strip().lower().replace(" ", "") for h in help_data[0]]
 rows = help_data[1:]
 help_df = pd.DataFrame(rows, columns=raw_headers[:len(rows[0])])
 
+# Filter both COCO and WARE HOUSE ownership
 if "ownership" in help_df.columns:
-    help_df = help_df[help_df["ownership"].astype(str).str.upper().str.strip() == "COCO"].copy()
+    allowed_ownership = ["COCO", "WARE HOUSE", "WAREHOUSE"]
+    help_df = help_df[
+        help_df["ownership"]
+        .astype(str)
+        .str.upper()
+        .str.strip()
+        .isin(allowed_ownership)
+    ].copy()
 
 if "branchcode" not in help_df.columns:
     print("❌ branchcode column missing in Help Sheet.")
     exit()
 
 branches = help_df["branchcode"].dropna().astype(str).str.strip().unique().tolist()
-print(f"🏪 Active COCO Branch Count: {len(branches)}")
+print(f"🏪 Active Filtered Branch Count (COCO & WARE HOUSE): {len(branches)}")
 
 # =========================================================
 # FETCH & PROCESS INVENTORY ACTIVITY DATA
@@ -116,18 +124,11 @@ for idx, branch in enumerate(branches):
             df["branchCode"] = branch
             df["activityDate"] = day_str
             
-            # 🌟 EXPLODE & SPLIT THE 'activities' COLUMN
+            # Explode & Split the 'activities' array
             if "activities" in df.columns:
-                # Remove rows with empty or missing activities
                 df = df.dropna(subset=["activities"]).copy()
-                
-                # Explode nested array into individual rows
                 df = df.explode("activities").reset_index(drop=True)
-                
-                # Flatten dict keys into separate columns (e.g. activity_type, activity_quantity, activity_cost)
                 activities_df = pd.json_normalize(df["activities"]).add_prefix("activity_")
-                
-                # Merge back with the original dataframe
                 df = pd.concat([df.drop(columns=["activities"]), activities_df], axis=1)
                 
             inv_items_list_activity.append(df)
