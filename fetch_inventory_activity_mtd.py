@@ -21,7 +21,7 @@ SECRET_KEY = os.environ["SECRET_KEY"]
 RISTA_BASE_URL = "https://api.ristaapps.com/v1"
 
 SPREADSHEET_ID = "130C3oQsVmONGVUulhGbDWroRKpkebwgnFhq3uiny_O0"
-DRIVE_FOLDER_ID = "1g5ap7nXTNwYl3RYyilKZIh0XrYhvCrwe"
+DRIVE_FOLDER_ID = "1cS_jlVQqMIMlk0omVozQR-rUBzjw9IUf"
 
 def get_token():
     payload = {"iss": API_KEY, "iat": int(time.time())}
@@ -120,11 +120,6 @@ help_lookup = help_lookup.drop_duplicates(subset=["branchCode"])
 branches = help_lookup["branchCode"].loc[lambda x: x != ""].tolist()
 print(f"🏪 Active Branches Loaded: {len(branches)}")
 
-# Verify specific stores in queue
-for check_code in explicit_stores:
-    status = "✅ Present" if check_code in branches else "❌ Missing"
-    print(f"Store {check_code}: {status}")
-
 # =========================================================
 # FETCH MTD INVENTORY ACTIVITY DATA
 # =========================================================
@@ -191,7 +186,12 @@ print(f"📁 Local Master CSV generated: {month_year_filename} ({len(final_df)} 
 try:
     drive_service = build('drive', 'v3', credentials=creds)
     query = f"name = '{month_year_filename}' and '{DRIVE_FOLDER_ID}' in parents and trashed = false"
-    results = drive_service.files().list(q=query, fields="files(id, name)", supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
+    results = drive_service.files().list(
+        q=query, 
+        fields="files(id, name)", 
+        supportsAllDrives=True, 
+        includeItemsFromAllDrives=True
+    ).execute()
     existing_files = results.get('files', [])
     
     media = MediaFileUpload(month_year_filename, mimetype='text/csv', resumable=True)
