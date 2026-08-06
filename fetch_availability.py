@@ -80,20 +80,18 @@ branches = help_df["branchcode"].dropna().astype(str).str.strip().unique().tolis
 print(f"🏪 Active COCO Branch Count: {len(branches)}")
 
 # =========================================================
-# COLLECTORS FOR TARGET DATASETS
+# COLLECTORS FOR TARGET DATASETS (Declared before loop)
 # =========================================================
 avail_current_list = []
 avail_hist_list = []
 inv_store_items_list = []
 inv_items_list = []
+inv_items_list_activity = []  # Fixed: Pre-declared to avoid NameError
 cons_sales_list = []
 cons_shrink_list = []
-
-# New Collectors
 coupon_utilization_list = []
 outlet_timings_list = []
 
-# Helper logic to extract data safely
 def safe_fetch(url, params):
     try:
         res = requests.get(url, headers=headers(), params=params, timeout=60)
@@ -107,7 +105,7 @@ def safe_fetch(url, params):
 for idx, branch in enumerate(branches):
     print(f"🔄 Fetching data blocks [{idx+1}/{len(branches)}] for Branch: {branch}")
     
-    # --- 1. AVAILABILITY BLOCKS ---
+    # 1. AVAILABILITY BLOCKS
     data = safe_fetch(f"{RISTA_BASE_URL}/items/soldout", {"branch": branch})
     if data:
         df = pd.json_normalize(data)
@@ -120,26 +118,21 @@ for idx, branch in enumerate(branches):
         df["branchCode"] = branch
         avail_hist_list.append(df)
 
-    # --- 2. INVENTORY BLOCKS ---
+    # 2. INVENTORY BLOCKS
     data = safe_fetch(f"{RISTA_BASE_URL}/inventory/store/items", {"branch": branch})
     if data:
         df = pd.json_normalize(data)
         df["branchCode"] = branch
         inv_store_items_list.append(df)
-        
-    data = safe_fetch(f"{RISTA_BASE_URL}/inventory/items", {"branch": branch, "day": fetch_date, "date": fetch_date})
-    if data:
-        df = pd.json_normalize(data)
-        df["branchCode"] = branch
-        inv_items_list.append(df)
 
-    data = safe_fetch(f"{RISTA_BASE_URL}/inventory/item/activity", {"branch": branch, "day": fetch_date, "date": fetch_date})
+    # Activity ledger endpoint
+    data = safe_fetch(f"{RISTA_BASE_URL}/inventory/item/activity/page", {"branch": branch, "day": fetch_date, "date": fetch_date})
     if data:
         df = pd.json_normalize(data)
         df["branchCode"] = branch
         inv_items_list_activity.append(df)
 
-    # --- 3. CONSUMPTION BLOCKS ---
+    # 3. CONSUMPTION BLOCKS
     data = safe_fetch(f"{RISTA_BASE_URL}/sales/page", {"branch": branch, "day": fetch_date})
     if data:
         df = pd.json_normalize(data)
@@ -156,14 +149,14 @@ for idx, branch in enumerate(branches):
         df["branchCode"] = branch
         cons_shrink_list.append(df)
 
-    # --- 4. COUPON UTILIZATION DASHBOARD ---
+    # 4. COUPON UTILIZATION
     data = safe_fetch(f"{RISTA_BASE_URL}/analytics/discount/transactions", {"branch": branch, "day": fetch_date, "date": fetch_date})
     if data:
         df = pd.json_normalize(data)
         df["branchCode"] = branch
         coupon_utilization_list.append(df)
 
-    # --- 5. OUTLET DELIVERY TIMINGS ---
+    # 5. OUTLET TIMINGS
     data = safe_fetch(f"{RISTA_BASE_URL}/outlet/delivery/timings", {"branch": branch})
     if data:
         df = pd.json_normalize(data)
@@ -189,7 +182,7 @@ def update_spreadsheet_tab(tab_name, data_frames):
     final_df = pd.concat(data_frames, ignore_index=True)
     final_df = final_df.fillna("")
     
-    # Sanitize data frames from containing un-flattened structural components (lists/dicts)
+    # Convert un-flattened lists/dicts to JSON strings
     for col in final_df.columns:
         if final_df[col].apply(lambda x: isinstance(x, (list, dict))).any():
             final_df[col] = final_df[col].apply(lambda x: json.dumps(x) if isinstance(x, (list, dict)) else x)
@@ -202,17 +195,14 @@ def update_spreadsheet_tab(tab_name, data_frames):
     except Exception as err:
         print(f"❌ Target update failure on sheet {tab_name}: {err}")
 
-# Update the workspace sheets
+# Update Google Sheets Worksheets
 update_spreadsheet_tab("Raw_Availability_Current", avail_current_list)
 update_spreadsheet_tab("Raw_Availability_History", avail_hist_list)
 update_spreadsheet_tab("Raw_Inventory_StoreItems", inv_store_items_list)
-update_spreadsheet_tab("Raw_Inventory_Items", inv_items_list)
 update_spreadsheet_tab("Raw_Inventory_Activity", inv_items_list_activity)
 update_spreadsheet_tab("Raw_Consumption_Sales", cons_sales_list)
 update_spreadsheet_tab("Raw_Consumption_Shrinkage", cons_shrink_list)
-
-# Push the new requested targets
 update_spreadsheet_tab("Raw_Analytics_Coupons", coupon_utilization_list)
 update_spreadsheet_tab("Raw_Outlet_DeliveryTimings", outlet_timings_list)
 
-print("🏁 All available data models updated on target workspace tabs. Ready for operational layout review!")
+print("🏁 All available data models updated on target workspace tabs.")
