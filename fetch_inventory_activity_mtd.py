@@ -71,17 +71,34 @@ except Exception:
     help_ws = spreadsheet.worksheet("Help Sheet")
 
 help_data = help_ws.get()
-raw_headers = [str(h).strip().lower().replace(" ", "") for h in help_data[0]]
+if not help_data:
+    print("❌ Help Sheet Empty")
+    exit()
+
+# Dynamically calculate maximum width across all rows to avoid dimension mismatch
+max_cols = max(len(r) for r in help_data)
+
+header_row = list(help_data[0]) + [""] * (max_cols - len(help_data[0]))
+raw_headers = [str(h).strip().lower().replace(" ", "") for h in header_row]
 
 safe_headers = []
 for i, h in enumerate(raw_headers):
-    h = f"blank_col_{i}" if not h else h
+    if not h:
+        h = f"blank_col_{i}"
     if h in safe_headers:
         h = f"{h}_{i}"
     safe_headers.append(h)
 
 rows = help_data[1:]
-normalized_rows = [list(r) + [""] * (len(safe_headers) - len(r)) for r in rows]
+normalized_rows = []
+for r in rows:
+    row_list = list(r)
+    if len(row_list) < max_cols:
+        row_list.extend([""] * (max_cols - len(row_list)))
+    elif len(row_list) > max_cols:
+        row_list = row_list[:max_cols]
+    normalized_rows.append(row_list)
+
 help_df = pd.DataFrame(normalized_rows, columns=safe_headers)
 
 branch_cols = [c for c in help_df.columns if "branchcode" in c]
