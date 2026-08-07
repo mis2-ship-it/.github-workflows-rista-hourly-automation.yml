@@ -11,7 +11,7 @@ from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-print("🚀 Rista Inventory Activity Pipeline Started")
+print("🚀 Rista Complete Inventory Activity Pipeline Started")
 
 # =========================================================
 # CONFIGURATION & AUTH
@@ -22,6 +22,7 @@ RISTA_BASE_URL = "https://api.ristaapps.com/v1"
 
 SPREADSHEET_ID = "130C3oQsVmONGVUulhGbDWroRKpkebwgnFhq3uiny_O0"
 DRIVE_FOLDER_ID = "1cS_jlVQqMIMlk0omVozQR-rUBzjw9IUf"
+TARGET_FILE_ID = "1tdLOS5XxD1HwazuxDMrY2n2Lp4J03R3B"
 
 def get_token():
     payload = {"iss": API_KEY, "iat": int(time.time())}
@@ -58,8 +59,6 @@ while curr <= end_date:
     curr += timedelta(days=1)
 
 print(f"📅 MTD Range: {date_list[0]} to {date_list[-1]} ({len(date_list)} Days)")
-
-# Dynamic Monthly File Name: e.g. "2026-08.csv"
 month_year_filename = f"{today.strftime('%Y-%m')}.csv"
 
 # =========================================================
@@ -75,30 +74,19 @@ if not help_data:
     print("❌ Help Sheet Empty")
     exit()
 
-# Dynamically calculate maximum width across all rows to avoid dimension mismatch
 max_cols = max(len(r) for r in help_data)
-
 header_row = list(help_data[0]) + [""] * (max_cols - len(help_data[0]))
 raw_headers = [str(h).strip().lower().replace(" ", "") for h in header_row]
 
 safe_headers = []
 for i, h in enumerate(raw_headers):
-    if not h:
-        h = f"blank_col_{i}"
+    h = f"blank_col_{i}" if not h else h
     if h in safe_headers:
         h = f"{h}_{i}"
     safe_headers.append(h)
 
 rows = help_data[1:]
-normalized_rows = []
-for r in rows:
-    row_list = list(r)
-    if len(row_list) < max_cols:
-        row_list.extend([""] * (max_cols - len(row_list)))
-    elif len(row_list) > max_cols:
-        row_list = row_list[:max_cols]
-    normalized_rows.append(row_list)
-
+normalized_rows = [list(r) + [""] * (max_cols - len(r)) for r in rows]
 help_df = pd.DataFrame(normalized_rows, columns=safe_headers)
 
 branch_cols = [c for c in help_df.columns if "branchcode" in c]
@@ -117,17 +105,13 @@ if region_cols:
     lookup_cols.append(region_cols[0])
     rename_dict[region_cols[0]] = "Region"
 
-# Must-include store codes
 explicit_stores = ["90003-2221", "90003-2216", "90003-2218", "90003-2214", "90003-2215", "DW"]
 
-# Ownership Filtering + Explicit Inclusion
 if ownership_cols:
     ownership_series = help_df[ownership_cols[0]].astype(str).str.upper().str.strip()
     branch_series = help_df[branch_col_name].astype(str).str.strip()
-    
     is_coco_wh = ownership_series.str.contains("COCO|WARE|WH", na=False)
     is_explicit = branch_series.isin(explicit_stores)
-    
     help_df = help_df[is_coco_wh | is_explicit].copy()
 
 help_lookup = help_df[lookup_cols].copy().rename(columns=rename_dict)
@@ -138,26 +122,40 @@ branches = help_lookup["branchCode"].loc[lambda x: x != ""].tolist()
 print(f"🏪 Active Branches Loaded: {len(branches)}")
 
 # =========================================================
-# FETCH MTD INVENTORY ACTIVITY DATA
+# FETCH COMPLETE INVENTORY ACTIVITY (WITH PAGINATION)
 # =========================================================
 inv_items_list_activity = []
 
-def safe_fetch(url, params):
-    try:
-        res = requests.get(url, headers=headers(), params=params, timeout=60)
-        if res.status_code == 200:
-            return res.json().get("data", [])
-    except Exception as e:
-        print(f"⚠️ API Error ({url}): {e}")
-    return []
+def fetch_paginated_branch_day(branch, day_str):
+    all_records = []
+    page = 1
+    while True:
+        try:
+            res = requests.get(
+                f"{RISTA_BASE_URL}/inventory/item/activity/page",
+                headers=headers(),
+                params={"branch": branch, "day": day_str, "date": day_str, "page": page, "count": 500, "limit": 500},
+                timeout=60
+            )
+            if res.status_code == 200:
+                data = res.json().get("data", [])
+                if not data:
+                    break
+                all_records.extend(data)
+                if len(data) < 50:  # Last page reached
+                    break
+                page += 1
+            else:
+                break
+        except Exception as e:
+            print(f"⚠️ Fetch Error on {branch} page {page}: {e}")
+            break
+    return all_records
 
 for idx, branch in enumerate(branches):
     print(f"🔄 Processing Branch [{idx+1}/{len(branches)}]: {branch}")
     for day_str in date_list:
-        data = safe_fetch(
-            f"{RISTA_BASE_URL}/inventory/item/activity/page", 
-            {"branch": branch, "day": day_str, "date": day_str}
-        )
+        data = fetch_paginated_branch_day(branch, day_str)
         if data:
             df = pd.json_normalize(data)
             df["branchCode"] = branch
@@ -179,7 +177,6 @@ final_df = pd.concat(inv_items_list_activity, ignore_index=True)
 final_df["branchCode"] = final_df["branchCode"].astype(str).str.strip()
 final_df = final_df.merge(help_lookup, on="branchCode", how="left")
 
-# Sanitize numbers and convert activity quantities/costs to absolute positive values
 num_fields = ["activity_quantity", "activity_cost", "openingBalance", "openingCost", "closingBalance", "closingCost"]
 for col in num_fields:
     if col in final_df.columns:
@@ -190,43 +187,32 @@ for col in num_fields:
 final_df["activity_quantity"] = final_df["activity_quantity"].abs()
 final_df["activity_cost"] = final_df["activity_cost"].abs()
 
-# Reorder key columns to front
 lead_cols = [c for c in ["branchCode", "Store Name", "Region", "activityDate"] if c in final_df.columns]
 final_df = final_df[lead_cols + [c for c in final_df.columns if c not in lead_cols]]
 
 # =========================================================
-# 1. SAVE MASTER DATA TO CSV & UPLOAD/OVERWRITE ON GOOGLE DRIVE
+# 1. PUSH MASTER DATA DIRECTLY TO DRIVE FILE (ID: 1tdLOS5XxD1HwazuxDMrY2n2Lp4J03R3B)
 # =========================================================
 final_df.to_csv(month_year_filename, index=False)
-print(f"📁 Local Master CSV generated: {month_year_filename} ({len(final_df)} rows)")
+print(f"📁 Local CSV generated: {month_year_filename} ({len(final_df)} rows)")
 
 try:
     drive_service = build('drive', 'v3', credentials=creds)
-    query = f"name = '{month_year_filename}' and '{DRIVE_FOLDER_ID}' in parents and trashed = false"
-    results = drive_service.files().list(
-        q=query, 
-        fields="files(id, name)", 
-        supportsAllDrives=True, 
-        includeItemsFromAllDrives=True
-    ).execute()
-    existing_files = results.get('files', [])
-    
     media = MediaFileUpload(month_year_filename, mimetype='text/csv', resumable=True)
     
-    if existing_files:
-        file_id = existing_files[0]['id']
-        drive_service.files().update(fileId=file_id, media_body=media, supportsAllDrives=True).execute()
-        print(f"🔄 Updated existing Google Drive file: '{month_year_filename}' (ID: {file_id})")
-    else:
-        file_metadata = {'name': month_year_filename, 'parents': [DRIVE_FOLDER_ID]}
-        new_file = drive_service.files().create(body=file_metadata, media_body=media, fields='id', supportsAllDrives=True).execute()
-        print(f"☁️ Created new Google Drive file: '{month_year_filename}' (ID: {new_file.get('id')})")
-        
+    # Update target file directly and keep inside target folder
+    drive_service.files().update(
+        fileId=TARGET_FILE_ID,
+        media_body=media,
+        addParents=DRIVE_FOLDER_ID,
+        supportsAllDrives=True
+    ).execute()
+    print(f"✅ Successfully updated Drive File ID '{TARGET_FILE_ID}' inside Folder '{DRIVE_FOLDER_ID}'")
 except Exception as e:
-    print(f"❌ Google Drive API Error: {e}")
+    print(f"❌ Google Drive Update Error: {e}")
 
 # =========================================================
-# FILTER SALES ACTIVITY TYPE FOR STOCK ON HAND CALCULATIONS
+# FILTER SALES ACTIVITY TYPE FOR DASHBOARDS
 # =========================================================
 sales_df = final_df[final_df["activity_type"].astype(str).str.strip().str.upper() == "SALES"].copy()
 
@@ -237,7 +223,6 @@ min_date, max_date = date_list[0], date_list[-1]
 
 opening_df = final_df[final_df["activityDate"] == min_date].groupby(["Region", "Store Name"], as_index=False)[["openingCost", "openingBalance"]].sum()
 closing_df = final_df[final_df["activityDate"] == max_date].groupby(["Region", "Store Name"], as_index=False)[["closingCost", "closingBalance"]].sum()
-
 sales_activity_sums = sales_df.groupby(["Region", "Store Name"], as_index=False)[["activity_cost", "activity_quantity"]].sum()
 
 store_summary = opening_df.merge(closing_df, on=["Region", "Store Name"], how="outer").merge(sales_activity_sums, on=["Region", "Store Name"], how="outer").fillna(0)
@@ -310,4 +295,4 @@ update_tab("Region_Summary", region_summary)
 update_tab("Store_Summary", store_summary_display)
 update_tab("Daily_Stock_On_Hand", daily_pivot)
 
-print("🏁 Execution complete. Master data safely updated in Google Drive!")
+print("🏁 Execution complete. All material data fetched and updated in Drive File ID 1tdLOS5XxD1HwazuxDMrY2n2Lp4J03R3B.")
