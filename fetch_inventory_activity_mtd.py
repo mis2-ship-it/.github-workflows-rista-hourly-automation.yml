@@ -122,40 +122,57 @@ branches = help_lookup["branchCode"].loc[lambda x: x != ""].tolist()
 print(f"🏪 Active Branches Loaded: {len(branches)}")
 
 # =========================================================
-# FETCH COMPLETE INVENTORY ACTIVITY (WITH PAGINATION)
+# FETCH COMPLETE INVENTORY ACTIVITY (FULL EXHAUSTIVE PAGINATION)
 # =========================================================
 inv_items_list_activity = []
 
-def fetch_paginated_branch_day(branch, day_str):
+def fetch_all_materials_for_branch_day(branch, day_str):
     all_records = []
     page = 1
-    while True:
+    max_pages = 100  # Safety limit to prevent infinite loops
+    
+    while page <= max_pages:
         try:
+            params = {
+                "branch": branch,
+                "day": day_str,
+                "date": day_str,
+                "page": page,
+                "limit": 500,
+                "size": 500,
+                "pageSize": 500,
+                "count": 500
+            }
             res = requests.get(
                 f"{RISTA_BASE_URL}/inventory/item/activity/page",
                 headers=headers(),
-                params={"branch": branch, "day": day_str, "date": day_str, "page": page, "count": 500, "limit": 500},
+                params=params,
                 timeout=60
             )
             if res.status_code == 200:
                 data = res.json().get("data", [])
-                if not data:
-                    break
+                if not data or len(data) == 0:
+                    break  # Stop only when an empty page is returned
+                
                 all_records.extend(data)
-                if len(data) < 50:  # Last page reached
+                
+                # Check for last page without breaking on default 20-item page size
+                if len(data) < 20:
                     break
+                    
                 page += 1
             else:
                 break
         except Exception as e:
-            print(f"⚠️ Fetch Error on {branch} page {page}: {e}")
+            print(f"⚠️ Fetch Error on {branch} {day_str} page {page}: {e}")
             break
+            
     return all_records
 
 for idx, branch in enumerate(branches):
     print(f"🔄 Processing Branch [{idx+1}/{len(branches)}]: {branch}")
     for day_str in date_list:
-        data = fetch_paginated_branch_day(branch, day_str)
+        data = fetch_all_materials_for_branch_day(branch, day_str)
         if data:
             df = pd.json_normalize(data)
             df["branchCode"] = branch
@@ -200,14 +217,13 @@ try:
     drive_service = build('drive', 'v3', credentials=creds)
     media = MediaFileUpload(month_year_filename, mimetype='text/csv', resumable=True)
     
-    # Update target file directly and keep inside target folder
     drive_service.files().update(
         fileId=TARGET_FILE_ID,
         media_body=media,
         addParents=DRIVE_FOLDER_ID,
         supportsAllDrives=True
     ).execute()
-    print(f"✅ Successfully updated Drive File ID '{TARGET_FILE_ID}' inside Folder '{DRIVE_FOLDER_ID}'")
+    print(f"✅ Successfully updated Master Data in Drive File ID '{TARGET_FILE_ID}' inside Folder '{DRIVE_FOLDER_ID}'")
 except Exception as e:
     print(f"❌ Google Drive Update Error: {e}")
 
@@ -295,4 +311,4 @@ update_tab("Region_Summary", region_summary)
 update_tab("Store_Summary", store_summary_display)
 update_tab("Daily_Stock_On_Hand", daily_pivot)
 
-print("🏁 Execution complete. All material data fetched and updated in Drive File ID 1tdLOS5XxD1HwazuxDMrY2n2Lp4J03R3B.")
+print("🏁 Execution complete. All material rows extracted and refreshed.")
